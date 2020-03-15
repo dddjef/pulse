@@ -1,4 +1,9 @@
 def uri_parser(uri_string):
+    """
+    transform a string uri in a dict
+    :param uri_string:
+    :return:
+    """
     uri_split_main = uri_string.split("@")
     if len(uri_split_main)>1:
         version = uri_split_main[1]
