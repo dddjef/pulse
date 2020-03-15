@@ -48,20 +48,15 @@ def create_resource(uri):
         print("ABORT : resource already exists at " + repo_work_path)
         return
 
-    # build_resource_template_path
+    # build_resource_template_path, abort if there's no template folder
     template_path = build_resource_template_path(uri['resource_type'])
     if not os.path.exists(template_path):
         print("ABORT : No template found for " + uri['resource_type'])
-        template_path = ""
+        return
 
-    # Copy the templates to repos or just create an empty work folder if there's no template
-    if template_path == "":
-        os.makedirs(repo_work_path)
-    else:
-        shutil.copytree(template_path + "\\WORK", repo_work_path)
-
-        # copy the template products to products repo
-        shutil.copytree(template_path + "\\PRODUCTS", build_products_repository_path(uri))
+    # Copy the templates to repos
+    shutil.copytree(template_path + "\\WORK", repo_work_path)
+    shutil.copytree(template_path + "\\PRODUCTS", build_products_repository_path(uri))
 
 
 def download_resource(entity, resource_type, version):
