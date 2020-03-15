@@ -3,7 +3,6 @@ import pulse.file_manager as fm
 
 # TO DO : create_resource should use test for existing resource within the api to avoid testing in file manager
 
-
 def create_resource(uri_string):
     """Create a new resource for the given type
     """
@@ -11,4 +10,4 @@ def create_resource(uri_string):
     fm.create_resource(uri)
 
 if __name__ == '__main__':
-    print create_resource("paf-modeling")
+    print create_resource("paf-texture")

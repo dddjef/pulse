@@ -1,6 +1,6 @@
 def uri_parser(uri_string):
     """
-    transform a string uri in a dict
+    transform a string uri in a dict uri
     :param uri_string:
     :return:
     """

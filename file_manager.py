@@ -26,7 +26,8 @@ def build_products_repository_path(uri):
     entities = uri['entity'].split(":")
     for entity in entities:
         path += "\\" + entity
-    return path
+    return path + "\\V" + uri['version'].zfill(cfg.VERSION_PADDING)
+
 
 def build_work_user_filepath(entity, resource_type):
     """custom function to build a sandbox resource path.
@@ -39,7 +40,7 @@ def build_products_user_filepath(entity, resource_type,version):
 
 
 def create_resource(uri):
-    """build_work_repository_path
+    """create a new resource default folders and file from a resource template
     """
     # build repo work path for initial version and abort if it already exists
     repo_work_path = build_work_repository_path(uri)
@@ -50,19 +51,17 @@ def create_resource(uri):
     # build_resource_template_path
     template_path = build_resource_template_path(uri['resource_type'])
     if not os.path.exists(template_path):
-        print("DEFAULT MODE : No template found for " + uri['resource_type'])
+        print("ABORT : No template found for " + uri['resource_type'])
         template_path = ""
 
-    # Copy the template work to repo work initial version or create an empty folder if there's no template
+    # Copy the templates to repos or just create an empty work folder if there's no template
     if template_path == "":
         os.makedirs(repo_work_path)
     else:
         shutil.copytree(template_path + "\\WORK", repo_work_path)
 
-    # build_products_repository_path(version = 0)
-
-
-    # copy the template products to products repo
+        # copy the template products to products repo
+        shutil.copytree(template_path + "\\PRODUCTS", build_products_repository_path(uri))
 
 
 def download_resource(entity, resource_type, version):
