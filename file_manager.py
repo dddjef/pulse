@@ -1,71 +1,70 @@
 import project_config as cfg
 import os
 import shutil
+import json
+import glob
 
-def build_resource_template_path(resource_type):
-    """custom function to build a template path
+DB_folder = cfg.WORK_REPOSITORY_ROOT + "\\DB"
+
+def build_repository_path(root, uri):
+    """custom function to build a work repository path
     """
-    return cfg.TEMPLATE_PATH + "\\" + resource_type
+    entities = uri['entity'].replace(":", "\\")
+    version = cfg.VERSION_PREVIX + str(uri['version']).zfill(cfg.VERSION_PADDING)
+    return root + "\\" + uri['resource_type'] + "\\" + entities + "\\" + version
 
 
-def build_work_repository_path(uri):
-    """custom function to build a work path.
-    ie : can use an external database to define the server
+def copy_folder_tree(source_folder, destination_folder):
+    """copy a folder tree, and creates subsequents destination folders if needed
     """
-    path = cfg.WORK_REPOSITORY_ROOT + "\\" + uri['resource_type']
-    entities = uri['entity'].split(":")
-    for entity in entities:
-        path += "\\" + entity
-    return path + "\\V" + uri['version'].zfill(cfg.VERSION_PADDING)
+    destination_folder = os.path.normpath(destination_folder)
+    if not os.path.exists(destination_folder):
+        os.makedirs(os.path.dirname(destination_folder.rstrip("\\")))
+
+    shutil.copytree(source_folder, destination_folder)
 
 
-def build_products_repository_path(uri):
-    """custom function to build products path.
-    """
-    path = cfg.PRODUCT_REPOSITORY_ROOT + "\\" + uri['resource_type']
-    entities = uri['entity'].split(":")
-    for entity in entities:
-        path += "\\" + entity
-    return path + "\\V" + uri['version'].zfill(cfg.VERSION_PADDING)
-
-
-def build_work_user_filepath(entity, resource_type):
-    """custom function to build a sandbox resource path.
-    """
-
-
-def build_products_user_filepath(entity, resource_type,version):
-    """custom function to build a user product resource path.
-    """
-
-
-def create_resource(uri):
+def upload_resource_version(uri, work_folder, products_folder=None):
     """create a new resource default folders and file from a resource template
     """
-    # build repo work path for initial version and abort if it already exists
-    repo_work_path = build_work_repository_path(uri)
-    if os.path.exists(repo_work_path):
-        print("ABORT : resource already exists at " + repo_work_path)
-        return
+    # Copy work folder to repo
+    copy_folder_tree(work_folder, build_repository_path(cfg.WORK_REPOSITORY_ROOT, uri))
 
-    # build_resource_template_path, abort if there's no template folder
-    template_path = build_resource_template_path(uri['resource_type'])
-    if not os.path.exists(template_path):
-        print("ABORT : No template found for " + uri['resource_type'])
-        return
+    # Copy products folder to repo if needed
+    if not products_folder:
+        return True
+    copy_folder_tree(products_folder, build_repository_path(cfg.PRODUCT_REPOSITORY_ROOT, uri))
 
-    # Copy the templates to repos
-    shutil.copytree(template_path + "\\WORK", repo_work_path)
-    shutil.copytree(template_path + "\\PRODUCTS", build_products_repository_path(uri))
+    return True
 
 
-def download_resource(entity, resource_type, version):
+def list_resources(uri):
+    return glob.glob(build_repository_path(cfg.WORK_REPOSITORY_ROOT, uri))
+
+###################################
+###################################
+
+
+
+
+
+def download_work(uri, work_folder):
     """build_work_user_filepath
     """
-    # abort if it already exists
-    # build_work_repository_path
-    # copy repo work to sandbox
+    # build user work path abort if it already exists
+    user_work_path = build_work_user_filepath(uri)
+    if os.path.exists(user_work_path):
+        print "ABORT download_resource : folder already exists " + user_work_path
 
+
+    # build repo work path abort if does not exists
+    repo_work_path = build_work_repository_path(uri)
+    if not os.path.exists(repo_work_path):
+        print("ABORT : resource does not exists at " + repo_work_path)
+        return
+
+    # copy repo work to sandbox
+    shutil.copytree(repo_work_path, user_work_path)
 
 def download_product(entity, resource_type, version, product_type):
     """build_products_user_filepath
@@ -74,23 +73,6 @@ def download_product(entity, resource_type, version, product_type):
     # build_products_repository_path
     # copy repo products type to products_user_filepath
 
-
-def upload_resource(entity, resource_type):
-    """
-    upload to repositories a sandbox work and its products
-    :param entity:
-    :param resource_type:
-    :return:
-    """
-    # abort if the resource is locked by someone else
-    # build_work_repository_path (v+1)
-    # abort if it already exists
-    # build_work_user_filepath
-    # copy repo work to sandbox
-    # build_products_user_filepath
-    # build_products_repository_path
-    # Copy each product to repository of it doesn't exists yet
-    # Make user products read only
 
 
 def lock(entity, resource_type):
