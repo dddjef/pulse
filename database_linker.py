@@ -5,13 +5,14 @@ import os
 import message as msg
 
 DB_folder = cfg.WORK_REPOSITORY_ROOT + "\\DB"
+VERSION_PREFIX = "V"
 
 
 def get_json_filepath(entity_type, uri):
     if entity_type == 'Resource':
         return DB_folder + "\\resources\\" + uri + "\\resource.json"
     elif entity_type == 'Version':
-        filename = "version" + uri.split("@")[1].zfill(cfg.VERSION_PADDING) + ".json"
+        filename = VERSION_PREFIX + uri.split("@")[1].zfill(cfg.VERSION_PADDING) + ".json"
         return DB_folder + "\\resources\\" + uri.split("@")[0] + "\\" + filename
     else:
         raise Exception('unknown database entity type')

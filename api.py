@@ -7,41 +7,50 @@ import database_linker as db
 import message as msg
 
 
+class PulseObject:
+    def __init__(self, uri):
+        self.uri = uri
 
-class Product:
-    def __init__(self, version, product_type):
+    def write_data(self):
+        db.write(entity_type=self.__class__.__name__, uri=self.uri, data_dict=vars(self))
+
+    def read_data(self):
+        data = db.read(entity_type=self.__class__.__name__, uri=self.uri)
+        if data:
+            for k in data:
+                setattr(self, k, data[k])
+        else:
+            msg.new('ERROR', 'No data found for ' + self.uri)
+
+
+class Product(PulseObject):
+    def __init__(self, version, product_type, uri):
+        PulseObject.__init__(self, uri)
         self.version = version
         self.product_type = product_type
 
 
-class Version:
+class Version(PulseObject):
     def __init__(self, uri):
+        PulseObject.__init__(self, uri)
         self.uri = uri
-        self.resource = None
         self.comment = ""
+
+    def get_resource(self):
+        pass
 
     def get_products(self):
         pass
 
     def checkout(self):
+        pass
         # abort if the resource is already in user sandbox
-        print pr.build_work_filepath(self.resource)
         # checkout the last version
 
-    def write_data(self):
-        db.write("Version", self.uri, vars(self))
 
-    def read_data(self):
-        resource_data = db.read("Version", self.uri)
-        if resource_data:
-            self.comment = resource_data['comment']
-        else:
-            msg.new('ERROR', 'No data found for ' + self.uri)
-
-
-class Resource:
+class Resource(PulseObject):
     def __init__(self, uri):
-        self.uri = uri
+        PulseObject.__init__(self, uri)
         self.lock = False
         self.lock_user = ''
         self.last_version = 0
@@ -56,7 +65,7 @@ class Resource:
             return
 
         # build the new version uri
-        version_uri = self.uri + "@" + str(self.versions_count + 1)
+        version_uri = self.uri + "@" + str(self.last_version + 1)
 
         # build_work_user_filepath
         work_source_folder = pr.build_work_filepath(version_uri)
@@ -65,34 +74,31 @@ class Resource:
         # build_product_user_filepath
         if include_products:
             products_source_folder = pr.build_product_filepath(version_uri)
+        else:
+            products_source_folder = None
 
-        fm.upload_resource_version(version_uri, work_source_folder, products_source_folder)
+        fm.upload_resource_version(uri_tools.string_to_dict(version_uri), work_source_folder, products_source_folder)
 
-        new_version = Version(version_uri, comments)
+        new_version = Version(version_uri)
 
         self.last_version += 1
         self.write_data()
         # TO DO : Make user products read only
 
-    def checkout(self):
-        pass
-        # abort if the resource is already in user sandbox
-        # checkout the last version
+    def checkout(self, index):
+        uri_dict = uri_tools.string_to_dict(self.uri)
+        destination_folder = pr.build_work_filepath(uri_dict)
 
-    def write_data(self):
-        db.write("Resource", self.uri, vars(self))
+        # TO DO : abort if the resource is already in user sandbox
+        if os.path.exists(destination_folder):
+            msg.new('ERROR', "can't check out a resource already in your sandbox")
+            return
 
-    def read_data(self):
-        resource_data = db.read("Resource", self.uri)
-        if resource_data:
-            for k in resource_data:
-                setattr(self, k, resource_data[k])
-        else:
-            msg.new('ERROR', 'No data found for ' + self.uri)
+        # download the version
+        uri_dict['version'] = index
+        fm.download_resource_version(uri_dict, destination_folder)
 
-
-def list_resources(uri_search_string):
-    return fm.list_resources(uri_tools.string_to_dict(uri_search_string))
+        msg.new('INFO', "resource check out in : " + destination_folder)
 
 
 def create_resource(uri):
@@ -116,26 +122,33 @@ def create_resource(uri):
     if not os.path.exists(products_template_path):
         products_template_path = None
 
+    # write the resource to database
     resource = Resource(uri)
     resource.write_data()
 
+    # initialize a first version
     version_uri = uri + "@0"
-    fm.upload_resource_version(version_uri, template_path + "\\WORK", products_template_path)
+    fm.upload_resource_version(uri_tools.string_to_dict(version_uri), template_path + "\\WORK", products_template_path)
     version = Version(version_uri)
+    version.comment = "init from template"
     version.write_data()
-    print version
-
-    #resource.create_version(work_source_folder=template_path + "\\WORK", products_source_folder=products_template_path)
 
 
-def checkout(uri_string):
+def checkout(uri, version_index="last", lock=False):
     """Download the resource work files in the user sandbox.
     TO DO : If no version is specified, the last version will be downloaded
     TO DO : read related dependencies in the json file
     TO DO : Download related dependencies if they are not available in products path
     """
-    uri = uri_tools.string_to_dict(uri_string)
-    fm.download_resource(uri)
+    resource = Resource(uri)
+    resource.read_data()
+    if version_index == "last":
+        index = resource.last_version
+    else:
+        index = int(version_index)
+
+    resource.checkout(index)
+    #fm.download_resource(uri)
     print uri
 
 
@@ -144,10 +157,13 @@ if __name__ == '__main__':
     import random
     letters = string.ascii_lowercase
     entity_name = ''.join(random.choice(letters) for i in range(10))
+    #entity_name = "fixed"
 
     uri_test = entity_name + "-modeling"
 
     my_version = create_resource(uri_test)
+    checkout(uri_test)
     # if not my_version:
     #     my_version = Version(uri_test + "@0")
+
     #my_version.checkout()

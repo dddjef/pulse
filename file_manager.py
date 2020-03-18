@@ -1,12 +1,9 @@
 import project_config as cfg
 import os
 import shutil
-import json
-import glob
-import uri_tools
 
 
-def build_repository_path(root, uri):
+def build_repository_path(root, uri_dict):
     """custom function to build a repository path
     """
     if root == "work":
@@ -17,7 +14,6 @@ def build_repository_path(root, uri):
         print "ABORT : unknown uri type"
         return
 
-    uri_dict = uri_tools.string_to_dict(uri)
     entities = uri_dict['entity'].replace(":", "\\")
     path = root + "\\" + uri_dict['resource_type'] + "\\" + entities
     if 'version' in uri_dict:
@@ -29,8 +25,9 @@ def copy_folder_tree(source_folder, destination_folder):
     """copy a folder tree, and creates subsequents destination folders if needed
     """
     destination_folder = os.path.normpath(destination_folder)
-    if not os.path.exists(destination_folder):
-        os.makedirs(os.path.dirname(destination_folder.rstrip("\\")))
+    parent_folder = os.path.dirname(destination_folder.rstrip("\\"))
+    if not os.path.exists(parent_folder):
+        os.makedirs(parent_folder)
 
     shutil.copytree(source_folder, destination_folder)
 
@@ -56,34 +53,14 @@ def upload_resource_version(uri, work_folder, products_folder=None):
     return True
 
 
-def list_resources(uri):
-    return glob.glob(build_repository_path("work", uri))
-
-
-###################################
-###################################
-
-
-
-
-
-def download_work(uri, work_folder):
+def download_resource_version(uri, work_folder):
     """build_work_user_filepath
     """
-    # build user work path abort if it already exists
-    user_work_path = build_work_user_filepath(uri)
-    if os.path.exists(user_work_path):
-        print "ABORT download_resource : folder already exists " + user_work_path
-
-
     # build repo work path abort if does not exists
-    repo_work_path = build_work_repository_path(uri)
-    if not os.path.exists(repo_work_path):
-        print("ABORT : resource does not exists at " + repo_work_path)
-        return
-
+    repo_work_path = build_repository_path("work", uri)
     # copy repo work to sandbox
-    shutil.copytree(repo_work_path, user_work_path)
+    copy_folder_tree(repo_work_path, work_folder)
+
 
 def download_product(entity, resource_type, version, product_type):
     """build_products_user_filepath

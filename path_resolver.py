@@ -15,6 +15,7 @@ def build_work_filepath(uri):
     return path
 
 
-def build_product_filepath(entity, resource_type, version, product_type):
+def build_product_filepath(uri):
     """custom function to build a user product resource path.
     """
+    pass
