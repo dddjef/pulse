@@ -4,6 +4,9 @@ import project_config as cfg
 import path_resolver as pr
 import os
 import database_linker as db
+import message as msg
+
+
 
 class Product:
     def __init__(self, version, product_type):
@@ -12,11 +15,10 @@ class Product:
 
 
 class Version:
-    def __init__(self, resource, index, comment=""):
-        self.resource = resource
-        self.index = index
-        #self.uri = resource.uri + "@" + str(index).zfill(cfg.VERSION_PADDING)
-        self.comment = comment
+    def __init__(self, uri):
+        self.uri = uri
+        self.resource = None
+        self.comment = ""
 
     def get_products(self):
         pass
@@ -26,26 +28,51 @@ class Version:
         print pr.build_work_filepath(self.resource)
         # checkout the last version
 
+    def write_data(self):
+        db.write("Version", self.uri, vars(self))
+
+    def read_data(self):
+        resource_data = db.read("Version", self.uri)
+        if resource_data:
+            self.comment = resource_data['comment']
+        else:
+            msg.new('ERROR', 'No data found for ' + self.uri)
+
+
 class Resource:
-    def __init__(self, uri_dict):
-        self.entity = uri_dict['entity']
-        self.resource_type = uri_dict['resource_type']
+    def __init__(self, uri):
+        self.uri = uri
         self.lock = False
+        self.lock_user = ''
+        self.last_version = 0
 
-    def get_versions(self):
+    def get_version(self, index):
         pass
 
-    def create_version(self):
-        pass
+    def create_version(self, include_products=True, comments=""):
         # abort if the resource is locked by someone else
-        # build_work_repository_path (v+1)
-        # abort if it already exists
+        if self.lock:
+            msg.new('ERROR', "resource is locked by " + self.lock_user)
+            return
+
+        # build the new version uri
+        version_uri = self.uri + "@" + str(self.versions_count + 1)
+
         # build_work_user_filepath
-        # copy repo work to sandbox
-        # build_products_user_filepath
-        # build_products_repository_path
-        # Copy each product to repository of it doesn't exists yet
-        # Make user products read only
+        work_source_folder = pr.build_work_filepath(version_uri)
+        # TO DO : check the sandbox is up to date
+
+        # build_product_user_filepath
+        if include_products:
+            products_source_folder = pr.build_product_filepath(version_uri)
+
+        fm.upload_resource_version(version_uri, work_source_folder, products_source_folder)
+
+        new_version = Version(version_uri, comments)
+
+        self.last_version += 1
+        self.write_data()
+        # TO DO : Make user products read only
 
     def checkout(self):
         pass
@@ -53,42 +80,52 @@ class Resource:
         # checkout the last version
 
     def write_data(self):
-        print vars(self)
-        #db.write_resource(self)
+        db.write("Resource", self.uri, vars(self))
 
-
-def message(type, body):
-    print(type + ":" + body)
+    def read_data(self):
+        resource_data = db.read("Resource", self.uri)
+        if resource_data:
+            for k in resource_data:
+                setattr(self, k, resource_data[k])
+        else:
+            msg.new('ERROR', 'No data found for ' + self.uri)
 
 
 def list_resources(uri_search_string):
     return fm.list_resources(uri_tools.string_to_dict(uri_search_string))
 
 
-def create_resource(uri_string):
+def create_resource(uri):
     """Create a new resource for the given entity and type
     """
-    uri = uri_tools.string_to_dict(uri_string)
+    uri_dict = uri_tools.string_to_dict(uri)
 
     # abort if the resource already exists
-    if list_resources(uri_string):
-        message('ERROR', "there's already a resource named : " + uri_string)
+    if db.read("Resource", uri):
+        msg.new('ERROR', "there's already a resource named : " + uri)
         return
 
     # abort if the template does not exists
-    template_path = pr.build_resource_template_path(uri['resource_type'])
+    template_path = pr.build_resource_template_path(uri_dict['resource_type'])
     if not os.path.exists(template_path):
-        message("ERROR", "No template found for " + template_path)
+        msg.new("ERROR", "No template found for " + template_path)
         return
 
-    # create products templates if they exists
+    # check products templates exists
     products_template_path = template_path + "\\PRODUCTS"
     if not os.path.exists(products_template_path):
         products_template_path = None
 
-    if fm.upload_resource_version(uri, template_path + "\\WORK", products_template_path):
-        resource = Resource(uri_dict=uri)
-        return Version(resource, index=0, comment="template version")
+    resource = Resource(uri)
+    resource.write_data()
+
+    version_uri = uri + "@0"
+    fm.upload_resource_version(version_uri, template_path + "\\WORK", products_template_path)
+    version = Version(version_uri)
+    version.write_data()
+    print version
+
+    #resource.create_version(work_source_folder=template_path + "\\WORK", products_source_folder=products_template_path)
 
 
 def checkout(uri_string):
@@ -103,8 +140,14 @@ def checkout(uri_string):
 
 
 if __name__ == '__main__':
-    uri_test = "pahhjk-modeling"
+    import string
+    import random
+    letters = string.ascii_lowercase
+    entity_name = ''.join(random.choice(letters) for i in range(10))
+
+    uri_test = entity_name + "-modeling"
+
     my_version = create_resource(uri_test)
-    if not my_version:
-        my_version = Version(uri_test + "@0")
-    my_version.checkout()
+    # if not my_version:
+    #     my_version = Version(uri_test + "@0")
+    #my_version.checkout()

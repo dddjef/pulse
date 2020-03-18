@@ -3,15 +3,26 @@ import os
 import shutil
 import json
 import glob
+import uri_tools
 
-DB_folder = cfg.WORK_REPOSITORY_ROOT + "\\DB"
 
 def build_repository_path(root, uri):
-    """custom function to build a work repository path
+    """custom function to build a repository path
     """
-    entities = uri['entity'].replace(":", "\\")
-    version = cfg.VERSION_PREVIX + str(uri['version']).zfill(cfg.VERSION_PADDING)
-    return root + "\\" + uri['resource_type'] + "\\" + entities + "\\" + version
+    if root == "work":
+        root = cfg.WORK_REPOSITORY_ROOT
+    elif root == "product":
+        root = cfg.PRODUCT_REPOSITORY_ROOT
+    else:
+        print "ABORT : unknown uri type"
+        return
+
+    uri_dict = uri_tools.string_to_dict(uri)
+    entities = uri_dict['entity'].replace(":", "\\")
+    path = root + "\\" + uri_dict['resource_type'] + "\\" + entities
+    if 'version' in uri_dict:
+        path += "\\" + cfg.VERSION_PREVIX + str(uri_dict['version']).zfill(cfg.VERSION_PADDING)
+    return path
 
 
 def copy_folder_tree(source_folder, destination_folder):
@@ -28,18 +39,26 @@ def upload_resource_version(uri, work_folder, products_folder=None):
     """create a new resource default folders and file from a resource template
     """
     # Copy work folder to repo
-    copy_folder_tree(work_folder, build_repository_path(cfg.WORK_REPOSITORY_ROOT, uri))
+    copy_folder_tree(work_folder, build_repository_path("work", uri))
 
-    # Copy products folder to repo if needed
+    # Copy products folder to repo
     if not products_folder:
         return True
-    copy_folder_tree(products_folder, build_repository_path(cfg.PRODUCT_REPOSITORY_ROOT, uri))
+    products_destination = build_repository_path("product", uri)
 
+    ######################
+    # This part manage the case a user product path use directly the product repository
+    if os.path.exists(products_destination):
+        return True
+    ######################
+
+    copy_folder_tree(products_folder, products_destination)
     return True
 
 
 def list_resources(uri):
-    return glob.glob(build_repository_path(cfg.WORK_REPOSITORY_ROOT, uri))
+    return glob.glob(build_repository_path("work", uri))
+
 
 ###################################
 ###################################
