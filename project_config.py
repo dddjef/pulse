@@ -5,3 +5,4 @@ PRODUCT_REPOSITORY_ROOT = "D:\\pipe\\pulse\\test\\product_repository"
 WORK_USER_ROOT = "S:"
 PRODUCT_USER_ROOT = "T:"
 VERSION_PADDING = 3
+VERSION_PREFIX = "V"

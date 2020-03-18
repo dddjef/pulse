@@ -133,6 +133,8 @@ def create_resource(uri):
     version.comment = "init from template"
     version.write_data()
 
+    return resource
+
 
 def checkout(uri, version_index="last", lock=False):
     """Download the resource work files in the user sandbox.
@@ -148,8 +150,6 @@ def checkout(uri, version_index="last", lock=False):
         index = int(version_index)
 
     resource.checkout(index)
-    #fm.download_resource(uri)
-    print uri
 
 
 if __name__ == '__main__':
@@ -157,11 +157,11 @@ if __name__ == '__main__':
     import random
     letters = string.ascii_lowercase
     entity_name = ''.join(random.choice(letters) for i in range(10))
-    #entity_name = "fixed"
+    entity_name = "fixed"
 
     uri_test = entity_name + "-modeling"
 
-    my_version = create_resource(uri_test)
+    create_resource(uri_test)
     checkout(uri_test)
     # if not my_version:
     #     my_version = Version(uri_test + "@0")

@@ -17,7 +17,7 @@ def build_repository_path(root, uri_dict):
     entities = uri_dict['entity'].replace(":", "\\")
     path = root + "\\" + uri_dict['resource_type'] + "\\" + entities
     if 'version' in uri_dict:
-        path += "\\" + cfg.VERSION_PREVIX + str(uri_dict['version']).zfill(cfg.VERSION_PADDING)
+        path += "\\" + cfg.VERSION_PREFIX + str(uri_dict['version']).zfill(cfg.VERSION_PADDING)
     return path
 
 
