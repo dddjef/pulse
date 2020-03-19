@@ -32,19 +32,19 @@ def copy_folder_tree(source_folder, destination_folder):
     shutil.copytree(source_folder, destination_folder)
 
 
-def upload_resource_version(uri, work_folder, products_folder=None):
+def upload_resource_version(uri_dict, work_folder, products_folder=None):
     """create a new resource default folders and file from a resource template
     """
     # Copy work folder to repo
-    copy_folder_tree(work_folder, build_repository_path("work", uri))
+    copy_folder_tree(work_folder, build_repository_path("work", uri_dict))
 
     # Copy products folder to repo
     if not products_folder:
         return True
-    products_destination = build_repository_path("product", uri)
+    products_destination = build_repository_path("product", uri_dict)
 
     ######################
-    # This part manage the case a user product path use directly the product repository
+    # This part manage the case a user writes directly to the product repository
     if os.path.exists(products_destination):
         return True
     ######################

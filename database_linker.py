@@ -35,6 +35,5 @@ def read(entity_type, uri):
 
     with open(json_filepath, "r") as read_file:
         data = json.load(read_file)
-        print data
 
     return data
