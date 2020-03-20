@@ -1,17 +1,17 @@
 import pulse.uri_tools as uri_tools
 import pulse.file_manager as fm
 import project_config as cfg
-import path_resolver as pr
-import os
-import database_linker as db
-import message as msg
-import hooks
+import pulse.path_resolver as pr
+import pulse.database_linker as db
+import pulse.message as msg
+import pulse.hooks as hooks
 import json
+import os
+
 
 class PulseObject:
     def __init__(self, uri):
         self.uri = uri
-        self.uri_dict = uri_tools.string_to_dict(uri)
 
     def write_data(self):
         db.write(entity_type=self.__class__.__name__, uri=self.uri, data_dict=vars(self))
@@ -20,10 +20,13 @@ class PulseObject:
         data = db.read(entity_type=self.__class__.__name__, uri=self.uri)
         if data:
             for k in data:
+                if k not in vars(self):
+                    msg.new('DEBUG', "missing attribute in object : " + k)
+                    continue
                 setattr(self, k, data[k])
             return True
         else:
-            msg.new('ERROR', 'No data found for ' + self.uri)
+            # msg.new('INFO', 'No data found for ' + self.uri)
             return False
 
 
@@ -52,7 +55,9 @@ class Resource(PulseObject):
         PulseObject.__init__(self, uri)
         self.lock = False
         self.lock_user = ''
-        self.last_version = 0
+        self.last_version = -1
+        self.resource_type = "unknown"
+        self.entity = ""
 
     def get_version(self, index):
         pass
@@ -62,43 +67,64 @@ class Resource(PulseObject):
             msg.new('ERROR', "the resource is locked by another user")
             return True
         return False
-    
-    def commit(self, comment="", include_products=True):
+
+    def _create_version(self, source_work, source_products, comment):
+        index = self.last_version + 1
+
+        # check work directory exist
+        if not os.path.exists(source_work):
+            msg.new("ERROR", "No source work found at " + source_work)
+            return
+
+        # copy work to a new version in repository
+        version = Version(self.uri + "@" + str(index))
+        fm.upload_resource_version(self, index, source_work, source_products)
+
+        # register changes to database
+        version.comment = comment
+        version.write_data()
+        self.last_version = index
+        self.write_data()
+        return version
+
+    def initialize_data(self):
+        # abort if the resource already exists
+        if get_resource(self.uri):
+            msg.new('ERROR', "there's already a resource named : " + self.uri)
+            return
+
+        # set resource attributes based on the parsed uri
+        for k, v in uri_tools.string_to_dict(self.uri).items():
+            setattr(self, k, v)
+
+        template_path = pr.build_resource_template_path(self)
+
+        self._create_version(template_path + "\\WORK", template_path + "\\PRODUCTS", "init from " + template_path)
+        msg.new('INFO', "resource initialized : " + self.uri)
+
+        return self
+
+    def commit(self, comment=""):
         # check current the user permission
         if self.user_needs_lock():
             return
 
-        # build the new version uri
-        version_uri = self.uri + "@" + str(self.last_version + 1)
-        version = Version(version_uri)
-        version.comment = comment
+        # build work and products path
+        work_folder = pr.build_work_filepath(self)
+        products_folder = pr.build_product_filepath(self, self.last_version + 1)
 
-        # get the sandbox folder and test it exists
-        work_source_folder = pr.build_work_filepath(version.uri_dict)
-        if not os.path.exists(work_source_folder):
+        # TODO : check the work is up to date
+        if not os.path.exists(work_folder):
             msg.new('ERROR', "this resource is not in your sandbox")
             return
 
-        # TODO : check the sandbox is up to date
+        # TODO : check the work status
 
         # launch the pre commit hook
         hooks.pre_commit(self)
 
-        # if user wants to export products folder, build path and test it's valid
-        if include_products:
-            products_source_folder = pr.build_product_filepath(version.uri_dict)
-            print "products_source : " + products_source_folder
-            if not os.path.exists(products_source_folder):
-                products_source_folder = None
-        else:
-            products_source_folder = None
-        # TODO : if products are not included, they should be moved to trash
+        new_version = self._create_version(work_folder, products_folder, comment)
 
-        fm.upload_resource_version(version.uri_dict, work_source_folder, products_source_folder)
-
-        version.write_data()
-        self.last_version += 1
-        self.write_data()
         # TODO : Make user products read only
         # TODO : save resource files content and date to the version data
         # TODO : update the sandbox version number
@@ -115,7 +141,7 @@ class Resource(PulseObject):
         else:
             index = int(index)
 
-        destination_folder = pr.build_work_filepath(self.uri_dict)
+        destination_folder = pr.build_work_filepath(self)
 
         # abort if the resource is already in user sandbox
         if os.path.exists(destination_folder):
@@ -123,14 +149,14 @@ class Resource(PulseObject):
             return
 
         # download the version
-        fm.download_resource_version(self.uri_dict, index, destination_folder)
+        fm.download_resource_version(self, index, destination_folder)
 
         # TODO : create the attended products folder?
 
         msg.new('INFO', "resource check out in : " + destination_folder)
 
     def trash_work(self):
-        work_folder = pr.build_work_filepath(self.uri_dict)
+        work_folder = pr.build_work_filepath(self)
         # abort if the resource is already in user sandbox
         if os.path.exists(work_folder):
             msg.new('ERROR', "can't check out a resource already in your sandbox")
@@ -156,6 +182,8 @@ class Resource(PulseObject):
         return vars(self)
 
 
+
+
 def get_user_name():
     return os.environ.get('USERNAME')
 
@@ -163,34 +191,8 @@ def get_user_name():
 def create_resource(uri):
     """Create a new resource for the given entity and type
     """
-    # abort if the resource already exists
-    if db.read("Resource", uri):
-        msg.new('ERROR', "there's already a resource named : " + uri)
-        return
-
-    # abort if the template does not exists
     resource = Resource(uri)
-    template_path = pr.build_resource_template_path(resource.uri_dict)
-    if not os.path.exists(template_path):
-        msg.new("ERROR", "No template found for " + template_path)
-        return
-
-    # check products templates exists
-    products_template_path = template_path + "\\PRODUCTS"
-    if not os.path.exists(products_template_path):
-        products_template_path = None
-
-    # write the resource to database
-    resource.write_data()
-
-    # initialize a first version
-    version_uri = uri + "@0"
-    fm.upload_resource_version(uri_tools.string_to_dict(version_uri), template_path + "\\WORK", products_template_path)
-    version = Version(version_uri)
-    version.comment = "init from template"
-    version.write_data()
-
-    return resource
+    return resource.initialize_data()
 
 
 def get_directory_content(directory):
@@ -212,8 +214,6 @@ def write_directory_content(directory, json_filepath=None):
     return json_filepath
 
 
-
-
 def get_resource(uri):
     resource = Resource(uri)
     if resource.read_data():
@@ -224,7 +224,7 @@ def get_resource(uri):
 
 if __name__ == '__main__':
 
-    """
+
     import string
     import random
     letters = string.ascii_lowercase
@@ -238,10 +238,9 @@ if __name__ == '__main__':
     resource.checkout()
     resource.set_lock(True)
     resource.commit("very first time")
-    print resource.get_status()
+
 
     # if not my_version:
     #     my_version = Version(uri_test + "@0")
 
-    """
-    print (write_directory_content("D:\maison"))
+

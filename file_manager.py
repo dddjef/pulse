@@ -3,7 +3,8 @@ import os
 import shutil
 import message as msg
 
-def build_repository_path(root, uri_dict):
+
+def build_repository_path(root, resource, version=None):
     """custom function to build a repository path
     """
     if root == "work":
@@ -11,13 +12,13 @@ def build_repository_path(root, uri_dict):
     elif root == "product":
         root = cfg.PRODUCT_REPOSITORY_ROOT
     else:
-        print "ABORT : unknown uri type"
+        msg.new('ERROR', "ABORT : unknown uri type")
         return
 
-    entities = uri_dict['entity'].replace(":", "\\")
-    path = root + "\\" + uri_dict['resource_type'] + "\\" + entities
-    if 'version' in uri_dict :
-        path += "\\" + cfg.VERSION_PREFIX + str(uri_dict['version']).zfill(cfg.VERSION_PADDING)
+    entities = resource.entity.replace(":", "\\")
+    path = root + "\\" + resource.resource_type + "\\" + entities
+    if version != None:
+        path += "\\" + cfg.VERSION_PREFIX + str(version).zfill(cfg.VERSION_PADDING)
     return path
 
 
@@ -33,16 +34,17 @@ def copy_folder_tree(source_folder, destination_folder):
     print "tree copy " + source_folder + " to " + destination_folder
 
 
-def upload_resource_version(uri_dict, work_folder, products_folder=None):
+def upload_resource_version(resource, version, work_folder, products_folder=None):
     """create a new resource default folders and file from a resource template
     """
+
     # Copy work folder to repo
-    copy_folder_tree(work_folder, build_repository_path("work", uri_dict))
+    copy_folder_tree(work_folder, build_repository_path("work", resource, version))
 
     # Copy products folder to repo
-    if not products_folder:
+    if not products_folder or not os.path.exists(products_folder):
         return True
-    products_destination = build_repository_path("product", uri_dict)
+    products_destination = build_repository_path("product", resource, version)
 
     ######################
     # This part manage the case a user writes directly to the product repository
@@ -55,12 +57,10 @@ def upload_resource_version(uri_dict, work_folder, products_folder=None):
     return True
 
 
-def download_resource_version(uri_dict, index, work_folder):
+def download_resource_version(resource, version, work_folder):
     """build_work_user_filepath
     """
-    # build repo work path abort if does not exists
-    uri_dict['version'] = index
-    repo_work_path = build_repository_path("work", uri_dict)
+    repo_work_path = build_repository_path("work", resource, version)
     # copy repo work to sandbox
     copy_folder_tree(repo_work_path, work_folder)
 

@@ -30,7 +30,6 @@ def write(entity_type, uri, data_dict):
 def read(entity_type, uri):
     json_filepath = get_json_filepath(entity_type, uri)
     if not os.path.exists(json_filepath):
-        print "No data for : " + uri
         return None
 
     with open(json_filepath, "r") as read_file:
