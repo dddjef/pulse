@@ -15,6 +15,13 @@ def build_work_filepath(resource):
     return path
 
 
+def build_trash_filepath(resource):
+    """custom function to build a sandbox trash path.
+    """
+    path = cfg.WORK_USER_ROOT + "\\" + cfg.PROJECT_SHORT_NAME + "\\" + "TRASH"
+    return path
+
+
 def build_product_filepath(resource, index):
     """custom function to build a user product resource path.
     """

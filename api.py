@@ -1,13 +1,13 @@
 import pulse.uri_tools as uri_tools
 import pulse.file_manager as fm
-import project_config as cfg
 import pulse.path_resolver as pr
 import pulse.database_linker as db
 import pulse.message as msg
 import pulse.hooks as hooks
 import json
 import os
-
+import shutil
+from datetime import datetime
 
 class PulseObject:
     def __init__(self, uri):
@@ -151,18 +151,28 @@ class Resource(PulseObject):
         # download the version
         fm.download_resource_version(self, index, destination_folder)
 
-        # TODO : create the attended products folder?
+        # TODO : create the attended products folder
 
         msg.new('INFO', "resource check out in : " + destination_folder)
 
     def trash_work(self):
         work_folder = pr.build_work_filepath(self)
         # abort if the resource is already in user sandbox
-        if os.path.exists(work_folder):
+        if not os.path.exists(work_folder):
             msg.new('ERROR', "can't check out a resource already in your sandbox")
             return
-        # TODO : move work to trash
-        pass
+
+        trash_directory = pr.build_trash_filepath(self)
+        if not os.path.exists(trash_directory):
+            os.makedirs(trash_directory)
+        trash_work =  trash_directory + "\\" + os.path.basename(work_folder) + "_" + get_date_time()
+
+        try:
+            os.rename(work_folder, trash_work)
+        except:
+            msg.new('ERROR', "work folder can't be removed. Close all application using : " + work_folder)
+            return False
+        msg.new('INFO', "work move to trash " + trash_work)
 
     def set_lock(self, state, user=None, steal=False):
         # abort if the resource is locked by someone else and the user doesn't want to steal the lock
@@ -182,6 +192,9 @@ class Resource(PulseObject):
         return vars(self)
 
 
+def get_date_time():
+    now = datetime.now()
+    return now.strftime("%d-%m-%Y_%H-%M-%S")
 
 
 def get_user_name():
@@ -238,6 +251,7 @@ if __name__ == '__main__':
     resource.checkout()
     resource.set_lock(True)
     resource.commit("very first time")
+    resource.trash_work()
 
 
     # if not my_version:
