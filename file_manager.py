@@ -1,7 +1,7 @@
 import project_config as cfg
 import os
 import shutil
-
+import message as msg
 
 def build_repository_path(root, uri_dict):
     """custom function to build a repository path
@@ -16,7 +16,7 @@ def build_repository_path(root, uri_dict):
 
     entities = uri_dict['entity'].replace(":", "\\")
     path = root + "\\" + uri_dict['resource_type'] + "\\" + entities
-    if 'version' in uri_dict:
+    if 'version' in uri_dict :
         path += "\\" + cfg.VERSION_PREFIX + str(uri_dict['version']).zfill(cfg.VERSION_PADDING)
     return path
 
@@ -30,6 +30,7 @@ def copy_folder_tree(source_folder, destination_folder):
         os.makedirs(parent_folder)
 
     shutil.copytree(source_folder, destination_folder)
+    print "tree copy " + source_folder + " to " + destination_folder
 
 
 def upload_resource_version(uri_dict, work_folder, products_folder=None):
@@ -46,6 +47,7 @@ def upload_resource_version(uri_dict, work_folder, products_folder=None):
     ######################
     # This part manage the case a user writes directly to the product repository
     if os.path.exists(products_destination):
+        msg.new("INFO", "product already exists in repo : " + products_destination)
         return True
     ######################
 
@@ -53,11 +55,12 @@ def upload_resource_version(uri_dict, work_folder, products_folder=None):
     return True
 
 
-def download_resource_version(uri, work_folder):
+def download_resource_version(uri_dict, index, work_folder):
     """build_work_user_filepath
     """
     # build repo work path abort if does not exists
-    repo_work_path = build_repository_path("work", uri)
+    uri_dict['version'] = index
+    repo_work_path = build_repository_path("work", uri_dict)
     # copy repo work to sandbox
     copy_folder_tree(repo_work_path, work_folder)
 

@@ -1,10 +1,10 @@
 import project_config as cfg
 
 
-def build_resource_template_path(resource_type):
+def build_resource_template_path(uri_dict):
     """custom function to build a template path
     """
-    return cfg.TEMPLATE_PATH + "\\" + resource_type
+    return cfg.TEMPLATE_PATH + "\\" + uri_dict['resource_type']
 
 
 def build_work_filepath(uri_dict):
@@ -15,9 +15,10 @@ def build_work_filepath(uri_dict):
     return path
 
 
-def build_product_filepath(uri_dict):
+def build_product_filepath(version_uri_dict):
     """custom function to build a user product resource path.
     """
-    path = cfg.PRODUCT_USER_ROOT
-    path += "\\" + uri_dict['resource_type'] + "\\" + uri_dict['entity'].replace(":", "\\")
+    version = str(version_uri_dict['version']).zfill(cfg.VERSION_PADDING)
+    path = cfg.PRODUCT_USER_ROOT + "\\" + version_uri_dict['resource_type']
+    path += "\\" + version_uri_dict['entity'].replace(":", "\\") + "\\" + cfg.VERSION_PREFIX + version
     return path
