@@ -1,13 +1,14 @@
 import pulse.uri_tools as uri_tools
-import pulse.file_manager as fm
+import pulse.repository_linker as fm
 import pulse.path_resolver as pr
 import pulse.database_linker as db
 import pulse.message as msg
 import pulse.hooks as hooks
 import json
 import os
-import shutil
+import project_config as cfg
 from datetime import datetime
+import file_utils as fu
 
 class PulseObject:
     def __init__(self, uri):
@@ -51,6 +52,7 @@ class Version(PulseObject):
 
 
 class Resource(PulseObject):
+    # TODO : convert last_version to string attr
     def __init__(self, uri):
         PulseObject.__init__(self, uri)
         self.lock = False
@@ -88,6 +90,7 @@ class Resource(PulseObject):
         return version
 
     def initialize_data(self):
+        # TODO : save a the version data
         # abort if the resource already exists
         if get_resource(self.uri):
             msg.new('ERROR', "there's already a resource named : " + self.uri)
@@ -118,7 +121,11 @@ class Resource(PulseObject):
             msg.new('ERROR', "this resource is not in your sandbox")
             return
 
-        # TODO : check the work status
+        # check the work status
+        if not self.get_work_file_changes():
+            msg.new('ERROR', "no file change to commit")
+            return
+
 
         # launch the pre commit hook
         hooks.pre_commit(self)
@@ -126,7 +133,11 @@ class Resource(PulseObject):
         new_version = self._create_version(work_folder, products_folder, comment)
 
         # TODO : Make user products read only
-        # TODO : save resource files content and date to the version data
+        # TODO : save work files content and date to the version data
+        files_dict = fu.get_directory_content(work_folder)
+        with open(self.get_work_data_filepath(), "w") as write_file:
+            json.dump(files_dict, write_file, indent=4, sort_keys=True)
+
         # TODO : update the sandbox version number
 
         msg.new('INFO', "New version published : " + str(self.last_version))
@@ -188,8 +199,28 @@ class Resource(PulseObject):
             self.lock_user = user
         self.write_data()
 
-    def get_status(self):
-        return vars(self)
+    def get_work_file_changes(self):
+        # TODO: add also products file if there's some in products folder
+        current_work_data = fu.get_directory_content(pr.build_work_filepath(self))
+        json_work = self.get_work_data_filepath()
+
+        past_work_data = {}
+        if os.path.exists(json_work):
+            with open(json_work, "r") as read_file:
+                past_work_data = json.load(read_file)
+
+        return fu.compare_directory_content(current_work_data, past_work_data)
+
+    def show_work_files_changes(self):
+        for change in self.get_work_file_changes():
+            print change
+
+
+    def get_work_data_filepath(self):
+        path = pr.build_work_filepath(self) + "\\"
+        path += cfg.VERSION_PREFIX + str(self.last_version).zfill(cfg.VERSION_PADDING) + ".json"
+        return path
+
 
 
 def get_date_time():
@@ -208,25 +239,6 @@ def create_resource(uri):
     return resource.initialize_data()
 
 
-def get_directory_content(directory):
-    files_dict = {}
-    for root, subdirectories, files in os.walk(directory):
-        for f in files:
-            filepath = os.path.join(root, f)
-            files_dict[filepath] = {"mdate": os.path.getmtime(filepath)}
-    return files_dict
-
-
-def write_directory_content(directory, json_filepath=None):
-    files_dict = get_directory_content(directory)
-    if not json_filepath:
-        json_filepath = os.path.join(directory, "content.json")
-
-    with open(json_filepath, "w") as write_file:
-        json.dump(files_dict, write_file, indent=4, sort_keys=True)
-    return json_filepath
-
-
 def get_resource(uri):
     resource = Resource(uri)
     if resource.read_data():
@@ -242,12 +254,16 @@ if __name__ == '__main__':
     import random
     letters = string.ascii_lowercase
     entity_name = ''.join(random.choice(letters) for i in range(10))
-    #entity_name = "fixedB"
+    entity_name = "fixedB"
 
     uri_test = entity_name + "-modeling"
 
-    create_resource(uri_test)
+    #create_resource(uri_test)
     resource = get_resource(uri_test)
+    resource.show_work_files_changes()
+    raise SystemExit(0)
+
+
     resource.checkout()
     resource.set_lock(True)
     resource.commit("very first time")
