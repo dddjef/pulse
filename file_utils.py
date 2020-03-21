@@ -16,12 +16,13 @@ def compare_directory_content(current_work_data, past_work_data):
     return file_changes
 
 
-def get_directory_content(directory):
+def get_directory_content(directory, exclude_list=[]):
     files_dict = {}
     for root, subdirectories, files in os.walk(directory):
         for f in files:
             filepath = os.path.join(root, f)
-            files_dict[filepath] = {"date": os.path.getmtime(filepath)}
+            if filepath not in exclude_list:
+                files_dict[filepath] = {"date": os.path.getmtime(filepath)}
     return files_dict
 
 

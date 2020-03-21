@@ -43,6 +43,7 @@ class Version(PulseObject):
         PulseObject.__init__(self, uri)
         self.uri = uri
         self.comment = ""
+        self.files = []
 
     def get_resource(self):
         pass
@@ -84,6 +85,7 @@ class Resource(PulseObject):
 
         # register changes to database
         version.comment = comment
+        #version.files = fu.get_directory_content(source_work)
         version.write_data()
         self.last_version = index
         self.write_data()
@@ -103,6 +105,7 @@ class Resource(PulseObject):
         template_path = pr.build_resource_template_path(self)
 
         self._create_version(template_path + "\\WORK", template_path + "\\PRODUCTS", "init from " + template_path)
+
         msg.new('INFO', "resource initialized : " + self.uri)
 
         return self
@@ -126,21 +129,21 @@ class Resource(PulseObject):
             msg.new('ERROR', "no file change to commit")
             return
 
-
         # launch the pre commit hook
         hooks.pre_commit(self)
 
         new_version = self._create_version(work_folder, products_folder, comment)
 
         # TODO : Make user products read only
-        # TODO : save work files content and date to the version data
-        files_dict = fu.get_directory_content(work_folder)
-        with open(self.get_work_data_filepath(), "w") as write_file:
-            json.dump(files_dict, write_file, indent=4, sort_keys=True)
 
-        # TODO : update the sandbox version number
+        self.save_work_files_content()
 
         msg.new('INFO', "New version published : " + str(self.last_version))
+
+    def save_work_files_content(self):
+        files_dict = fu.get_directory_content(pr.build_work_filepath(self))
+        with open(self.get_work_data_filepath(), "w") as write_file:
+            json.dump(files_dict, write_file, indent=4, sort_keys=True)
 
     def checkout(self, index="last"):
         """Download the resource work files in the user sandbox.
@@ -162,7 +165,13 @@ class Resource(PulseObject):
         # download the version
         fm.download_resource_version(self, index, destination_folder)
 
-        # TODO : create the attended products folder
+        # create the version data file if it does not exits
+        version_data_file = self.get_work_data_filepath()
+        if not os.path.exists(version_data_file):
+            self.save_work_files_content()
+
+        # create the attended products folder
+        os.makedirs(pr.build_product_filepath(self, self.last_version + 1))
 
         msg.new('INFO', "resource check out in : " + destination_folder)
 
@@ -176,7 +185,7 @@ class Resource(PulseObject):
         trash_directory = pr.build_trash_filepath(self)
         if not os.path.exists(trash_directory):
             os.makedirs(trash_directory)
-        trash_work =  trash_directory + "\\" + os.path.basename(work_folder) + "_" + get_date_time()
+        trash_work = trash_directory + "\\" + os.path.basename(work_folder) + "_" + get_date_time()
 
         try:
             os.rename(work_folder, trash_work)
@@ -201,8 +210,8 @@ class Resource(PulseObject):
 
     def get_work_file_changes(self):
         # TODO: add also products file if there's some in products folder
-        current_work_data = fu.get_directory_content(pr.build_work_filepath(self))
         json_work = self.get_work_data_filepath()
+        current_work_data = fu.get_directory_content(pr.build_work_filepath(self), exclude_list=[json_work])
 
         past_work_data = {}
         if os.path.exists(json_work):
@@ -215,12 +224,10 @@ class Resource(PulseObject):
         for change in self.get_work_file_changes():
             print change
 
-
     def get_work_data_filepath(self):
         path = pr.build_work_filepath(self) + "\\"
-        path += cfg.VERSION_PREFIX + str(self.last_version).zfill(cfg.VERSION_PADDING) + ".json"
+        path += cfg.VERSION_PREFIX + str(self.last_version).zfill(cfg.VERSION_PADDING) + ".pipe"
         return path
-
 
 
 def get_date_time():
