@@ -20,6 +20,8 @@ def get_directory_content(directory):
     files_dict = {}
     for root, subdirectories, files in os.walk(directory):
         for f in files:
+            if f.endswith(".pipe"):
+                continue
             filepath = os.path.join(root, f)
             files_dict[filepath] = {"date": os.path.getmtime(filepath)}
     return files_dict

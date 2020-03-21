@@ -10,6 +10,7 @@ import project_config as cfg
 from datetime import datetime
 import file_utils as fu
 
+
 class PulseObject:
     def __init__(self, uri):
         self.uri = uri
@@ -101,8 +102,8 @@ class Resource(PulseObject):
         for k, v in uri_tools.string_to_dict(self.uri).items():
             setattr(self, k, v)
 
+        # create an initial version based on templates
         template_path = pr.build_resource_template_path(self)
-
         self._create_version(template_path + "\\WORK", template_path + "\\PRODUCTS", "init from " + template_path)
 
         msg.new('INFO', "resource initialized : " + self.uri)
@@ -117,6 +118,7 @@ class Resource(PulseObject):
         # build work and products path
         work_folder = pr.build_work_filepath(self)
         products_folder = pr.build_product_filepath(self, self.last_version + 1)
+        pipe_data = self.get_work_pipe_filepath()
 
         # TODO : check the work is up to date
 
@@ -136,6 +138,13 @@ class Resource(PulseObject):
         new_version = self._create_version(work_folder, products_folder, comment)
 
         # TODO : Make user products read only
+
+        # TODO : increment the pipe file
+        new_pipe_data = self.get_work_pipe_filepath()
+        os.rename(pipe_data, new_pipe_data)
+
+        # TODO : create new products directory
+        os.makedirs(pr.build_product_filepath(self, self.last_version + 1))
 
         msg.new('INFO', "New version published : " + str(self.last_version))
 
@@ -163,7 +172,17 @@ class Resource(PulseObject):
         # create the attended products folder
         os.makedirs(pr.build_product_filepath(self, self.last_version + 1))
 
+        # if there's no pipe file, create one
+        pipe_data = self.get_work_pipe_filepath()
+        if not os.path.exists(pipe_data):
+            with open(pipe_data, "w") as write_file:
+                json.dump({"dependencies": []}, write_file, indent=4, sort_keys=True)
+
         msg.new('INFO', "resource check out in : " + destination_folder)
+
+    def get_work_pipe_filepath(self):
+        work_folder = pr.build_work_filepath(self)
+        return work_folder + "\\" + cfg.VERSION_PREFIX + str(self.last_version + 1).zfill(cfg.VERSION_PADDING) + ".pipe"
 
     def trash_work(self):
         work_folder = pr.build_work_filepath(self)
