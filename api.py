@@ -43,7 +43,7 @@ class Version(PulseObject):
         PulseObject.__init__(self, uri)
         self.uri = uri
         self.comment = ""
-        self.files = []
+        self.work_files = []
 
     def get_resource(self):
         pass
@@ -85,14 +85,13 @@ class Resource(PulseObject):
 
         # register changes to database
         version.comment = comment
-        #version.files = fu.get_directory_content(source_work)
+        version.work_files = fu.get_directory_content(source_work)
         version.write_data()
         self.last_version = index
         self.write_data()
         return version
 
     def initialize_data(self):
-        # TODO : save a the version data
         # abort if the resource already exists
         if get_resource(self.uri):
             msg.new('ERROR', "there's already a resource named : " + self.uri)
@@ -120,12 +119,14 @@ class Resource(PulseObject):
         products_folder = pr.build_product_filepath(self, self.last_version + 1)
 
         # TODO : check the work is up to date
+
         if not os.path.exists(work_folder):
             msg.new('ERROR', "this resource is not in your sandbox")
             return
 
         # check the work status
-        if not self.get_work_file_changes():
+        # TODO : check also there's no new products
+        if not self.get_work_files_changes():
             msg.new('ERROR', "no file change to commit")
             return
 
@@ -136,14 +137,8 @@ class Resource(PulseObject):
 
         # TODO : Make user products read only
 
-        self.save_work_files_content()
-
         msg.new('INFO', "New version published : " + str(self.last_version))
 
-    def save_work_files_content(self):
-        files_dict = fu.get_directory_content(pr.build_work_filepath(self))
-        with open(self.get_work_data_filepath(), "w") as write_file:
-            json.dump(files_dict, write_file, indent=4, sort_keys=True)
 
     def checkout(self, index="last"):
         """Download the resource work files in the user sandbox.
@@ -164,11 +159,6 @@ class Resource(PulseObject):
 
         # download the version
         fm.download_resource_version(self, index, destination_folder)
-
-        # create the version data file if it does not exits
-        version_data_file = self.get_work_data_filepath()
-        if not os.path.exists(version_data_file):
-            self.save_work_files_content()
 
         # create the attended products folder
         os.makedirs(pr.build_product_filepath(self, self.last_version + 1))
@@ -208,26 +198,14 @@ class Resource(PulseObject):
             self.lock_user = user
         self.write_data()
 
-    def get_work_file_changes(self):
+    def get_work_files_changes(self):
         # TODO: add also products file if there's some in products folder
-        json_work = self.get_work_data_filepath()
-        current_work_data = fu.get_directory_content(pr.build_work_filepath(self), exclude_list=[json_work])
+        current_work_files = fu.get_directory_content(pr.build_work_filepath(self))
 
-        past_work_data = {}
-        if os.path.exists(json_work):
-            with open(json_work, "r") as read_file:
-                past_work_data = json.load(read_file)
+        last_version = Version(self.uri + "@" + str(self.last_version))
+        last_version.read_data()
 
-        return fu.compare_directory_content(current_work_data, past_work_data)
-
-    def show_work_files_changes(self):
-        for change in self.get_work_file_changes():
-            print change
-
-    def get_work_data_filepath(self):
-        path = pr.build_work_filepath(self) + "\\"
-        path += cfg.VERSION_PREFIX + str(self.last_version).zfill(cfg.VERSION_PADDING) + ".pipe"
-        return path
+        return fu.compare_directory_content(current_work_files, last_version.work_files)
 
 
 def get_date_time():
