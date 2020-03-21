@@ -246,31 +246,3 @@ def get_resource(uri):
     else:
         return None
 
-
-if __name__ == '__main__':
-
-
-    import string
-    import random
-    letters = string.ascii_lowercase
-    entity_name = ''.join(random.choice(letters) for i in range(10))
-    entity_name = "fixedB"
-
-    uri_test = entity_name + "-modeling"
-
-    #create_resource(uri_test)
-    resource = get_resource(uri_test)
-    resource.show_work_files_changes()
-    raise SystemExit(0)
-
-
-    resource.checkout()
-    resource.set_lock(True)
-    resource.commit("very first time")
-    resource.trash_work()
-
-
-    # if not my_version:
-    #     my_version = Version(uri_test + "@0")
-
-
