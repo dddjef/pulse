@@ -66,8 +66,10 @@ class Resource(PulseObject):
     def get_version(self, index):
         pass
 
-    def user_needs_lock(self):
-        if self.lock and self.lock_user != get_user_name():
+    def user_needs_lock(self, user=None):
+        if not user:
+            user = get_user_name()
+        if self.lock and self.lock_user != user:
             msg.new('ERROR', "the resource is locked by another user")
             return True
         return False
@@ -118,9 +120,12 @@ class Resource(PulseObject):
         # build work and products path
         work_folder = pr.build_work_filepath(self)
         products_folder = pr.build_product_filepath(self, self.last_version + 1)
-        pipe_data = self.get_work_pipe_filepath()
+
 
         # TODO : check the work is up to date
+        pipe_data = self.get_work_pipe_filepath()
+        if not os.path.exists(pipe_data):
+            msg.new('ERROR', "")
 
         if not os.path.exists(work_folder):
             msg.new('ERROR', "this resource is not in your sandbox")
@@ -207,7 +212,7 @@ class Resource(PulseObject):
         # abort if the resource is locked by someone else and the user doesn't want to steal the lock
         if not steal:
             self.read_data()
-            if self.user_needs_lock():
+            if self.user_needs_lock(user):
                 return
 
         self.lock = state
@@ -216,6 +221,7 @@ class Resource(PulseObject):
         else:
             self.lock_user = user
         self.write_data()
+        msg.new('INFO', 'resource lock state is now ' + str(state))
 
     def get_work_files_changes(self):
         # TODO: add also products file if there's some in products folder
