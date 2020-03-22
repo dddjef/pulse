@@ -122,10 +122,12 @@ class Resource(PulseObject):
         products_folder = pr.build_product_filepath(self, self.last_version + 1)
 
 
-        # TODO : check the work is up to date
+        # check the work is up to date
         pipe_data = self.get_work_pipe_filepath()
         if not os.path.exists(pipe_data):
-            msg.new('ERROR', "")
+            last_version_name = cfg.VERSION_PREFIX + str(self.last_version).zfill(cfg.VERSION_PADDING)
+            msg.new('ERROR', "Your version is deprecated, it should be " + last_version_name)
+            return
 
         if not os.path.exists(work_folder):
             msg.new('ERROR', "this resource is not in your sandbox")

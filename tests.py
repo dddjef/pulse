@@ -5,7 +5,7 @@ import pulse.path_resolver as pr
 
 letters = string.ascii_lowercase
 entity_name = ''.join(random.choice(letters) for i in range(10))
-entity_name = "fixedT"
+entity_name = "fixedU"
 
 uri_test = entity_name + "-modeling"
 
