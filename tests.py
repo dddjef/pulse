@@ -5,7 +5,7 @@ import pulse.path_resolver as pr
 
 letters = string.ascii_lowercase
 entity_name = ''.join(random.choice(letters) for i in range(10))
-entity_name = "fixedU"
+entity_name = "fixedX"
 
 uri_test = entity_name + "-modeling"
 
@@ -13,9 +13,9 @@ create_resource(uri_test)
 resource = get_resource(uri_test)
 
 
-resource.checkout()
-print resource.get_work_files_changes()
+work = resource.checkout()
+print work.get_files_changes()
 # resource.set_lock(True)
-resource.commit("very first time")
+work.commit("very first time")
 
 # resource.trash_work()
