@@ -1,5 +1,5 @@
 import pulse.uri_tools as uri_tools
-import pulse.repository_linker as fm
+import pulse.repository_linker as repo
 import pulse.path_resolver as pr
 import pulse.database_linker as db
 import pulse.message as msg
@@ -16,7 +16,7 @@ class PulseObject:
         self.uri = uri
 
     def write_data(self):
-        # get the storable data
+        # get the storage data
         # data = dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_'))
         db.write(entity_type=self.__class__.__name__, uri=self.uri, data_dict=vars(self))
 
@@ -60,15 +60,31 @@ class Work:
     def __init__(self, folder, resource):
         self.folder = folder
         self.resource = resource
-        self.version = resource.last_version + 1
-        self.products_folder = pr.build_products_filepath(resource.entity, resource.resource_type, self.version)
+        self.version = 0
+        self.products_folder = ""
+        self.set_version(resource.last_version + 1)
 
     def set_version(self, index):
-        old_pipe_data = self.version_pipe_filepath()
         self.version = index
-        new_pipe_data = self.version_pipe_filepath()
-        os.rename(old_pipe_data, new_pipe_data)
-        self.products_folder = pr.build_products_filepath(self.resource.entity, self.resource.resource_type, index)
+
+        # if the version file already exists, abort file creation
+        new_version_file = self.version_pipe_filepath(self.version)
+        if os.path.exists(new_version_file):
+            return
+
+        # create the new version file
+        with open(new_version_file, "w") as write_file:
+            json.dump({"created_by": get_user_name()}, write_file, indent=4, sort_keys=True)
+
+        # remove the old version file
+        old_version_file = self.version_pipe_filepath(self.version-1)
+        if os.path.exists(old_version_file):
+            os.remove(old_version_file)
+
+        # create a new products folder
+        self.products_folder = pr.build_products_filepath(self.resource.entity, self.resource.resource_type, self.version)
+        print "create dir " + self.products_folder
+        os.makedirs(self.products_folder)
 
     def commit(self, comment=""):
         # check current the user permission
@@ -95,9 +111,6 @@ class Work:
         # increment the work
         self.set_version(self.version + 1)
 
-        # create new products directory
-        os.makedirs(self.products_folder)
-
         msg.new('INFO', "New version published : " + str(self.resource.last_version))
 
     def trash(self):
@@ -111,8 +124,8 @@ class Work:
             return False
         msg.new('INFO', "work move to trash " + trash_work)
 
-    def version_pipe_filepath(self):
-        return self.folder + "\\" + cfg.VERSION_PREFIX + str(self.version).zfill(cfg.VERSION_PADDING) + ".pipe"
+    def version_pipe_filepath(self, index):
+        return self.folder + "\\" + cfg.VERSION_PREFIX + str(index).zfill(cfg.VERSION_PADDING) + ".pipe"
 
     def get_files_changes(self):
         # TODO: add also products file if there's some in products folder
@@ -161,7 +174,7 @@ class Resource(PulseObject):
 
         # copy work to a new version in repository
         version = Version(self.uri + "@" + str(index))
-        fm.upload_resource_version(self, index, source_work, source_products)
+        repo.upload_resource_version(self, index, source_work, source_products)
 
         # register changes to database
         version.comment = comment
@@ -209,18 +222,10 @@ class Resource(PulseObject):
             return work
 
         # download the version
-        fm.download_resource_version(self, index, destination_folder)
+        repo.download_resource_version(self, index, destination_folder)
 
-        # TODO : fill the json data with something relevant (create the file at commit to ensure it exists?)
-        # if there's no pipe file, create one
+        # create the work object
         work = Work(destination_folder, self)
-        pipe_data = work.version_pipe_filepath()
-        if not os.path.exists(pipe_data):
-            with open(pipe_data, "w") as write_file:
-                json.dump({"dependencies": []}, write_file, indent=4, sort_keys=True)
-
-        # create the attended products folder
-        os.makedirs(work.products_folder)
 
         msg.new('INFO', "resource check out in : " + destination_folder)
         return work
