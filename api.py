@@ -57,6 +57,8 @@ class Version(PulseObject):
 
 
 class Work:
+    # TODO : add methods to work with work inputs list (add, remove)
+    # TODO : examine if this class could be derived from Version. (resource, inputs, folder...)
     def __init__(self, folder, resource):
         self.folder = folder
         self.resource = resource
@@ -153,7 +155,6 @@ class Work:
         
 class Resource(PulseObject):
     # TODO : add a last version name attribute
-    # TODO : add methods to work with work inputs list
     # TODO : support for products inputs
     def __init__(self, uri):
         PulseObject.__init__(self, uri)
@@ -211,6 +212,10 @@ class Resource(PulseObject):
 
         # create an initial version based on templates
         template_path = pr.build_resource_template_path(self)
+        if not os.path.exists(template_path):
+            msg.new('ERROR', "no template found for " + self.resource_type)
+            return
+
         self.create_version(template_path + "\\WORK", template_path + "\\PRODUCTS", "init from " + template_path)
 
         msg.new('INFO', "resource initialized : " + self.uri)
