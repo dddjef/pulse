@@ -66,6 +66,7 @@ class Work:
 
     def set_version(self, index):
         self.version = index
+        self.products_folder = pr.build_products_filepath(self.resource.entity, self.resource.resource_type, self.version)
 
         # if the version file already exists, abort file creation
         new_version_file = self.version_pipe_filepath(self.version)
@@ -82,7 +83,6 @@ class Work:
             os.remove(old_version_file)
 
         # create a new products folder
-        self.products_folder = pr.build_products_filepath(self.resource.entity, self.resource.resource_type, self.version)
         print "create dir " + self.products_folder
         os.makedirs(self.products_folder)
 
@@ -135,13 +135,20 @@ class Work:
         return self.folder + "\\" + cfg.VERSION_PREFIX + str(index).zfill(cfg.VERSION_PADDING) + ".pipe"
 
     def get_files_changes(self):
-        # TODO: add also products file if there's some in products folder
+
         current_work_files = fu.get_directory_content(self.folder)
     
         last_version = Version(self.resource.uri + "@" + str(self.resource.last_version))
         last_version.read_data()
     
-        return fu.compare_directory_content(current_work_files, last_version.work_files)
+        diff = fu.compare_directory_content(current_work_files, last_version.work_files)
+
+        # add products
+        print "path : ", self.products_folder
+        for path in os.listdir(self.products_folder):
+            diff.append((path, "added"))
+
+        return diff
 
         
 class Resource(PulseObject):

@@ -31,7 +31,7 @@ def copy_folder_tree(source_folder, destination_folder):
         os.makedirs(parent_folder)
 
     shutil.copytree(source_folder, destination_folder)
-    print "tree copy " + source_folder + " to " + destination_folder
+    msg.new('DEBUG', "repo copy " + source_folder + " to " + destination_folder)
 
 
 def upload_resource_version(resource, version, work_folder, products_folder=None):
@@ -72,20 +72,3 @@ def download_product(entity, resource_type, version, product_type):
     # build_products_repository_path
     # copy repo products type to products_user_filepath
 
-
-
-def lock(entity, resource_type):
-    """store a lock information for the given resource.
-    """
-    # Save the current user name, the date, the workstation
-
-
-def unlock(entity, resource_type):
-    """remove the lock from the resource
-    """
-
-
-def get_lock_info(entity, resource_type):
-    """return lock information for the given resource.
-    return None if there is no current lock
-    """

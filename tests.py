@@ -6,7 +6,7 @@ import string
 import random
 letters = string.ascii_lowercase
 entity_name = ''.join(random.choice(letters) for i in range(10))
-#entity_name = "fixedAG"
+entity_name = "fixedAH"
 
 
 uri_test = entity_name + "-modeling"
@@ -16,7 +16,7 @@ work = resource.checkout()
 print work.get_files_changes()
 resource.set_lock(True)
 work.commit("very first time")
-work.trash()
+# work.trash()
 
 
 # resource.trash_work()
