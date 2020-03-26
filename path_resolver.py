@@ -1,5 +1,10 @@
 import project_config as cfg
 import os
+from datetime import datetime
+
+def get_date_time():
+    now = datetime.now()
+    return now.strftime("%d-%m-%Y_%H-%M-%S")
 
 def build_resource_template_path(resource):
     """custom function to build a template path
@@ -18,9 +23,8 @@ def build_work_filepath(resource):
 def build_project_trash_filepath(work):
     """custom function to build a sandbox trash path.
     """
-    path = cfg.WORK_USER_ROOT + "\\" + cfg.PROJECT_SHORT_NAME + "\\" + "TRASH"
-    if not os.path.exists(path):
-        os.makedirs(path)
+    path = cfg.WORK_USER_ROOT + "\\" + cfg.PROJECT_SHORT_NAME + "\\" + "TRASH" + "\\"
+    path += work.resource.resource_type + "-" + work.resource.entity.replace(":", "_") + "-" + get_date_time()
     return path
 
 

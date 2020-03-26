@@ -28,3 +28,10 @@ def get_directory_content(directory):
     return files_dict
 
 
+def test_path_write_access(path):
+    try:
+        os.rename(path, path + 'tmp')
+        os.rename(path + 'tmp', path)
+    except:
+        return False
+    return True

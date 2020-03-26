@@ -7,8 +7,8 @@ import pulse.hooks as hooks
 import json
 import os
 import project_config as cfg
-from datetime import datetime
 import file_utils as fu
+import shutil
 
 
 class PulseObject:
@@ -114,15 +114,22 @@ class Work:
         msg.new('INFO', "New version published : " + str(self.resource.last_version))
 
     def trash(self):
-        trash_directory = pr.build_project_trash_filepath(self)
-        trash_work = trash_directory + "\\" + os.path.basename(self.folder) + "_" + get_date_time()
+        # test the work and products folder are movable
+        for path in [self.folder, self.products_folder]:
+            if not fu.test_path_write_access(path):
+                msg.new('ERROR', "can't move folder " + path)
+                return
 
-        try:
-            os.rename(self.folder, trash_work)
-        except:
-            msg.new('ERROR', "work folder can't be removed. Close all application using : " + self.folder)
-            return False
-        msg.new('INFO', "work move to trash " + trash_work)
+        # create the trash work directory
+        trash_directory = pr.build_project_trash_filepath(self)
+        os.makedirs(trash_directory)
+
+        # move folders
+        shutil.move(self.folder, trash_directory + "\\WORK")
+        shutil.move(self.products_folder, trash_directory + "\\PRODUCTS")
+
+        msg.new('INFO', "work move to trash " + trash_directory)
+        return True
 
     def version_pipe_filepath(self, index):
         return self.folder + "\\" + cfg.VERSION_PREFIX + str(index).zfill(cfg.VERSION_PADDING) + ".pipe"
@@ -254,11 +261,6 @@ def get_inputs(folder):
     with open(json_filepath, "r") as read_file:
         data = json.load(read_file)    
     return data
-
-
-def get_date_time():
-    now = datetime.now()
-    return now.strftime("%d-%m-%Y_%H-%M-%S")
 
 
 def get_user_name():
