@@ -1,5 +1,5 @@
 PROJECT_SHORT_NAME = "project_test"
-TEMPLATE_PATH = "D:\\pipe\\pulse\\test\\templates"
+# TODO : move repo path to repo module
 WORK_REPOSITORY_ROOT = "D:\\pipe\\pulse\\test\\work_repository"
 PRODUCT_REPOSITORY_ROOT = "D:\\pipe\\pulse\\test\\product_repository"
 WORK_USER_ROOT = "S:"

@@ -6,6 +6,7 @@ def compare_directory_content(current_work_data, past_work_data):
     for filepath in current_work_data:
         if filepath in past_work_data:
             if current_work_data[filepath]['date'] != past_work_data[filepath]['date']:
+                print("date diff", current_work_data[filepath], past_work_data[filepath])
                 file_changes.append((filepath, "edited"))
             past_work_data.pop(filepath)
         else:

@@ -168,7 +168,8 @@ class Work():
 
     def get_products_directory(self):
         return pr.build_products_filepath(self.entity, self.resource_type, self.version)
-        
+
+
 class Resource(PulseObject):
     # TODO : add a last version name attribute
     # TODO : support for products inputs
@@ -177,8 +178,10 @@ class Resource(PulseObject):
         self.lock = False
         self.lock_user = ''
         self.last_version = -1
-        self.resource_type = "unknown"
-        self.entity = ""
+        # set resource attributes based on the parsed uri
+        uri_dict = uri_tools.string_to_dict(self.uri)
+        self.resource_type = uri_dict["resource_type"]
+        self.entity = uri_dict["entity"]
 
     def get_work(self):
         work_folder = pr.build_work_filepath(self)
@@ -220,14 +223,6 @@ class Resource(PulseObject):
 
     def initialize_data(self, template_resource_uri=None):
         # TODO : init from nothing create a new template, init from something can be a template or another resource
-        # abort if the resource already exists
-        if get_resource(self.uri):
-            msg.new('ERROR', "there's already a resource named : " + self.uri)
-            return
-
-        # set resource attributes based on the parsed uri
-        for k, v in uri_tools.string_to_dict(self.uri).items():
-            setattr(self, k, v)
 
         # if the user wants to create a template, start from an empty directory
         if self.entity == TEMPLATE_NAME:
@@ -336,6 +331,8 @@ def get_user_name():
 def create_resource(uri):
     """Create a new resource for the given entity and type
     """
+    if get_resource(uri):
+        raise Exception ("resource already exists")
     resource = Resource(uri)
     return resource.initialize_data()
 
