@@ -4,21 +4,20 @@ import shutil
 import message as msg
 
 
-def build_repository_path(root, resource, version=None):
+def build_repository_path(root, commit):
     """custom function to build a repository path
     """
     if root == "work":
         root = cfg.WORK_REPOSITORY_ROOT
-    elif root == "product":
+    elif root == "products":
         root = cfg.PRODUCT_REPOSITORY_ROOT
     else:
         msg.new('ERROR', "ABORT : unknown uri type")
         return
 
-    entities = resource.entity.replace(":", "\\")
-    path = root + "\\" + resource.resource_type + "\\" + entities
-    if version != None:
-        path += "\\" + cfg.VERSION_PREFIX + str(version).zfill(cfg.VERSION_PADDING)
+    entities = commit.entity.replace(":", "\\")
+    path = root + "\\" + commit.resource_type + "\\" + entities
+    path += "\\" + cfg.VERSION_PREFIX + str(commit.version).zfill(cfg.VERSION_PADDING)
     return path
 
 
@@ -29,22 +28,31 @@ def copy_folder_tree(source_folder, destination_folder):
     parent_folder = os.path.dirname(destination_folder.rstrip("\\"))
     if not os.path.exists(parent_folder):
         os.makedirs(parent_folder)
-
-    shutil.copytree(source_folder, destination_folder)
     msg.new('DEBUG', "repo copy " + source_folder + " to " + destination_folder)
+    shutil.copytree(source_folder, destination_folder)
 
 
-def upload_resource_version(resource, version, work_folder, products_folder=None):
+
+def copy_resource_commit(source_commit, target_commit):
+    source_repo_work_path = build_repository_path("work", source_commit)
+    source_repo_products_path = build_repository_path("products", source_commit)
+    target_repo_work_path = build_repository_path("work", target_commit)
+    target_repo_products_path = build_repository_path("products", target_commit)
+    copy_folder_tree(source_repo_work_path, target_repo_work_path)
+    copy_folder_tree(source_repo_products_path, target_repo_products_path)
+
+
+def upload_resource_commit(commit, work_folder, products_folder=None):
     """create a new resource default folders and file from a resource template
     """
 
     # Copy work folder to repo
-    copy_folder_tree(work_folder, build_repository_path("work", resource, version))
+    copy_folder_tree(work_folder, build_repository_path("work", commit))
 
     # Copy products folder to repo
     if not products_folder or not os.path.exists(products_folder):
         return True
-    products_destination = build_repository_path("product", resource, version)
+    products_destination = build_repository_path("products", commit)
 
     ######################
     # This part manage the case a user writes directly to the product repository
@@ -57,15 +65,15 @@ def upload_resource_version(resource, version, work_folder, products_folder=None
     return True
 
 
-def download_resource_version(resource, version, work_folder):
+def download_resource_commit(commit, work_folder):
     """build_work_user_filepath
     """
-    repo_work_path = build_repository_path("work", resource, version)
+    repo_work_path = build_repository_path("work", commit)
     # copy repo work to sandbox
     copy_folder_tree(repo_work_path, work_folder)
 
 
-def download_product(entity, resource_type, version, product_type):
+def download_product(entity, resource_type, commit, product_type):
     """build_products_user_filepath
     """
     # abort if a product_type already exists in products_user_filepath

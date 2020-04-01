@@ -25,6 +25,8 @@ def get_directory_content(directory):
             filepath = os.path.join(root, f)
             relative_path = filepath[len(directory):]
             files_dict[relative_path] = {"date": os.path.getmtime(filepath)}
+    print directory
+    print files_dict
     return files_dict
 
 

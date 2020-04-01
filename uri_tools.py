@@ -23,4 +23,7 @@ def dict_to_string(uri_dict):
     :param uri_string:
     :return uri dict:
     """
-    return uri_dict["entity"] + "-" + uri_dict['resource_type'] + "@" + str(uri_dict['version'].zfill(cfg.VERSION_PADDING))
+    uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
+    if 'version' in uri_dict:
+        uri += "@" + str(uri_dict['version'].zfill(cfg.VERSION_PADDING))
+    return uri

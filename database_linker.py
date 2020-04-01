@@ -11,7 +11,7 @@ DB_folder = cfg.WORK_REPOSITORY_ROOT + "\\DB"
 def get_json_filepath(entity_type, uri):
     if entity_type == 'Resource':
         return DB_folder + "\\resources\\" + uri + "\\resource.json"
-    elif entity_type == 'Version':
+    elif entity_type == 'Commit':
         filename = cfg.VERSION_PREFIX + uri.split("@")[1].zfill(cfg.VERSION_PADDING) + ".json"
         return DB_folder + "\\resources\\" + uri.split("@")[0] + "\\" + filename
     else:
@@ -29,6 +29,8 @@ def write(entity_type, uri, data_dict):
 
 def read(entity_type, uri):
     json_filepath = get_json_filepath(entity_type, uri)
+    print uri
+    print json_filepath
     if not os.path.exists(json_filepath):
         return None
 
