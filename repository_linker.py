@@ -3,14 +3,17 @@ import os
 import shutil
 import message as msg
 
+work_repository_root = "D:\\pipe\\pulse\\test\\work_repository"
+product_repository_root = "D:\\pipe\\pulse\\test\\product_repository"
+
 
 def build_repository_path(root, commit):
     """custom function to build a repository path
     """
     if root == "work":
-        root = cfg.WORK_REPOSITORY_ROOT
+        root = work_repository_root
     elif root == "products":
-        root = cfg.PRODUCT_REPOSITORY_ROOT
+        root = product_repository_root
     else:
         msg.new('ERROR', "ABORT : unknown uri type")
         return
@@ -30,7 +33,6 @@ def copy_folder_tree(source_folder, destination_folder):
         os.makedirs(parent_folder)
     msg.new('DEBUG', "repo copy " + source_folder + " to " + destination_folder)
     shutil.copytree(source_folder, destination_folder)
-
 
 
 def copy_resource_commit(source_commit, target_commit):

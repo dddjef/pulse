@@ -8,21 +8,34 @@ import random
 
 class TestBasic(unittest.TestCase):
     def setUp(self):
+
+        # start by a cleanup
+        directories_to_clean = [
+            r"D:\pipe\pulse\test\sandbox",
+            r"D:\pipe\pulse\test\work_repository",
+            r"D:\pipe\pulse\test\product_repository",
+            r"D:\pipe\pulse\test\DB",
+            r"D:\pipe\pulse\test\user_products",
+            ]
+
+        for directory in directories_to_clean:
+            for filename in os.listdir(directory):
+                file_path = os.path.join(directory, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    print('Failed to delete %s. Reason: %s' % (file_path, e))
+
         letters = string.ascii_lowercase
         random_name = ''.join(random.choice(letters) for i in range(10))
-        resource_type = "type_" + random_name[0:4]
+        resource_type = "modeling"
         self.uri_template = TEMPLATE_NAME + "-" + resource_type
-        self.uri_test = "test" + "-" + resource_type
+        self.uri_test = "ch_anna" + "-" + resource_type
         self.uri_rand = random_name + "-" + resource_type
 
-
-
-    def test_create_existing_resource(self):
-        pass
-
-
-
-    # TODO : add cleanup functions
     def test_complete_scenario(self):
         # create a new template resource
         template = create_resource(self.uri_template)

@@ -4,8 +4,7 @@ import repository_linker as fm
 import os
 import message as msg
 
-DB_folder = cfg.WORK_REPOSITORY_ROOT + "\\DB"
-
+DB_folder = "D:\\pipe\\pulse\\test\\DB"
 
 
 def get_json_filepath(entity_type, uri):

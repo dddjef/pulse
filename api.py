@@ -332,7 +332,7 @@ def create_resource(uri):
     """Create a new resource for the given entity and type
     """
     if get_resource(uri):
-        raise Exception ("resource already exists")
+        raise Exception ("resource already exists : " + uri)
     resource = Resource(uri)
     return resource.initialize_data()
 
