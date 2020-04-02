@@ -50,7 +50,7 @@ class Commit(PulseObject):
         PulseObject.__init__(self, self.uri)
         self.comment = ""
         self.files = []
-        self.work_inputs = []
+        self.products_inputs = []
         self.entity = resource.entity
         self.resource_type = resource.resource_type
         self.version = version
@@ -70,6 +70,14 @@ class Work():
         self.entity = resource.entity
         self.resource_type = resource.resource_type
         self.data_file = self.directory + "\\work.pipe"
+        self.products_inputs_file = self.directory + "\\products_inputs.pipe"
+        self.products_inputs = []
+
+    def add_product_inputs(self, product_uri):
+        pass
+
+    def remove_product_inputs(self, product_uri):
+        pass
 
     def write(self):
         new_version_file = self.version_pipe_filepath(self.version)
@@ -93,11 +101,17 @@ class Work():
         with open(self.data_file, "w") as write_file:
             json.dump({"version": self.version}, write_file, indent=4, sort_keys=True)
 
+        with open(self.products_inputs_file, "w") as write_file:
+            json.dump(self.products_inputs, write_file, indent=4, sort_keys=True)
+
     def read(self):
-        work_data_file = self.directory + "\\work.pipe"
-        with open(work_data_file, "r") as read_file:
+        with open(self.data_file, "r") as read_file:
             work_data = json.load(read_file)
         self.version = work_data["version"]
+
+        with open(self.products_inputs_file, "r") as read_file:
+            self.products_inputs = json.load(read_file)
+
 
     def commit(self, comment=""):
         # check current the user permission
@@ -119,7 +133,7 @@ class Work():
         hooks.pre_commit(self)
 
         # create new version in resource repository
-        self.resource.create_commit(self.directory, self.get_products_directory(), comment)
+        self.resource.create_commit(self.directory, self.get_products_directory(), comment, self.products_inputs)
 
         # increment the work
         self.version += 1
@@ -185,10 +199,9 @@ class Resource(PulseObject):
     def get_work(self):
         work_folder = pr.build_work_filepath(self)
         if os.path.exists(work_folder):
-            return Work(self, 0)
+            return Work(self)
         else:
             return None
-
 
     def user_needs_lock(self, user=None):
         if not user:
@@ -198,7 +211,7 @@ class Resource(PulseObject):
             return True
         return False
 
-    def create_commit(self, source_work, source_products, comment):
+    def create_commit(self, source_work, source_products, comment, products_inputs):
         index = self.last_version + 1
 
         # check work directory exist
@@ -214,7 +227,7 @@ class Resource(PulseObject):
         commit.comment = comment
         # FIXME the files should include the products too
         commit.files = fu.get_directory_content(source_work)
-        commit.work_inputs = get_inputs(source_work)
+        commit.products_inputs = products_inputs
         commit.write_data()
         self.last_version = index
         self.write_data()
@@ -228,11 +241,13 @@ class Resource(PulseObject):
             msg.new('INFO', "new template created for type : " + self.resource_type)
             # create the initial commit from an empty directory
             tmp_folder = tempfile.mkdtemp()
-            self.create_commit(tmp_folder, tmp_folder, "")
+            self.create_commit(tmp_folder, tmp_folder, "", [])
             os.rmdir(tmp_folder)
 
             commit = Commit(self, 0)
+            commit.products_inputs = []
             commit.files = []
+
         else:
             if not template_resource_uri:
                 uri_dict = {"entity": TEMPLATE_NAME, "resource_type": self.resource_type}
@@ -248,6 +263,7 @@ class Resource(PulseObject):
             commit = Commit(self, 0)
             repo.copy_resource_commit(template_commit, commit)
             commit.files = template_commit.files
+            commit.products_inputs = template_commit.products_inputs
 
         commit.write_data()
         self.last_version = 0
@@ -291,6 +307,7 @@ class Resource(PulseObject):
         # create the work object
         work = Work(self)
         work.version = self.last_version + 1
+        work.products_inputs = commit.products_inputs
         work.write()
 
         msg.new('INFO', "resource check out in : " + destination_folder)
@@ -310,16 +327,6 @@ class Resource(PulseObject):
             self.lock_user = user
         self.write_data()
         msg.new('INFO', 'resource lock state is now ' + str(state))
-
-
-def get_inputs(folder):
-    json_filepath = folder + "inputs.json"
-    if not os.path.exists(json_filepath):
-        return []
-
-    with open(json_filepath, "r") as read_file:
-        data = json.load(read_file)    
-    return data
 
 
 def get_user_name():

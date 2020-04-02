@@ -27,31 +27,31 @@ def reset_files():
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
+    print "FILES RESETED"
+
 
 class TestBasic(unittest.TestCase):
 
     def setUp(self):
-
-        # start by a cleanup
         reset_files()
-
         letters = string.ascii_lowercase
         random_name = ''.join(random.choice(letters) for i in range(10))
         resource_type = "modeling"
         self.uri_template = TEMPLATE_NAME + "-" + resource_type
-        self.uri_test = "ch_annab" + "-" + resource_type
+        self.uri_test = "ch_anna" + "-" + resource_type
         self.uri_rand = random_name + "-" + resource_type
 
-    def test_exceptions_create_resource(self):
+    def test_exceptions_resource(self):
         # test resource without template
         with self.assertRaises(Exception):
             create_resource(self.uri_test)
-        # test resource with mis formed uri
+        # TODO : test resource with mis formed uri
         # test create an existing resource
         create_resource(self.uri_template)
         create_resource(self.uri_test)
         with self.assertRaises(Exception):
             create_resource(self.uri_test)
+        # TODO : test get missing resource
 
     def test_complete_scenario(self):
         # create a new template resource
