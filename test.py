@@ -5,36 +5,53 @@ import random
 
 # TODO : unhandled error on missing resource type
 # TODO : test starting from another resource than template
+# TODO : test trashing an open file
+
+def reset_files():
+    directories_to_clean = [
+        r"D:\pipe\pulse\test\sandbox",
+        r"D:\pipe\pulse\test\work_repository",
+        r"D:\pipe\pulse\test\product_repository",
+        r"D:\pipe\pulse\test\DB",
+        r"D:\pipe\pulse\test\user_products",
+    ]
+
+    for directory in directories_to_clean:
+        for filename in os.listdir(directory):
+            file_path = os.path.join(directory, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print('Failed to delete %s. Reason: %s' % (file_path, e))
+
 
 class TestBasic(unittest.TestCase):
+
     def setUp(self):
 
         # start by a cleanup
-        directories_to_clean = [
-            r"D:\pipe\pulse\test\sandbox",
-            r"D:\pipe\pulse\test\work_repository",
-            r"D:\pipe\pulse\test\product_repository",
-            r"D:\pipe\pulse\test\DB",
-            r"D:\pipe\pulse\test\user_products",
-            ]
-
-        for directory in directories_to_clean:
-            for filename in os.listdir(directory):
-                file_path = os.path.join(directory, filename)
-                try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)
-                except Exception as e:
-                    print('Failed to delete %s. Reason: %s' % (file_path, e))
+        reset_files()
 
         letters = string.ascii_lowercase
         random_name = ''.join(random.choice(letters) for i in range(10))
         resource_type = "modeling"
         self.uri_template = TEMPLATE_NAME + "-" + resource_type
-        self.uri_test = "ch_anna" + "-" + resource_type
+        self.uri_test = "ch_annab" + "-" + resource_type
         self.uri_rand = random_name + "-" + resource_type
+
+    def test_exceptions_create_resource(self):
+        # test resource without template
+        with self.assertRaises(Exception):
+            create_resource(self.uri_test)
+        # test resource with mis formed uri
+        # test create an existing resource
+        create_resource(self.uri_template)
+        create_resource(self.uri_test)
+        with self.assertRaises(Exception):
+            create_resource(self.uri_test)
 
     def test_complete_scenario(self):
         # create a new template resource
@@ -44,8 +61,8 @@ class TestBasic(unittest.TestCase):
         open(work.directory + "\\template_work.txt", 'a').close()
         work.commit()
         # create a resource based on this template
-        self.assertEqual(create_resource(self.uri_rand).last_version, 0)
-        resource = get_resource(self.uri_rand)
+        self.assertEqual(create_resource(self.uri_test).last_version, 0)
+        resource = get_resource(self.uri_test)
         work = resource.checkout()
 
         # check directories are created
@@ -67,7 +84,7 @@ class TestBasic(unittest.TestCase):
         #
         # print "============  commit"
         # work.commit("very first time")
-        self.assertEqual(work.trash(), True)
+        #self.assertEqual(work.trash(), True)
 
 
 if __name__ == '__main__':

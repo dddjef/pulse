@@ -175,11 +175,10 @@ class Resource(PulseObject):
     # TODO : support for products inputs
     def __init__(self, uri):
         PulseObject.__init__(self, uri)
+        uri_dict = uri_tools.string_to_dict(self.uri)
         self.lock = False
         self.lock_user = ''
         self.last_version = -1
-        # set resource attributes based on the parsed uri
-        uri_dict = uri_tools.string_to_dict(self.uri)
         self.resource_type = uri_dict["resource_type"]
         self.entity = uri_dict["entity"]
 
@@ -241,8 +240,7 @@ class Resource(PulseObject):
 
             template_resource = get_resource(template_resource_uri)
             if not template_resource:
-                msg.new('ERROR', "no resource found for " + template_resource_uri)
-                return
+                raise Exception("no resource found for " + template_resource_uri)
 
             template_commit = template_resource.get_commit("last")
             # copy work to a new version in repository
@@ -331,6 +329,7 @@ def get_user_name():
 def create_resource(uri):
     """Create a new resource for the given entity and type
     """
+    # TODO : add a regex testing the URI
     if get_resource(uri):
         raise Exception ("resource already exists : " + uri)
     resource = Resource(uri)
