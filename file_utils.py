@@ -1,12 +1,11 @@
 import os
-import json
+
 
 def compare_directory_content(current_work_data, past_work_data):
     file_changes = []
     for filepath in current_work_data:
         if filepath in past_work_data:
-            if current_work_data[filepath]['date'] != past_work_data[filepath]['date']:
-                print("date diff", current_work_data[filepath], past_work_data[filepath])
+            if round(current_work_data[filepath]['date'], 4) != round(past_work_data[filepath]['date'], 4):
                 file_changes.append((filepath, "edited"))
             past_work_data.pop(filepath)
         else:
@@ -26,8 +25,6 @@ def get_directory_content(directory):
             filepath = os.path.join(root, f)
             relative_path = filepath[len(directory):]
             files_dict[relative_path] = {"date": os.path.getmtime(filepath)}
-    print directory
-    print files_dict
     return files_dict
 
 
