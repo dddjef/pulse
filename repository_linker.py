@@ -6,6 +6,7 @@ import message as msg
 work_repository_root = "D:\\pipe\\pulse\\test\\work_repository"
 product_repository_root = "D:\\pipe\\pulse\\test\\product_repository"
 
+# TODO : turn this module to a class to show clearly what functions is the interface
 
 def build_repository_path(root, commit):
     """custom function to build a repository path
@@ -35,6 +36,10 @@ def copy_folder_tree(source_folder, destination_folder):
     shutil.copytree(source_folder, destination_folder)
 
 
+def make_directories(path):
+    os.makedirs(path)
+
+
 def copy_resource_commit(source_commit, target_commit):
     source_repo_work_path = build_repository_path("work", source_commit)
     source_repo_products_path = build_repository_path("products", source_commit)
@@ -42,6 +47,11 @@ def copy_resource_commit(source_commit, target_commit):
     target_repo_products_path = build_repository_path("products", target_commit)
     copy_folder_tree(source_repo_work_path, target_repo_work_path)
     copy_folder_tree(source_repo_products_path, target_repo_products_path)
+
+
+def create_resource_empty_commit(commit):
+    make_directories(build_repository_path("work", commit))
+    make_directories(build_repository_path("products", commit))
 
 
 def upload_resource_commit(commit, work_folder, products_folder=None):

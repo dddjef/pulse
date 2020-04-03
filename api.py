@@ -149,10 +149,22 @@ class Work:
         # launch the pre commit hook
         hooks.pre_commit(self)
 
-        # create new version in resource repository
-        self.resource.create_commit(self.directory, self.get_products_directory(), comment, self.products_inputs)
+        products_directory = self.get_products_directory()
 
-        # increment the work
+        # copy work to a new version in repository
+        commit = Commit(self.resource, self.version)
+        repo.upload_resource_commit(commit, self.directory, products_directory)
+
+        # register changes to database
+        commit.comment = comment
+        commit.files = fu.get_directory_content(self.directory)
+        commit.products_inputs = self.products_inputs
+        commit.products = os.listdir(products_directory)
+        commit.write_data()
+        self.resource.last_version = self.version
+        self.resource.write_data()
+
+        # increment the work and the products files
         self.version += 1
         self.write()
 
@@ -226,28 +238,6 @@ class Resource(PulseObject):
             return True
         return False
 
-    def create_commit(self, source_work, source_products, comment, products_inputs):
-        index = self.last_version + 1
-
-        # check work directory exist
-        if not os.path.exists(source_work):
-            msg.new("ERROR", "No source work found at " + source_work)
-            return
-
-        # copy work to a new version in repository
-        commit = Commit(self, index)
-        repo.upload_resource_commit(commit, source_work, source_products)
-
-        # register changes to database
-        commit.comment = comment
-        commit.files = fu.get_directory_content(source_work)
-        commit.products_inputs = products_inputs
-        commit.products = os.listdir(source_products)
-        commit.write_data()
-        self.last_version = index
-        self.write_data()
-        return commit
-
     def initialize_data(self, template_resource_uri=None):
         # TODO : init from nothing create a new template, init from something can be a template or another resource
 
@@ -255,11 +245,8 @@ class Resource(PulseObject):
         if self.entity == TEMPLATE_NAME:
             msg.new('INFO', "new template created for type : " + self.resource_type)
             # create the initial commit from an empty directory
-            tmp_folder = tempfile.mkdtemp()
-            self.create_commit(tmp_folder, tmp_folder, "", [])
-            os.rmdir(tmp_folder)
-
             commit = Commit(self, 0)
+            repo.create_resource_empty_commit(commit)
             commit.products_inputs = []
             commit.files = []
 
@@ -362,17 +349,6 @@ def get_resource(uri):
     resource = Resource(uri)
     if resource.read_data():
         return resource
-    else:
-        return None
-
-
-def get_product(uri):
-    uri_dict = uri_tools.string_to_dict()
-    resource = get_resource(uri)
-    commit = Commit(resource, uri_dict['version'])
-    if commit.read_data():
-        if uri_dict['product'] in commit.get_products():
-            print "yeaaaaaah"
     else:
         return None
 
