@@ -1,2 +1,2 @@
-def new(type, body):
-    print(type + ": " + body)
+def new(message_type, body):
+    print(message_type + ": " + body)
