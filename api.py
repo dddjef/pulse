@@ -70,7 +70,7 @@ class Work:
         self.products_inputs = []
 
     def add_product_inputs(self, resource, version, product_type):
-        # TODO : download product
+
         commit = Commit(resource, version)
         commit.read_data()
         if product_type not in commit.products:
@@ -88,6 +88,14 @@ class Work:
             self.products_inputs.append(product_uri)
             with open(self.products_inputs_file, "w") as write_file:
                 json.dump(self.products_inputs, write_file, indent=4, sort_keys=True)
+
+        # download product if needed
+        products_directory = pr.build_products_filepath(commit.entity, commit.resource_type, commit.version)
+        if os.path.exists(products_directory):
+            msg.new("DEBUG", "product already exists in user products")
+            return
+        repo.download_product(commit, product_type, products_directory)
+        msg.new("INFO", "product added to work inputs")
 
     def remove_product_inputs(self, product_uri):
         # remove it from the work data

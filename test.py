@@ -7,6 +7,7 @@ import random
 # TODO : test starting from another resource than template
 # TODO : test trashing an open file
 
+
 def reset_files():
     directories_to_clean = [
         r"D:\pipe\pulse\test\sandbox",
@@ -87,9 +88,11 @@ class TestBasic(unittest.TestCase):
         # create a new commit
         work.commit("some abc produced")
         self.assertEqual(resource.last_version, 2)
+        shutil.rmtree(r"T:\modeling\ch_anna")
         # create a new resource
         bubu_resource = create_resource("bubu-modeling")
         work = bubu_resource.checkout()
+
         work.add_product_inputs(resource, 2, "ABC")
         # test the product registration
         work.read()

@@ -8,6 +8,7 @@ product_repository_root = "D:\\pipe\\pulse\\test\\product_repository"
 
 # TODO : turn this module to a class to show clearly what functions is the interface
 
+
 def build_repository_path(root, commit):
     """custom function to build a repository path
     """
@@ -85,10 +86,10 @@ def download_resource_commit(commit, work_folder):
     copy_folder_tree(repo_work_path, work_folder)
 
 
-def download_product(entity, resource_type, commit, product_type):
+def download_product(commit, product_type, products_directory):
     """build_products_user_filepath
     """
-    # abort if a product_type already exists in products_user_filepath
     # build_products_repository_path
+    product_repo_path = build_repository_path("products", commit) + "\\" + product_type
     # copy repo products type to products_user_filepath
-
+    copy_folder_tree(product_repo_path, products_directory)
