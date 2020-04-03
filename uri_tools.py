@@ -10,12 +10,17 @@ def string_to_dict(uri_string):
     uri_split = uri_split_main[0].split("-")
     entity = uri_split[0]
     resource_type = uri_split[1]
+    product_type = ""
+    version = -1
+
+    if len(uri_split)>2:
+        product_type = uri_split[2]
 
     if len(uri_split_main)>1:
         version = uri_split_main[1]
-        return {"entity": entity, "resource_type": resource_type, "version": version}
-    else:
-        return {"entity": entity, "resource_type": resource_type}
+
+    return {"entity": entity, "resource_type": resource_type, "version": version, "product_type": product_type}
+
 
 
 def dict_to_string(uri_dict):
@@ -24,6 +29,8 @@ def dict_to_string(uri_dict):
     :return uri dict:
     """
     uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
+    if 'product_type' in uri_dict:
+        uri += "-" + uri_dict['product_type']
     if 'version' in uri_dict:
-        uri += "@" + str(uri_dict['version'].zfill(cfg.VERSION_PADDING))
+        uri += "@" + (str(int(uri_dict['version'])))
     return uri

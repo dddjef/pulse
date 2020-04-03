@@ -50,18 +50,14 @@ class Commit(PulseObject):
         PulseObject.__init__(self, self.uri)
         self.comment = ""
         self.files = []
+        self.products = []
         self.products_inputs = []
         self.entity = resource.entity
         self.resource_type = resource.resource_type
         self.version = version
 
-    def get_products(self):
-        pass
 
-
-
-
-class Work():
+class Work:
     # TODO : add methods to work with work inputs list (add, remove)
     def __init__(self, resource):
         self.directory = pr.build_work_filepath(resource)
@@ -73,17 +69,39 @@ class Work():
         self.products_inputs_file = self.directory + "\\products_inputs.pipe"
         self.products_inputs = []
 
-    def add_product_inputs(self, product_uri):
-        pass
+    def add_product_inputs(self, resource, version, product_type):
+        # TODO : download product
+        commit = Commit(resource, version)
+        commit.read_data()
+        if product_type not in commit.products:
+            raise Exception("product unknown for this commit")
+
+        product_uri = uri_tools.dict_to_string({
+            "entity": resource.entity,
+            "resource_type": resource.resource_type,
+            "product_type": product_type,
+            "version": version
+        })
+
+        # add it to the work data
+        if product_uri not in self.products_inputs:
+            self.products_inputs.append(product_uri)
+            with open(self.products_inputs_file, "w") as write_file:
+                json.dump(self.products_inputs, write_file, indent=4, sort_keys=True)
 
     def remove_product_inputs(self, product_uri):
-        pass
+        # remove it from the work data
+        if product_uri in self.products_inputs:
+            self.products_inputs.remove(product_uri)
+            self.write()
+
+        # TODO if the product is not used anymore, remove it from user products
 
     def write(self):
         new_version_file = self.version_pipe_filepath(self.version)
-        for file in os.listdir(self.directory):
-            if file.endswith('.pipe'):
-                os.remove(os.path.join(self.directory, file))
+        for work_file in os.listdir(self.directory):
+            if work_file.endswith('.pipe'):
+                os.remove(os.path.join(self.directory, work_file))
 
         # create the new version file
         with open(new_version_file, "w") as write_file:
@@ -111,7 +129,6 @@ class Work():
 
         with open(self.products_inputs_file, "r") as read_file:
             self.products_inputs = json.load(read_file)
-
 
     def commit(self, comment=""):
         # check current the user permission
@@ -141,7 +158,6 @@ class Work():
 
         msg.new('INFO', "New version published : " + str(self.resource.last_version))
 
-
     def trash(self):
         # test the work and products folder are movable
         products_directory = self.get_products_directory()
@@ -170,8 +186,7 @@ class Work():
     
         last_commit = Commit(self.resource, self.resource.last_version)
         last_commit.read_data()
-    
-        print "last files", last_commit.files
+
         diff = fu.compare_directory_content(current_work_files, last_commit.files)
 
         # add products
@@ -225,9 +240,9 @@ class Resource(PulseObject):
 
         # register changes to database
         commit.comment = comment
-        # FIXME the files should include the products too
         commit.files = fu.get_directory_content(source_work)
         commit.products_inputs = products_inputs
+        commit.products = os.listdir(source_products)
         commit.write_data()
         self.last_version = index
         self.write_data()
@@ -347,6 +362,17 @@ def get_resource(uri):
     resource = Resource(uri)
     if resource.read_data():
         return resource
+    else:
+        return None
+
+
+def get_product(uri):
+    uri_dict = uri_tools.string_to_dict()
+    resource = get_resource(uri)
+    commit = Commit(resource, uri_dict['version'])
+    if commit.read_data():
+        if uri_dict['product'] in commit.get_products():
+            print "yeaaaaaah"
     else:
         return None
 

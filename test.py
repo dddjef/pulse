@@ -41,6 +41,7 @@ class TestBasic(unittest.TestCase):
         self.uri_test = "ch_anna" + "-" + resource_type
         self.uri_rand = random_name + "-" + resource_type
 
+    @unittest.skip("demonstrating skipping")
     def test_exceptions_resource(self):
         # test resource without template
         with self.assertRaises(Exception):
@@ -79,6 +80,23 @@ class TestBasic(unittest.TestCase):
         work.commit("very first time")
         self.assertEqual(resource.last_version, 1)
 
+        # create a product
+        abc_dir = work.get_products_directory() + "\\ABC"
+        os.mkdir(abc_dir)
+        open(abc_dir + "\\test.abc", 'a').close()
+        # create a new commit
+        work.commit("some abc produced")
+        self.assertEqual(resource.last_version, 2)
+        # create a new resource
+        bubu_resource = create_resource("bubu-modeling")
+        work = bubu_resource.checkout()
+        work.add_product_inputs(resource, 2, "ABC")
+        # test the product registration
+        work.read()
+        self.assertEqual(work.products_inputs[0], "ch_anna-modeling-ABC@2")
+        # test to add an unknown product
+        with self.assertRaises(Exception):
+            work.add_product_inputs(resource, 2, "unknown")
 
         # resource.set_lock(True)
         #
