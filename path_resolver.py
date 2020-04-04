@@ -2,14 +2,10 @@ import project_config as cfg
 import os
 from datetime import datetime
 
+
 def get_date_time():
     now = datetime.now()
     return now.strftime("%d-%m-%Y_%H-%M-%S")
-
-def build_resource_template_path(resource):
-    """custom function to build a template path
-    """
-    return cfg.TEMPLATE_PATH + "\\" + resource.resource_type
 
 
 def build_work_filepath(resource):
@@ -33,5 +29,5 @@ def build_products_filepath(entity, resource_type, version_index):
     """
     version = str(version_index).zfill(cfg.VERSION_PADDING)
     path = cfg.PRODUCT_USER_ROOT + "\\" + resource_type
-    path += "\\" + entity.replace(":", "\\")+ "\\" + cfg.VERSION_PREFIX + version
+    path += "\\" + entity.replace(":", "\\") + "\\" + cfg.VERSION_PREFIX + version
     return path
