@@ -9,7 +9,7 @@ import os
 import project_config as cfg
 import file_utils as fu
 import shutil
-
+import time
 
 TEMPLATE_NAME = "_template"
 
@@ -72,6 +72,15 @@ class Product:
         if not os.path.exists(self._work_users_file):
             return []
         return fu.read_data(self._work_users_file)
+
+    def get_unused_time(self):
+        users = self.get_work_users()
+        if users:
+            return -1
+        if os.path.exists(self._work_users_file):
+            return time.time() - os.path.getmtime(self._work_users_file)
+        else:
+            return time.time() - os.path.getctime(self.directory)
 
 
 class Commit(PulseObject):

@@ -103,6 +103,7 @@ class TestBasic(unittest.TestCase):
         # trash the hat
         hat_mdl_work.trash()
         self.assertTrue(hat_mdl_work.directory not in anna_mdl_v2_abc.get_work_users())
+        # check the unused time for the product
 
 
         # resource.set_lock(True)
