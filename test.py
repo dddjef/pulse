@@ -54,6 +54,8 @@ class TestBasic(unittest.TestCase):
         with self.assertRaises(Exception):
             create_resource(self.uri_test)
         # TODO : test get missing resource
+        # TODO : test create from another resource as template
+
 
     def test_complete_scenario(self):
         # create a new template resource
@@ -101,10 +103,15 @@ class TestBasic(unittest.TestCase):
         anna_mdl_v2_abc = anna_mdl_v2.get_product("ABC")
         # check the work registration to product
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_work_users())
+        with self.assertRaises(Exception):
+            anna_mdl_v2_abc.remove_from_user_products()
+
         # trash the hat
         hat_mdl_work.trash()
         self.assertTrue(hat_mdl_work.directory not in anna_mdl_v2_abc.get_work_users())
         # check the unused time for the product
+        self.assertTrue(anna_mdl_v2_abc.get_unused_time() > 0)
+        anna_mdl_v2_abc.remove_from_user_products()
 
 
         # resource.set_lock(True)

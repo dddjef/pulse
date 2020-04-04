@@ -17,6 +17,7 @@ TEMPLATE_NAME = "_template"
 class PulseObject:
     def __init__(self, uri):
         self.uri = uri
+        # TODO : try read data on creation
 
     def write_data(self):
         # get the storage data
@@ -82,6 +83,11 @@ class Product:
         else:
             return time.time() - os.path.getctime(self.directory)
 
+    def remove_from_user_products(self):
+        if len(self.get_work_users()) > 0:
+            raise Exception("Can't remove a product. It still in use by work")
+        shutil.rmtree(self.directory)
+
 
 class Commit(PulseObject):
     def __init__(self, resource, version):
@@ -102,7 +108,6 @@ class Commit(PulseObject):
 
 
 class Work:
-    # TODO : add methods to work with work inputs list (add, remove)
     def __init__(self, resource):
         self.directory = pr.build_work_filepath(resource)
         self.resource = resource
@@ -329,8 +334,7 @@ class Resource(PulseObject):
         """Download the resource work files in the user sandbox.
          TODO : read related dependencies in the commit data
          TODO : Download related dependencies if they are not available in products path
-         TODO : check the function works also to check out an old commit
-         """
+        """
         commit = self.get_commit(index)
         if not commit:
             msg.new('ERROR', "resource has no commit named " + commit.uri)
