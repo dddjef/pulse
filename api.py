@@ -233,8 +233,7 @@ class Work:
 
         # unregister from products
         for product_uri in self.products_inputs:
-            product_dict = uri_tools.string_to_dict(product_uri)
-            product = Commit(Resource(product_uri), product_dict['version']).get_product(product_dict["product_type"])
+            product = uri_to_object(product_uri)
             if not os.path.exists(product.directory):
                 continue
             product.remove_work_user(self.directory)
@@ -266,22 +265,14 @@ class Work:
 
 class Resource(PulseObject):
     # TODO : add a last version name attribute
-    # TODO : support for products inputs
-    def __init__(self, uri):
-        PulseObject.__init__(self, uri)
-        uri_dict = uri_tools.string_to_dict(self.uri)
+    def __init__(self, entity, resource_type):
+        PulseObject.__init__(self, uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}))
         self.lock = False
         self.lock_user = ''
         self.last_version = -1
-        self.resource_type = uri_dict["resource_type"]
-        self.entity = uri_dict["entity"]
-
-    def get_work(self):
-        work_folder = pr.build_work_filepath(self)
-        if os.path.exists(work_folder):
-            return Work(self)
-        else:
-            return None
+        self.resource_type = resource_type
+        self.entity = entity
+        self.work_directory = pr.build_work_filepath(self)
 
     def user_needs_lock(self, user=None):
         if not user:
@@ -346,7 +337,7 @@ class Resource(PulseObject):
             msg.new('ERROR', "resource has no commit named " + str(index))
             return
 
-        destination_folder = pr.build_work_filepath(self)
+        destination_folder = self.work_directory
         print ("destination_folder", destination_folder)
 
         # abort if the resource is already in user sandbox
@@ -394,23 +385,24 @@ def create_resource(uri):
     # TODO : add a regex testing the URI
     if get_resource(uri):
         raise Exception ("resource already exists : " + uri)
-    resource = Resource(uri)
+    resource = uri_to_object(uri)
     return resource.initialize_data()
 
 
 def get_resource(uri):
-    resource = Resource(uri)
+    resource = uri_to_object(uri)
     if resource.read_data():
         return resource
     else:
         return None
 
 
-def get_work(uri):
-    resource = get_resource(uri)
-    if not resource:
-        return None
-    work = resource.get_work()
-    if not work:
-        return None
-    return work
+def uri_to_object(uri_string):
+    uri_dict = uri_tools.string_to_dict(uri_string)
+    resource = Resource(uri_dict['entity'], uri_dict['resource_type'])
+    if uri_dict['version'] == -1:
+        return resource
+    commit = Commit(resource, uri_dict['version'])
+    if uri_dict['product_type'] == "":
+        return commit
+    return commit.get_product(uri_dict["product_type"])

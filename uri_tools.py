@@ -1,5 +1,3 @@
-import project_config as cfg
-
 def string_to_dict(uri_string):
     """
     transform a string uri in a dict uri
@@ -20,7 +18,6 @@ def string_to_dict(uri_string):
         version = uri_split_main[1]
 
     return {"entity": entity, "resource_type": resource_type, "version": version, "product_type": product_type}
-
 
 
 def dict_to_string(uri_dict):
