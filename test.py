@@ -63,43 +63,44 @@ class TestBasic(unittest.TestCase):
         open(work.directory + "\\template_work.txt", 'a').close()
         work.commit()
         # create a resource based on this template
-        self.assertEqual(create_resource(self.uri_test).last_version, 0)
-        resource = get_resource(self.uri_test)
-        work = resource.checkout()
+        anna_uri = "ch_anna-modeling"
+        self.assertEqual(create_resource(anna_uri).last_version, 0)
+        anna_mdl_resource = get_resource(anna_uri)
+        anna_mdl_work = anna_mdl_resource.checkout()
 
         # check directories are created
-        self.assertTrue(os.path.exists(work.directory))
-        self.assertTrue(os.path.exists(work.get_products_directory()))
+        self.assertTrue(os.path.exists(anna_mdl_work.directory))
+        self.assertTrue(os.path.exists(anna_mdl_work.get_products_directory()))
         # should have no change
-        self.assertEqual(work.get_files_changes(), [])
+        self.assertEqual(anna_mdl_work.get_files_changes(), [])
         # commit should failed, since there's no change
-        self.assertEqual(work.commit("very first time"), None)
+        self.assertEqual(anna_mdl_work.commit("very first time"), None)
         # create a new file in work directory and try to commit again
-        new_file ="\\test_complete.txt"
-        open( work.directory + new_file, 'a').close()
-        self.assertEqual(work.get_files_changes(), [(new_file, 'added')])
-        work.commit("very first time")
-        self.assertEqual(resource.last_version, 1)
+        new_file = "\\test_complete.txt"
+        open(anna_mdl_work.directory + new_file, 'a').close()
+        self.assertEqual(anna_mdl_work.get_files_changes(), [(new_file, 'added')])
+        anna_mdl_work.commit("very first time")
+        self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a product
-        abc_dir = work.get_products_directory() + "\\ABC"
+        abc_dir = anna_mdl_work.get_products_directory() + "\\ABC"
         os.mkdir(abc_dir)
         open(abc_dir + "\\test.abc", 'a').close()
         # create a new commit
-        work.commit("some abc produced")
-        self.assertEqual(resource.last_version, 2)
-        shutil.rmtree(r"T:\modeling\ch_anna")
+        anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
+        self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
-        bubu_resource = create_resource("bubu-modeling")
-        work = bubu_resource.checkout()
+        hat_mdl_resource = create_resource("hat-modeling")
+        hat_mdl_work = hat_mdl_resource.checkout()
 
-        work.add_product_inputs(resource, 2, "ABC")
+        hat_mdl_work.add_product_input(anna_mdl_resource, 2, "ABC")
         # test the product registration
-        work.read()
-        self.assertEqual(work.products_inputs[0], "ch_anna-modeling-ABC@2")
-        # test to add an unknown product
-        with self.assertRaises(Exception):
-            work.add_product_inputs(resource, 2, "unknown")
+        hat_mdl_work.read()
+        self.assertEqual(hat_mdl_work.products_inputs[0], "ch_anna-modeling-ABC@2")
+        product = anna_mdl_v2.get_product("ABC")
+
+
+
 
         # resource.set_lock(True)
         #

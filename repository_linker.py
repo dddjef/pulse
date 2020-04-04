@@ -86,10 +86,10 @@ def download_resource_commit(commit, work_folder):
     copy_folder_tree(repo_work_path, work_folder)
 
 
-def download_product(commit, product_type, products_directory):
+def download_product(product):
     """build_products_user_filepath
     """
     # build_products_repository_path
-    product_repo_path = build_repository_path("products", commit) + "\\" + product_type
+    product_repo_path = build_repository_path("products", product.commit) + "\\" + product.product_type
     # copy repo products type to products_user_filepath
-    copy_folder_tree(product_repo_path, products_directory)
+    copy_folder_tree(product_repo_path, product.directory)

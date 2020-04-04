@@ -1,4 +1,5 @@
 import os
+import json
 
 
 def compare_directory_content(current_work_data, past_work_data):
@@ -35,3 +36,13 @@ def test_path_write_access(path):
     except:
         return False
     return True
+
+
+def read_data(filepath):
+    with open(filepath, "r") as read_file:
+        return json.load(read_file)
+
+
+def write_data(filepath, data):
+    with open(filepath, "w") as write_file:
+        json.dump(data, write_file, indent=4, sort_keys=True)

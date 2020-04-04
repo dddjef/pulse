@@ -9,10 +9,10 @@ import os
 import project_config as cfg
 import file_utils as fu
 import shutil
-import tempfile
-import copy
+
 
 TEMPLATE_NAME = "_template"
+
 
 class PulseObject:
     def __init__(self, uri):
@@ -33,15 +33,45 @@ class PulseObject:
                 setattr(self, k, data[k])
             return True
         else:
-            # msg.new('INFO', 'No data found for ' + self.uri)
             return False
 
 
-class Product(PulseObject):
-    def __init__(self, commit, product_type, uri):
-        PulseObject.__init__(self, uri)
+class Product:
+    def __init__(self, commit, product_type):
         self.commit = commit
         self.product_type = product_type
+        self.directory = pr.build_products_filepath(commit.entity, commit.resource_type, commit.version) + "\\" + product_type
+        self._work_users_file = self.directory + "\\" + "work_users.pipe"
+        self.uri = uri_tools.dict_to_string({
+            "entity": commit.entity,
+            "resource_type": commit.resource_type,
+            "product_type": product_type,
+            "version": commit.version
+        })
+
+    def add_work_user(self, work_directory):
+        if os.path.exists(self._work_users_file):
+            product_work_users = self.get_work_users()
+        else:
+            product_work_users = []
+
+        if work_directory not in product_work_users:
+            product_work_users.append(work_directory)
+            fu.write_data(self._work_users_file, product_work_users)
+
+    def remove_work_user(self, work_directory):
+        product_work_users = self.get_work_users()
+        if work_directory in product_work_users:
+            product_work_users.remove(work_directory)
+            fu.write_data(self._work_users_file, product_work_users)
+
+    def init_work_users(self):
+        fu.write_data(self._work_users_file, [])
+
+    def get_work_users(self):
+        if not os.path.exists(self._work_users_file):
+            return []
+        return fu.read_data(self._work_users_file)
 
 
 class Commit(PulseObject):
@@ -50,11 +80,16 @@ class Commit(PulseObject):
         PulseObject.__init__(self, self.uri)
         self.comment = ""
         self.files = []
-        self.products = []
         self.products_inputs = []
         self.entity = resource.entity
         self.resource_type = resource.resource_type
         self.version = version
+
+    def get_product(self, product_type):
+        product = Product(self, product_type)
+        if not os.path.exists(product.directory):
+            raise Exception("Unknown product :" + product.uri)
+        return product
 
 
 class Work:
@@ -69,41 +104,34 @@ class Work:
         self.products_inputs_file = self.directory + "\\products_inputs.pipe"
         self.products_inputs = []
 
-    def add_product_inputs(self, resource, version, product_type):
-
-        commit = Commit(resource, version)
-        commit.read_data()
-        if product_type not in commit.products:
-            raise Exception("product unknown for this commit")
-
-        product_uri = uri_tools.dict_to_string({
-            "entity": resource.entity,
-            "resource_type": resource.resource_type,
-            "product_type": product_type,
-            "version": version
-        })
+    def add_product_input(self, resource, version, product_type):
+        product = Commit(resource, version).get_product(product_type)
 
         # add it to the work data
-        if product_uri not in self.products_inputs:
-            self.products_inputs.append(product_uri)
-            with open(self.products_inputs_file, "w") as write_file:
-                json.dump(self.products_inputs, write_file, indent=4, sort_keys=True)
+        if product.uri in self.products_inputs:
+            msg.new("DEBUG", "product already exists in user products")
+        else:
+            self.products_inputs.append(product.uri)
+            fu.write_data(self.products_inputs_file, self.products_inputs)
 
         # download product if needed
-        products_directory = pr.build_products_filepath(commit.entity, commit.resource_type, commit.version)
-        if os.path.exists(products_directory):
-            msg.new("DEBUG", "product already exists in user products")
-            return
-        repo.download_product(commit, product_type, products_directory)
-        msg.new("INFO", "product added to work inputs")
+        if not os.path.exists(product.directory):
+            repo.download_product(product.commit, product_type, product.directory)
+            product.init_work_users()
+            msg.new("INFO", "product added to user products")
+        # else register work to product
+        else:
+            product.add_work_user(self.directory)
 
-    def remove_product_inputs(self, product_uri):
+    def remove_product_inputs(self, resource, version, product_type):
+        product = Commit(resource, version).get_product(product_type)
+
         # remove it from the work data
-        if product_uri in self.products_inputs:
-            self.products_inputs.remove(product_uri)
-            self.write()
-
-        # TODO if the product is not used anymore, remove it from user products
+        if product.uri in self.products_inputs:
+            self.products_inputs.remove(product.uri)
+            fu.write_data(self.products_inputs_file, self.products_inputs)
+        # remove work from product users
+            product.remove_work_user(self.directory)
 
     def write(self):
         new_version_file = self.version_pipe_filepath(self.version)
@@ -167,7 +195,6 @@ class Work:
         commit.comment = comment
         commit.files = fu.get_directory_content(self.directory)
         commit.products_inputs = self.products_inputs
-        commit.products = os.listdir(products_directory)
         commit.write_data()
         self.resource.last_version = self.version
         self.resource.write_data()
@@ -177,6 +204,7 @@ class Work:
         self.write()
 
         msg.new('INFO', "New version published : " + str(self.resource.last_version))
+        return commit
 
     def trash(self):
         # test the work and products folder are movable
@@ -193,6 +221,8 @@ class Work:
         # move folders
         shutil.move(self.directory, trash_directory + "\\WORK")
         shutil.move(products_directory, trash_directory + "\\PRODUCTS")
+
+        # TODO : unregister from products
 
         msg.new('INFO', "work move to trash " + trash_directory)
         return True
