@@ -97,16 +97,19 @@ class TestBasic(unittest.TestCase):
         # test the product registration
         hat_mdl_work.read()
         self.assertEqual(hat_mdl_work.products_inputs[0], "ch_anna-modeling-ABC@2")
-        product = anna_mdl_v2.get_product("ABC")
-
-
+        anna_mdl_v2_abc = anna_mdl_v2.get_product("ABC")
+        # check the work registration to product
+        self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_work_users())
+        # trash the hat
+        hat_mdl_work.trash()
+        self.assertTrue(hat_mdl_work.directory not in anna_mdl_v2_abc.get_work_users())
 
 
         # resource.set_lock(True)
         #
         # print "============  commit"
         # work.commit("very first time")
-        #self.assertEqual(work.trash(), True)
+
 
 
 if __name__ == '__main__':

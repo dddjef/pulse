@@ -116,7 +116,7 @@ class Work:
 
         # download product if needed
         if not os.path.exists(product.directory):
-            repo.download_product(product.commit, product_type, product.directory)
+            repo.download_product(product)
             product.init_work_users()
             msg.new("INFO", "product added to user products")
         # else register work to product
@@ -222,7 +222,13 @@ class Work:
         shutil.move(self.directory, trash_directory + "\\WORK")
         shutil.move(products_directory, trash_directory + "\\PRODUCTS")
 
-        # TODO : unregister from products
+        # unregister from products
+        for product_uri in self.products_inputs:
+            product_dict = uri_tools.string_to_dict(product_uri)
+            product = Commit(Resource(product_uri), product_dict['version']).get_product(product_dict["product_type"])
+            if not os.path.exists(product.directory):
+                continue
+            product.remove_work_user(self.directory)
 
         msg.new('INFO', "work move to trash " + trash_directory)
         return True
