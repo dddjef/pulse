@@ -282,10 +282,11 @@ class Resource(PulseObject):
             return True
         return False
 
-    def initialize_data(self, template_resource_uri=None):
-        # TODO : init from nothing create a new template, init from something can be a template or another resource
+    def initialize_data(self, template_resource=None):
+        # test the resource does not already exists
+        if self.read_data():
+            raise Exception("resource already exists : " + self.uri)
 
-        # if the user wants to create a template, start from an empty directory
         if self.entity == TEMPLATE_NAME:
             msg.new('INFO', "new template created for type : " + self.resource_type)
             # create the initial commit from an empty directory
@@ -295,13 +296,11 @@ class Resource(PulseObject):
             commit.files = []
 
         else:
-            if not template_resource_uri:
-                uri_dict = {"entity": TEMPLATE_NAME, "resource_type": self.resource_type}
-                template_resource_uri = uri_tools.dict_to_string(uri_dict)
-
-            template_resource = get_resource(template_resource_uri)
             if not template_resource:
-                raise Exception("no resource found for " + template_resource_uri)
+                template_resource = Resource(TEMPLATE_NAME, self.resource_type)
+
+            if not template_resource.read_data():
+                raise Exception("no resource found for " + template_resource.uri)
 
             template_commit = template_resource.get_commit("last")
             # copy work to a new version in repository
@@ -334,11 +333,10 @@ class Resource(PulseObject):
          """
         commit = self.get_commit(index)
         if not commit:
-            msg.new('ERROR', "resource has no commit named " + str(index))
+            msg.new('ERROR', "resource has no commit named " + commit.uri)
             return
 
         destination_folder = self.work_directory
-        print ("destination_folder", destination_folder)
 
         # abort if the resource is already in user sandbox
         if os.path.exists(destination_folder):
@@ -377,24 +375,6 @@ class Resource(PulseObject):
 
 def get_user_name():
     return os.environ.get('USERNAME')
-
-
-def create_resource(uri):
-    """Create a new resource for the given entity and type
-    """
-    # TODO : add a regex testing the URI
-    if get_resource(uri):
-        raise Exception ("resource already exists : " + uri)
-    resource = uri_to_object(uri)
-    return resource.initialize_data()
-
-
-def get_resource(uri):
-    resource = uri_to_object(uri)
-    if resource.read_data():
-        return resource
-    else:
-        return None
 
 
 def uri_to_object(uri_string):

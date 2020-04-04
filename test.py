@@ -57,15 +57,16 @@ class TestBasic(unittest.TestCase):
 
     def test_complete_scenario(self):
         # create a new template resource
-        template = create_resource(self.uri_template)
+        template = uri_to_object(self.uri_template)
+        template.initialize_data()
         # checkout the template to edit it and save it
         work = template.checkout()
         open(work.directory + "\\template_work.txt", 'a').close()
         work.commit()
         # create a resource based on this template
-        anna_uri = "ch_anna-modeling"
-        self.assertEqual(create_resource(anna_uri).last_version, 0)
-        anna_mdl_resource = get_resource(anna_uri)
+        anna_mdl_resource = uri_to_object("ch_anna-modeling").initialize_data()
+        self.assertEqual(anna_mdl_resource.last_version, 0)
+
         anna_mdl_work = anna_mdl_resource.checkout()
 
         # check directories are created
@@ -90,7 +91,7 @@ class TestBasic(unittest.TestCase):
         anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
         self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
-        hat_mdl_resource = create_resource("hat-modeling")
+        hat_mdl_resource = uri_to_object("hat-modeling").initialize_data()
         hat_mdl_work = hat_mdl_resource.checkout()
 
         hat_mdl_work.add_product_input(anna_mdl_resource, 2, "ABC")
