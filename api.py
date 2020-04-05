@@ -79,9 +79,6 @@ class Product:
             product_work_users.remove(work_directory)
             fu.write_data(self._work_users_file, product_work_users)
 
-    def init_work_users(self):
-        fu.write_data(self._work_users_file, [])
-
     def get_work_users(self):
         if not os.path.exists(self._work_users_file):
             return []
@@ -105,6 +102,10 @@ class Product:
         if not (os.listdir(self.products_directory)):
             shutil.rmtree(self.products_directory)
 
+    def download(self):
+        repo.download_product(self)
+        fu.write_data(self._work_users_file, [])
+
 
 class Commit(PulseObject):
     def __init__(self, resource, version):
@@ -116,11 +117,14 @@ class Commit(PulseObject):
         self.entity = resource.entity
         self.resource_type = resource.resource_type
         self.version = version
+        self.products = []
 
     def get_product(self, product_type):
+        self.read_data()
+        print self.products
+        if product_type not in self.products:
+            raise Exception("Unknown product :" + product_type)
         product = Product(self, product_type)
-        if not os.path.exists(product.directory):
-            raise Exception("Unknown product :" + product.uri)
         return product
 
 
@@ -147,12 +151,11 @@ class Work:
 
         # download product if needed
         if not os.path.exists(product.directory):
-            repo.download_product(product)
-            product.init_work_users()
+            product.download()
             msg.new("INFO", "product added to user products")
-        # else register work to product
-        else:
-            product.add_work_user(self.directory)
+
+        # add work user
+        product.add_work_user(self.directory)
 
     def remove_product_inputs(self, resource, version, product_type):
         product = Commit(resource, version).get_product(product_type)
@@ -227,6 +230,7 @@ class Work:
             ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
         )
         commit.products_inputs = self.products_inputs
+        commit.products = os.listdir(products_directory)
         commit.write_data()
         self.resource.last_version = self.version
         self.resource.write_data()
@@ -378,6 +382,13 @@ class Resource(PulseObject):
         work.version = self.last_version + 1
         work.products_inputs = commit.products_inputs
         work.write()
+
+        # download requested input products if needed
+        for uri in work.products_inputs:
+            product = uri_to_object(uri)
+            if not os.path.exists(product.directory):
+                product.download()
+                product.add_work_user(self.work_directory)
 
         msg.new('INFO', "resource check out in : " + destination_folder)
         return work
