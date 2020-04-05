@@ -53,7 +53,8 @@ class Product:
     def __init__(self, commit, product_type):
         self.commit = commit
         self.product_type = product_type
-        self.directory = pr.build_products_filepath(commit.entity, commit.resource_type, commit.version) + "\\" + product_type
+        self.products_directory = pr.build_products_filepath(commit.entity, commit.resource_type, commit.version)
+        self.directory = self.products_directory + "\\" + product_type
         self._work_users_file = self.directory + "\\" + "work_users.pipe"
         self.uri = uri_tools.dict_to_string({
             "entity": commit.entity,
@@ -99,6 +100,10 @@ class Product:
         if len(self.get_work_users()) > 0:
             raise Exception("Can't remove a product. It still in use by work")
         shutil.rmtree(self.directory)
+        # remove also the version directory if it's empty now
+        # TODO : test it should never be a work product path (created by default when you increment a work)
+        if not (os.listdir(self.products_directory)):
+            shutil.rmtree(self.products_directory)
 
 
 class Commit(PulseObject):
