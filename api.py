@@ -13,6 +13,13 @@ import time
 
 TEMPLATE_NAME = "_template"
 
+# TODO : replace message error by raising a pulse error
+# TODO : rename uri_to_obj to pulseNode
+# TODO : add a purge user products tool
+# TODO : add a list resources tool
+
+product_work_users_filename = "work_users.pipe"
+
 
 class PulseError(Exception):
     def __init__( self, reason ):
@@ -55,7 +62,7 @@ class Product:
         self.product_type = product_type
         self.products_directory = pr.build_products_filepath(commit.entity, commit.resource_type, commit.version)
         self.directory = self.products_directory + "\\" + product_type
-        self._work_users_file = self.directory + "\\" + "work_users.pipe"
+        self._work_users_file = self.directory + "\\" + product_work_users_filename
         self.uri = uri_tools.dict_to_string({
             "entity": commit.entity,
             "resource_type": commit.resource_type,
@@ -105,6 +112,7 @@ class Product:
     def download(self):
         repo.download_product(self)
         fu.write_data(self._work_users_file, [])
+        # TODO : should download product inputs recursively
 
 
 class Commit(PulseObject):
@@ -294,7 +302,6 @@ class Work:
 
 
 class Resource(PulseObject):
-    # TODO : add a last version name attribute
     def __init__(self, entity, resource_type):
         PulseObject.__init__(self, uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}))
         self.lock = False
@@ -422,3 +429,15 @@ def uri_to_object(uri_string):
     if uri_dict['product_type'] == "":
         return commit
     return commit.get_product(uri_dict["product_type"])
+
+def purge_unused_user_products(unused_days=0):
+    for (dirpath, dirnames, filenames) in os.walk(cfg.PRODUCT_USER_ROOT):
+        for filename in filenames:
+            if not filename == product_work_users_filename:
+                continue
+            pipe_filepath = os.path.join(dirpath, filename)
+            users = fu.read_data(pipe_filepath)
+            if not users:
+                # TODO get unused time
+                shutil.rmtree(os.path.dirname(pipe_filepath))
+                msg.new("INFO", "product removed" + os.path.dirname(pipe_filepath))

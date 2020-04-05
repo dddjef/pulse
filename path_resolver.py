@@ -27,6 +27,7 @@ def build_project_trash_filepath(work):
 def build_products_filepath(entity, resource_type, version_index):
     """custom function to build a user product resource path.
     """
+    # TODO standardize access with resource entity
     version = str(version_index).zfill(cfg.VERSION_PADDING)
     path = cfg.PRODUCT_USER_ROOT + "\\" + resource_type
     path += "\\" + entity.replace(":", "\\") + "\\" + cfg.VERSION_PREFIX + version

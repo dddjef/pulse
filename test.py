@@ -116,9 +116,10 @@ class TestBasic(unittest.TestCase):
         # check the unused time for the product
         self.assertTrue(anna_mdl_v2_abc.get_unused_time() > 0)
         # remove the product
-        anna_mdl_v2_abc.remove_from_user_products()
+        purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
+
 
         # resource.set_lock(True)
         #
