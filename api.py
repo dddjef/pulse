@@ -14,6 +14,18 @@ import time
 TEMPLATE_NAME = "_template"
 
 
+class PulseError(Exception):
+    def __init__( self, reason ):
+        Exception.__init__(self)
+        self._reason = reason
+
+    def reason(self):
+        return self._reason
+
+    def __str__(self):
+        return self._reason
+
+
 class PulseObject:
     def __init__(self, uri):
         self.uri = uri
@@ -148,12 +160,14 @@ class Work:
             product.remove_work_user(self.directory)
 
     def write(self):
-        new_version_file = self.version_pipe_filepath(self.version)
-        for work_file in os.listdir(self.directory):
-            if work_file.endswith('.pipe'):
-                os.remove(os.path.join(self.directory, work_file))
+
+        # remove old version file
+        old_version_file = self.version_pipe_filepath(self.resource.last_version)
+        if os.path.exists(old_version_file):
+            os.remove(os.path.join(self.directory, old_version_file))
 
         # create the new version file
+        new_version_file = self.version_pipe_filepath(self.version)
         with open(new_version_file, "w") as write_file:
             json.dump({"created_by": get_user_name()}, write_file, indent=4, sort_keys=True)
 
@@ -168,9 +182,6 @@ class Work:
         # write data to json
         with open(self.data_file, "w") as write_file:
             json.dump({"version": self.version}, write_file, indent=4, sort_keys=True)
-
-        with open(self.products_inputs_file, "w") as write_file:
-            json.dump(self.products_inputs, write_file, indent=4, sort_keys=True)
 
     def read(self):
         with open(self.data_file, "r") as read_file:
@@ -193,8 +204,7 @@ class Work:
 
         # check the work status
         if not self.get_files_changes():
-            msg.new('ERROR', "no file change to commit")
-            return
+            raise PulseError("no file change to commit")
 
         # launch the pre commit hook
         hooks.pre_commit(self)
@@ -207,7 +217,10 @@ class Work:
 
         # register changes to database
         commit.comment = comment
-        commit.files = fu.get_directory_content(self.directory)
+        commit.files = fu.get_directory_content(
+            self.directory,
+            ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
+        )
         commit.products_inputs = self.products_inputs
         commit.write_data()
         self.resource.last_version = self.version
@@ -251,7 +264,10 @@ class Work:
 
     def get_files_changes(self):
 
-        current_work_files = fu.get_directory_content(self.directory)
+        current_work_files = fu.get_directory_content(
+            self.directory,
+            ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
+        )
     
         last_commit = Commit(self.resource, self.resource.last_version)
         last_commit.read_data()

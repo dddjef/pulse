@@ -56,7 +56,6 @@ class TestBasic(unittest.TestCase):
         # TODO : test get missing resource
         # TODO : test create from another resource as template
 
-
     def test_complete_scenario(self):
         # create a new template resource
         template = uri_to_object(self.uri_template)
@@ -69,15 +68,15 @@ class TestBasic(unittest.TestCase):
         anna_mdl_resource = uri_to_object("ch_anna-modeling").initialize_data()
         self.assertEqual(anna_mdl_resource.last_version, 0)
 
+        # checkout, and check directories are created
         anna_mdl_work = anna_mdl_resource.checkout()
-
-        # check directories are created
         self.assertTrue(os.path.exists(anna_mdl_work.directory))
         self.assertTrue(os.path.exists(anna_mdl_work.get_products_directory()))
         # should have no change
         self.assertEqual(anna_mdl_work.get_files_changes(), [])
         # commit should failed, since there's no change
-        self.assertEqual(anna_mdl_work.commit("very first time"), None)
+        with self.assertRaises(PulseError):
+            anna_mdl_work.commit("very first time")
         # create a new file in work directory and try to commit again
         new_file = "\\test_complete.txt"
         open(anna_mdl_work.directory + new_file, 'a').close()
@@ -94,6 +93,7 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
         hat_mdl_resource = uri_to_object("hat-modeling").initialize_data()
+        self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 
         hat_mdl_work.add_product_input(anna_mdl_resource, 2, "ABC")
@@ -103,22 +103,27 @@ class TestBasic(unittest.TestCase):
         anna_mdl_v2_abc = anna_mdl_v2.get_product("ABC")
         # check the work registration to product
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_work_users())
+        # check you can't remove a product if it's used by a work
         with self.assertRaises(Exception):
             anna_mdl_v2_abc.remove_from_user_products()
 
+        hat_mdl_work.commit("with input")
+        self.assertEqual(hat_mdl_resource.last_version, 1)
         # trash the hat
+
         hat_mdl_work.trash()
         self.assertTrue(hat_mdl_work.directory not in anna_mdl_v2_abc.get_work_users())
         # check the unused time for the product
         self.assertTrue(anna_mdl_v2_abc.get_unused_time() > 0)
+        # remove the product
         anna_mdl_v2_abc.remove_from_user_products()
-
+        # checkout the work
+        hat_mdl_work = hat_mdl_resource.checkout()
 
         # resource.set_lock(True)
         #
         # print "============  commit"
         # work.commit("very first time")
-
 
 
 if __name__ == '__main__':
