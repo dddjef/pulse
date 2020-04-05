@@ -388,7 +388,7 @@ class Resource(PulseObject):
             product = uri_to_object(uri)
             if not os.path.exists(product.directory):
                 product.download()
-                product.add_work_user(self.work_directory)
+            product.add_work_user(self.work_directory)
 
         msg.new('INFO', "resource check out in : " + destination_folder)
         return work
