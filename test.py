@@ -119,7 +119,6 @@ class TestBasic(unittest.TestCase):
         purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
-        # FIXME : at this point, there's an unregistered anna product V001
 
 
         # resource.set_lock(True)

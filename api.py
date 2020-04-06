@@ -253,11 +253,14 @@ class Work:
         )
         commit.products_inputs = self.products_inputs
         commit.products = os.listdir(products_directory)
-
-        # register products to user products list
-        for product_type in commit.products:
-            product = Product(commit, product_type)
-            product.register_to_user_products()
+        # if there's no product, delete the products version directory
+        if not commit.products:
+            os.rmdir(products_directory)
+        else:
+            # register products to user products list
+            for product_type in commit.products:
+                product = Product(commit, product_type)
+                product.register_to_user_products()
 
         commit.write_data()
         self.resource.last_version = self.version
