@@ -54,7 +54,6 @@ class TestBasic(unittest.TestCase):
         with self.assertRaises(Exception):
             create_resource(self.uri_test)
         # TODO : test get missing resource
-        # TODO : test create from another resource as template
 
     def test_complete_scenario(self):
         # create a new template resource

@@ -388,8 +388,7 @@ class Resource(PulseObject):
 
     def checkout(self, index="last"):
         """Download the resource work files in the user sandbox.
-         TODO : read related dependencies in the commit data
-         TODO : Download related dependencies if they are not available in products path
+        Download related dependencies if they are not available in products path
         """
         commit = self.get_commit(index)
         if not commit:
