@@ -1,7 +1,6 @@
 import os
 import json
 
-
 def compare_directory_content(current_work_data, past_work_data):
     file_changes = []
     for filepath in current_work_data:
@@ -46,3 +45,11 @@ def read_data(filepath):
 def write_data(filepath, data):
     with open(filepath, "w") as write_file:
         json.dump(data, write_file, indent=4, sort_keys=True)
+
+
+def remove_empty_parents_directory(directory):
+    while not os.listdir(directory):
+        os.rmdir(directory)
+        directory = os.path.dirname(directory)
+        if directory.endswith(":"):
+            break

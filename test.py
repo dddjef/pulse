@@ -119,6 +119,8 @@ class TestBasic(unittest.TestCase):
         purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
+        hat_mdl_work.remove_product_inputs(anna_mdl_resource, 2, "ABC")
+        anna_mdl_work.trash()
 
 
         # resource.set_lock(True)

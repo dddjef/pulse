@@ -105,9 +105,7 @@ class Product:
             raise Exception("Can't remove a product. It still in use by work")
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
-        # TODO : test it should never be a work product path (created by default when you increment a work)
-        if not (os.listdir(self.products_directory)):
-            shutil.rmtree(self.products_directory)
+        fu.remove_empty_parents_directory(os.path.dirname(self.directory))
         self.unregister_to_user_products()
 
     def download(self):
@@ -288,6 +286,9 @@ class Work:
         # move folders
         shutil.move(self.directory, trash_directory + "\\WORK")
         shutil.move(products_directory, trash_directory + "\\PRODUCTS")
+
+        # recursively remove products directories if there are empty
+        fu.remove_empty_parents_directory(os.path.dirname(products_directory))
 
         # unregister from products
         for product_uri in self.products_inputs:
