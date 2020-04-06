@@ -18,6 +18,7 @@ TEMPLATE_NAME = "_template"
 # TODO : add a list resources tool
 
 product_work_users_filename = "work_users.pipe"
+user_products_list_filepath = cfg.PRODUCT_USER_ROOT + "\\products_list.pipe"
 
 
 class PulseError(Exception):
@@ -95,7 +96,7 @@ class Product:
         if users:
             return -1
         if os.path.exists(self._work_users_file):
-            return time.time() - os.path.getmtime(self._work_users_file)
+            return time.time() - os.path.getmtime(self._work_users_file) + 0.01
         else:
             return time.time() - os.path.getctime(self.directory)
 
@@ -107,12 +108,26 @@ class Product:
         # TODO : test it should never be a work product path (created by default when you increment a work)
         if not (os.listdir(self.products_directory)):
             shutil.rmtree(self.products_directory)
+        self.unregister_to_user_products()
 
     def download(self):
         repo.download_product(self)
         fu.write_data(self._work_users_file, [])
+        self.register_to_user_products()
         # TODO : should download product inputs recursively
 
+    def register_to_user_products(self):
+        try:
+            products_list = fu.read_data(user_products_list_filepath)
+        except IOError:
+            products_list = []
+        products_list.append(self.uri)
+        fu.write_data(user_products_list_filepath, products_list)
+
+    def unregister_to_user_products(self):
+        products_list = fu.read_data(user_products_list_filepath)
+        products_list.remove(self.uri)
+        fu.write_data(user_products_list_filepath, products_list)
 
 class Commit(PulseObject):
     def __init__(self, resource, version):
@@ -238,6 +253,12 @@ class Work:
         )
         commit.products_inputs = self.products_inputs
         commit.products = os.listdir(products_directory)
+
+        # register products to user products list
+        for product_type in commit.products:
+            product = Product(commit, product_type)
+            product.register_to_user_products()
+
         commit.write_data()
         self.resource.last_version = self.version
         self.resource.write_data()
@@ -429,14 +450,10 @@ def uri_to_object(uri_string):
         return commit
     return commit.get_product(uri_dict["product_type"])
 
+
 def purge_unused_user_products(unused_days=0):
-    for (dirpath, dirnames, filenames) in os.walk(cfg.PRODUCT_USER_ROOT):
-        for filename in filenames:
-            if not filename == product_work_users_filename:
-                continue
-            pipe_filepath = os.path.join(dirpath, filename)
-            users = fu.read_data(pipe_filepath)
-            if not users:
-                # TODO get unused time
-                shutil.rmtree(os.path.dirname(pipe_filepath))
-                msg.new("INFO", "product removed" + os.path.dirname(pipe_filepath))
+    for uri in fu.read_data(user_products_list_filepath):
+        product = uri_to_object(uri)
+        # convert unused days in seconds to compare with unused time
+        if (product.get_unused_time()) > (unused_days*86400):
+            product.remove_from_user_products()
