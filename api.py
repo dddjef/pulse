@@ -15,7 +15,6 @@ TEMPLATE_NAME = "_template"
 
 # TODO : replace message error by raising a pulse error
 # TODO : rename uri_to_obj to pulseNode
-# TODO : add a purge user products tool
 # TODO : add a list resources tool
 
 product_work_users_filename = "work_users.pipe"
