@@ -292,7 +292,7 @@ class Work:
 
         # unregister from products
         for product_uri in self.products_inputs:
-            product = uri_to_object(product_uri)
+            product = get_pulse_node(product_uri)
             if not os.path.exists(product.directory):
                 continue
             product.remove_work_user(self.directory)
@@ -415,7 +415,7 @@ class Resource(PulseObject):
 
         # download requested input products if needed
         for uri in work.products_inputs:
-            product = uri_to_object(uri)
+            product = get_pulse_node(uri)
             if not os.path.exists(product.directory):
                 product.download()
             product.add_work_user(self.work_directory)
@@ -443,7 +443,7 @@ def get_user_name():
     return os.environ.get('USERNAME')
 
 
-def uri_to_object(uri_string):
+def get_pulse_node(uri_string):
     uri_dict = uri_tools.string_to_dict(uri_string)
     resource = Resource(uri_dict['entity'], uri_dict['resource_type'])
     if uri_dict['version'] == -1:
@@ -456,7 +456,7 @@ def uri_to_object(uri_string):
 
 def purge_unused_user_products(unused_days=0):
     for uri in fu.read_data(user_products_list_filepath):
-        product = uri_to_object(uri)
+        product = get_pulse_node(uri)
         # convert unused days in seconds to compare with unused time
         if (product.get_unused_time()) > (unused_days*86400):
             product.remove_from_user_products()
