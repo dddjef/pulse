@@ -12,7 +12,6 @@ import time
 
 TEMPLATE_NAME = "_template"
 
-# TODO : replace message error by raising a pulse error
 # TODO : add a list resources tool
 
 product_work_users_filename = "work_users.pipe"
@@ -35,12 +34,10 @@ class PulseObject:
     def __init__(self, project, uri):
         self.uri = uri
         self._project = project
-        # TODO : try read data on object creation
 
     def write_data(self):
         # get the storage data
         data = dict((name, getattr(self, name)) for name in vars(self) if not name.startswith('_'))
-        print "data", data
         self._project.cnx.db.write(self._project.name, self.__class__.__name__, self.uri, data)
 
     def read_data(self):
@@ -234,8 +231,7 @@ class Work:
         if not self.version == self.resource.last_version + 1:
             last_version_name = self.project.cfg.VERSION_PREFIX
             last_version_name += str(self.resource.last_version).zfill(self.project.cfg.VERSION_PADDING)
-            msg.new('ERROR', "Your version is deprecated, it should be " + last_version_name)
-            return
+            raise PulseError("Your version is deprecated, it should be " + last_version_name)
 
         # check the work status
         if not self.get_files_changes():
@@ -283,8 +279,7 @@ class Work:
         products_directory = self.get_products_directory()
         for path in [self.directory, products_directory]:
             if not fu.test_path_write_access(path):
-                msg.new('ERROR', "can't move folder " + path)
-                return
+                raise PulseError("can't move folder " + path)
 
         # create the trash work directory
         trash_directory = pr.build_project_trash_filepath(self.project, self)
@@ -348,10 +343,7 @@ class Resource(PulseObject):
     def user_needs_lock(self, user=None):
         if not user:
             user = self._project.cnx.user_name
-        if self.lock and self.lock_user != user:
-            msg.new('ERROR', "the resource is locked by another user")
-            return True
-        return False
+        return self.lock and self.lock_user != user
 
     def initialize_data(self, template_resource=None):
         # test the resource does not already exists
@@ -402,8 +394,7 @@ class Resource(PulseObject):
         """
         commit = self.get_commit(index)
         if not commit:
-            msg.new('ERROR', "resource has no commit named " + commit.uri)
-            return
+            raise PulseError("resource has no commit named " + commit.uri)
 
         destination_folder = self.work_directory
 

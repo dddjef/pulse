@@ -9,6 +9,17 @@ repository_version_padding = 3
 # TODO : turn this module to a class to show clearly what functions is the interface
 
 
+class PulseRepositoryError(Exception):
+    def __init__( self, reason ):
+        Exception.__init__(self)
+        self._reason = reason
+
+    def reason(self):
+        return self._reason
+
+    def __str__(self):
+        return self._reason
+
 def build_repository_path(root, commit):
     """custom function to build a repository path
     """
@@ -17,8 +28,7 @@ def build_repository_path(root, commit):
     elif root == "products":
         root = product_repository_root
     else:
-        msg.new('ERROR', "ABORT : unknown uri type")
-        return
+        raise PulseRepositoryError("unknown uri type")
 
     entities = commit.entity.replace(":", "\\")
     path = root + "\\" + commit.resource_type + "\\" + entities
