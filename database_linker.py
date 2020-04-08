@@ -1,6 +1,6 @@
 import json
 import os
-
+import glob
 # = "D:\\pipe\\pulse\\test\\DB"
 
 
@@ -21,6 +21,7 @@ class DB:
         if not os.path.exists(connexion_data["DB_root"]):
             raise PulseDatabaseError("can't find the database :" + connexion_data["DB_root"])
         self._root = connexion_data["DB_root"]
+        self.data_filename = "data.json"
 
     def create_project(self, project_name):
         project_directory = os.path.join(self._root, project_name)
@@ -28,15 +29,17 @@ class DB:
             raise PulseDatabaseError("project already exists")
         os.makedirs(project_directory)
 
-    def find_entity(self, project_name, entity_type):
-        # TODO : find entity within the database
-        pass
+    def find_uris(self, project_name, entity_type, uri_pattern):
+        uris =[]
+        for path in glob.glob(os.path.dirname(self._get_json_filepath(project_name, entity_type, uri_pattern))):
+            uris.append(path.split(os.pathsep)[-1])
+        return uris
 
     def get_user_name(self):
         return os.environ.get('USERNAME')
 
     def _get_json_filepath(self, project_name, entity_type, uri):
-        return os.path.join(self._root, project_name, entity_type,  uri, "data.json")
+        return os.path.join(self._root, project_name, entity_type,  uri, self.data_filename)
 
     def write(self, project_name, entity_type, uri, data_dict):
         json_filepath = self._get_json_filepath(project_name, entity_type, uri)

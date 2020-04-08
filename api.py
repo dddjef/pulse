@@ -12,8 +12,6 @@ import time
 
 TEMPLATE_NAME = "_template"
 
-# TODO : add a list resources tool
-
 
 class PulseError(Exception):
     def __init__(self, reason ):
@@ -462,6 +460,9 @@ class Project:
         if uri_dict['product_type'] == "":
             return commit
         return commit.get_product(uri_dict["product_type"])
+
+    def list_nodes(self, entity_type, uri_pattern):
+        return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]
 
     def purge_unused_user_products(self, unused_days=0):
         for uri in fu.read_data(self.cfg.user_products_list_filepath):

@@ -123,6 +123,8 @@ class TestBasic(unittest.TestCase):
         hat_mdl_work = hat_mdl_resource.checkout()
         hat_mdl_work.remove_product_inputs(anna_mdl_resource, 2, "ABC")
         anna_mdl_work.trash()
+        for nd in prj.list_nodes("Resource", "*anna*"):
+            print nd.uri
 
 
         # resource.set_lock(True)
