@@ -1,7 +1,7 @@
 import pulse.uri_tools as uri_tools
 import pulse.repository_linker as repo
 import pulse.path_resolver as pr
-import pulse.database_linker as db
+from pulse.database_linker import DB
 import pulse.message as msg
 import pulse.hooks as hooks
 import json
@@ -14,7 +14,6 @@ import time
 TEMPLATE_NAME = "_template"
 
 # TODO : replace message error by raising a pulse error
-# TODO : rename uri_to_obj to pulseNode
 # TODO : add a list resources tool
 
 product_work_users_filename = "work_users.pipe"
@@ -34,17 +33,19 @@ class PulseError(Exception):
 
 
 class PulseObject:
-    def __init__(self, uri):
+    def __init__(self, project, uri):
         self.uri = uri
-        # TODO : try read data on creation
+        self._project = project
+        # TODO : try read data on object creation
 
     def write_data(self):
         # get the storage data
-        # data = dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_'))
-        db.write(entity_type=self.__class__.__name__, uri=self.uri, data_dict=vars(self))
+        data = dict((name, getattr(self, name)) for name in vars(self) if not name.startswith('_'))
+        print "data", data
+        self._project.cnx.db.write(self._project.name, self.__class__.__name__, self.uri, data)
 
     def read_data(self):
-        data = db.read(entity_type=self.__class__.__name__, uri=self.uri)
+        data = self._project.cnx.db.read(self._project.name, self.__class__.__name__, self.uri)
         if data:
             for k in data:
                 if k not in vars(self):
@@ -130,7 +131,7 @@ class Product:
 class Commit(PulseObject):
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
-        PulseObject.__init__(self, self.uri)
+        PulseObject.__init__(self, resource._project, self.uri)
         self.comment = ""
         self.files = []
         self.products_inputs = []
@@ -197,7 +198,7 @@ class Work:
         # create the new version file
         new_version_file = self.version_pipe_filepath(self.version)
         with open(new_version_file, "w") as write_file:
-            json.dump({"created_by": get_user_name()}, write_file, indent=4, sort_keys=True)
+            json.dump({"created_by": self.resource._project.cnx.user_name}, write_file, indent=4, sort_keys=True)
 
         # remove the old version file
         old_version_file = self.version_pipe_filepath(self.version-1)
@@ -292,7 +293,7 @@ class Work:
 
         # unregister from products
         for product_uri in self.products_inputs:
-            product = get_pulse_node(product_uri)
+            product = self.resource._project.get_pulse_node(product_uri)
             if not os.path.exists(product.directory):
                 continue
             product.remove_work_user(self.directory)
@@ -326,18 +327,18 @@ class Work:
 
 
 class Resource(PulseObject):
-    def __init__(self, entity, resource_type):
-        PulseObject.__init__(self, uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}))
+    def __init__(self, project, entity, resource_type):
         self.lock = False
         self.lock_user = ''
         self.last_version = -1
         self.resource_type = resource_type
         self.entity = entity
         self.work_directory = pr.build_work_filepath(self)
-
+        PulseObject.__init__(self, project, uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}))
+        
     def user_needs_lock(self, user=None):
         if not user:
-            user = get_user_name()
+            user = self._project.cnx.user_name
         if self.lock and self.lock_user != user:
             msg.new('ERROR', "the resource is locked by another user")
             return True
@@ -358,7 +359,7 @@ class Resource(PulseObject):
 
         else:
             if not template_resource:
-                template_resource = Resource(TEMPLATE_NAME, self.resource_type)
+                template_resource = Resource(self._project, TEMPLATE_NAME, self.resource_type)
 
             if not template_resource.read_data():
                 raise Exception("no resource found for " + template_resource.uri)
@@ -415,7 +416,7 @@ class Resource(PulseObject):
 
         # download requested input products if needed
         for uri in work.products_inputs:
-            product = get_pulse_node(uri)
+            product = self._project.get_pulse_node(uri)
             if not os.path.exists(product.directory):
                 product.download()
             product.add_work_user(self.work_directory)
@@ -432,31 +433,60 @@ class Resource(PulseObject):
 
         self.lock = state
         if not user:
-            self.lock_user = get_user_name()
+            self.lock_user = self._project.get_user_name()
         else:
             self.lock_user = user
         self.write_data()
         msg.new('INFO', 'resource lock state is now ' + str(state))
 
 
-def get_user_name():
-    return os.environ.get('USERNAME')
+class Config(PulseObject):
+    def __init__(self, project, work_user_root, product_user_root, version_padding=3, version_prefix="V"):
+        self.work_user_root = work_user_root
+        self.product_user_root = product_user_root
+        self.version_padding = version_padding
+        self.version_prefix = version_prefix
+        PulseObject.__init__(self, project, uri="config")
 
 
-def get_pulse_node(uri_string):
-    uri_dict = uri_tools.string_to_dict(uri_string)
-    resource = Resource(uri_dict['entity'], uri_dict['resource_type'])
-    if uri_dict['version'] == -1:
-        return resource
-    commit = Commit(resource, uri_dict['version'])
-    if uri_dict['product_type'] == "":
-        return commit
-    return commit.get_product(uri_dict["product_type"])
+class Project:
+    def __init__(self, connection, project_name):
+        self.cnx = connection
+        self.name = project_name
+        self.cfg = None
+
+    def get_pulse_node(self, uri_string):
+        uri_dict = uri_tools.string_to_dict(uri_string)
+        resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
+        if uri_dict['version'] == -1:
+            return resource
+        commit = Commit(resource, uri_dict['version'])
+        if uri_dict['product_type'] == "":
+            return commit
+        return commit.get_product(uri_dict["product_type"])
+
+    def purge_unused_user_products(self, unused_days=0):
+        for uri in fu.read_data(user_products_list_filepath):
+            product = self.get_pulse_node(uri)
+            # convert unused days in seconds to compare with unused time
+            if (product.get_unused_time()) > (unused_days*86400):
+                product.remove_from_user_products()
+
+    def set_config(self, work_user_root, product_user_root, version_padding, version_prefix):
+        self.cfg = Config(self, work_user_root, product_user_root, version_padding, version_prefix)
+        self.cfg.write_data()
 
 
-def purge_unused_user_products(unused_days=0):
-    for uri in fu.read_data(user_products_list_filepath):
-        product = get_pulse_node(uri)
-        # convert unused days in seconds to compare with unused time
-        if (product.get_unused_time()) > (unused_days*86400):
-            product.remove_from_user_products()
+class Connection:
+    def __init__(self, connexion_data):
+        self.db = DB(connexion_data)
+        self.user_name = self.db.get_user_name()
+
+    def create_project(self, project_name, work_user_root, product_user_root, version_padding=3, version_prefix="V"):
+        project = Project(self, project_name)
+        self.db.create_project(project_name)
+        project.set_config(work_user_root, product_user_root, version_padding, version_prefix)
+        return project
+
+    def get_project(self, project_name):
+        pass

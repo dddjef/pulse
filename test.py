@@ -56,15 +56,18 @@ class TestBasic(unittest.TestCase):
         # TODO : test get missing resource
 
     def test_complete_scenario(self):
+        # create a connection
+        cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
+        prj = cnx.create_project("prj_test", "S:", "T:")
         # create a new template resource
-        template = get_pulse_node(self.uri_template)
+        template = prj.get_pulse_node(self.uri_template)
         template.initialize_data()
         # checkout the template to edit it and save it
         work = template.checkout()
         open(work.directory + "\\template_work.txt", 'a').close()
         work.commit()
         # create a resource based on this template
-        anna_mdl_resource = get_pulse_node("ch_anna-modeling").initialize_data()
+        anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling").initialize_data()
         self.assertEqual(anna_mdl_resource.last_version, 0)
 
         # checkout, and check directories are created
@@ -91,7 +94,7 @@ class TestBasic(unittest.TestCase):
         anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
         self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
-        hat_mdl_resource = get_pulse_node("hat-modeling").initialize_data()
+        hat_mdl_resource = prj.get_pulse_node("hat-modeling").initialize_data()
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 
@@ -115,7 +118,7 @@ class TestBasic(unittest.TestCase):
         # check the unused time for the product
         self.assertTrue(anna_mdl_v2_abc.get_unused_time() > 0)
         # remove the product
-        purge_unused_user_products()
+        prj.purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
         hat_mdl_work.remove_product_inputs(anna_mdl_resource, 2, "ABC")
