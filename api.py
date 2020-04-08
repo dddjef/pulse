@@ -14,9 +14,6 @@ TEMPLATE_NAME = "_template"
 
 # TODO : add a list resources tool
 
-product_work_users_filename = "work_users.pipe"
-
-
 
 class PulseError(Exception):
     def __init__(self, reason ):
@@ -59,7 +56,7 @@ class Product:
         self.product_type = product_type
         self.products_directory = pr.build_products_filepath(commit.get_resource().get_project(), commit.entity, commit.resource_type, commit.version)
         self.directory = self.products_directory + "\\" + product_type
-        self._work_users_file = self.directory + "\\" + product_work_users_filename
+        self._work_users_file = self.directory + "\\" + "work_users.pipe"
         self.uri = uri_tools.dict_to_string({
             "entity": commit.entity,
             "resource_type": commit.resource_type,
