@@ -1,11 +1,11 @@
-import project_config as cfg
 import os
 import shutil
 import message as msg
 
 work_repository_root = "D:\\pipe\\pulse\\test\\work_repository"
 product_repository_root = "D:\\pipe\\pulse\\test\\product_repository"
-
+repository_version_prefix = "V"
+repository_version_padding = 3
 # TODO : turn this module to a class to show clearly what functions is the interface
 
 
@@ -22,7 +22,7 @@ def build_repository_path(root, commit):
 
     entities = commit.entity.replace(":", "\\")
     path = root + "\\" + commit.resource_type + "\\" + entities
-    path += "\\" + cfg.VERSION_PREFIX + str(commit.version).zfill(cfg.VERSION_PADDING)
+    path += "\\" + repository_version_prefix + str(commit.version).zfill(repository_version_padding)
     return path
 
 

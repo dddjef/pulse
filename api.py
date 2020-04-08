@@ -6,7 +6,6 @@ import pulse.message as msg
 import pulse.hooks as hooks
 import json
 import os
-import project_config as cfg
 import file_utils as fu
 import shutil
 import time
@@ -17,11 +16,11 @@ TEMPLATE_NAME = "_template"
 # TODO : add a list resources tool
 
 product_work_users_filename = "work_users.pipe"
-user_products_list_filepath = cfg.PRODUCT_USER_ROOT + "\\products_list.pipe"
+
 
 
 class PulseError(Exception):
-    def __init__( self, reason ):
+    def __init__(self, reason ):
         Exception.__init__(self)
         self._reason = reason
 
@@ -61,7 +60,7 @@ class Product:
     def __init__(self, commit, product_type):
         self.commit = commit
         self.product_type = product_type
-        self.products_directory = pr.build_products_filepath(commit.entity, commit.resource_type, commit.version)
+        self.products_directory = pr.build_products_filepath(commit.get_resource().get_project(), commit.entity, commit.resource_type, commit.version)
         self.directory = self.products_directory + "\\" + product_type
         self._work_users_file = self.directory + "\\" + product_work_users_filename
         self.uri = uri_tools.dict_to_string({
@@ -70,6 +69,7 @@ class Product:
             "product_type": product_type,
             "version": commit.version
         })
+        self.project_products_list = self.commit.get_resource().get_project().cfg.user_products_list_filepath
 
     def add_work_user(self, work_directory):
         if os.path.exists(self._work_users_file):
@@ -117,21 +117,21 @@ class Product:
 
     def register_to_user_products(self):
         try:
-            products_list = fu.read_data(user_products_list_filepath)
+            products_list = fu.read_data(self.project_products_list)
         except IOError:
             products_list = []
         products_list.append(self.uri)
-        fu.write_data(user_products_list_filepath, products_list)
+        fu.write_data(self.project_products_list, products_list)
 
     def unregister_to_user_products(self):
-        products_list = fu.read_data(user_products_list_filepath)
+        products_list = fu.read_data(self.project_products_list)
         products_list.remove(self.uri)
-        fu.write_data(user_products_list_filepath, products_list)
+        fu.write_data(self.project_products_list, products_list)
+
 
 class Commit(PulseObject):
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
-        PulseObject.__init__(self, resource._project, self.uri)
         self.comment = ""
         self.files = []
         self.products_inputs = []
@@ -139,6 +139,8 @@ class Commit(PulseObject):
         self.resource_type = resource.resource_type
         self.version = version
         self.products = []
+        self._resource = resource
+        PulseObject.__init__(self, resource.get_project(), self.uri)
 
     def get_product(self, product_type):
         self.read_data()
@@ -148,11 +150,14 @@ class Commit(PulseObject):
         product = Product(self, product_type)
         return product
 
+    def get_resource(self):
+        return self._resource
 
 class Work:
     def __init__(self, resource):
-        self.directory = pr.build_work_filepath(resource)
         self.resource = resource
+        self.project = resource.get_project()
+        self.directory = pr.build_work_filepath(self.project, resource)
         self.version = None
         self.entity = resource.entity
         self.resource_type = resource.resource_type
@@ -198,7 +203,7 @@ class Work:
         # create the new version file
         new_version_file = self.version_pipe_filepath(self.version)
         with open(new_version_file, "w") as write_file:
-            json.dump({"created_by": self.resource._project.cnx.user_name}, write_file, indent=4, sort_keys=True)
+            json.dump({"created_by": self.resource.get_project().cnx.user_name}, write_file, indent=4, sort_keys=True)
 
         # remove the old version file
         old_version_file = self.version_pipe_filepath(self.version-1)
@@ -227,7 +232,8 @@ class Work:
 
         # check the work is up to date
         if not self.version == self.resource.last_version + 1:
-            last_version_name = cfg.VERSION_PREFIX + str(self.resource.last_version).zfill(cfg.VERSION_PADDING)
+            last_version_name = self.project.cfg.VERSION_PREFIX
+            last_version_name += str(self.resource.last_version).zfill(self.project.cfg.VERSION_PADDING)
             msg.new('ERROR', "Your version is deprecated, it should be " + last_version_name)
             return
 
@@ -281,7 +287,7 @@ class Work:
                 return
 
         # create the trash work directory
-        trash_directory = pr.build_project_trash_filepath(self)
+        trash_directory = pr.build_project_trash_filepath(self.project, self)
         os.makedirs(trash_directory)
 
         # move folders
@@ -293,7 +299,7 @@ class Work:
 
         # unregister from products
         for product_uri in self.products_inputs:
-            product = self.resource._project.get_pulse_node(product_uri)
+            product = self.resource.get_project().get_pulse_node(product_uri)
             if not os.path.exists(product.directory):
                 continue
             product.remove_work_user(self.directory)
@@ -302,7 +308,7 @@ class Work:
         return True
 
     def version_pipe_filepath(self, index):
-        return self.directory + "\\" + cfg.VERSION_PREFIX + str(index).zfill(cfg.VERSION_PADDING) + ".pipe"
+        return self.directory + "\\" + self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
 
     def get_files_changes(self):
 
@@ -323,7 +329,7 @@ class Work:
         return diff
 
     def get_products_directory(self):
-        return pr.build_products_filepath(self.entity, self.resource_type, self.version)
+        return pr.build_products_filepath(self.project, self.entity, self.resource_type, self.version)
 
 
 class Resource(PulseObject):
@@ -333,9 +339,12 @@ class Resource(PulseObject):
         self.last_version = -1
         self.resource_type = resource_type
         self.entity = entity
-        self.work_directory = pr.build_work_filepath(self)
+        self.work_directory = pr.build_work_filepath(project, self)
         PulseObject.__init__(self, project, uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}))
         
+    def get_project(self):
+        return self._project
+
     def user_needs_lock(self, user=None):
         if not user:
             user = self._project.cnx.user_name
@@ -446,6 +455,7 @@ class Config(PulseObject):
         self.product_user_root = product_user_root
         self.version_padding = version_padding
         self.version_prefix = version_prefix
+        self.user_products_list_filepath = os.path.join(product_user_root, "products_list.pipe")
         PulseObject.__init__(self, project, uri="config")
 
 
@@ -466,7 +476,7 @@ class Project:
         return commit.get_product(uri_dict["product_type"])
 
     def purge_unused_user_products(self, unused_days=0):
-        for uri in fu.read_data(user_products_list_filepath):
+        for uri in fu.read_data(self.cfg.user_products_list_filepath):
             product = self.get_pulse_node(uri)
             # convert unused days in seconds to compare with unused time
             if (product.get_unused_time()) > (unused_days*86400):

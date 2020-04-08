@@ -1,5 +1,4 @@
 import json
-import project_config as cfg
 import os
 
 # = "D:\\pipe\\pulse\\test\\DB"
