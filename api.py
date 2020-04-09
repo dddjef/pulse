@@ -28,9 +28,13 @@ class PulseError(Exception):
 
 
 class PulseObject:
-    def __init__(self, project, uri):
+    def __init__(self, project, parent, uri):
         self.uri = uri
         self._project = project
+        self._parent = parent
+
+    def get_parent(self):
+        return self._parent
 
     def get_project(self):
         return self._project
@@ -141,8 +145,7 @@ class Commit(PulseObject):
         self.resource_type = resource.resource_type
         self.version = version
         self.products = []
-        self._resource = resource
-        PulseObject.__init__(self, resource.get_project(), self.uri)
+        PulseObject.__init__(self, resource.get_project(), resource, self.uri)
 
     def get_product(self, product_type):
         self.read_data()
@@ -153,7 +156,7 @@ class Commit(PulseObject):
         return product
 
     def get_resource(self):
-        return self._resource
+        return self._parent
 
 
 class Work:
@@ -344,6 +347,7 @@ class Resource(PulseObject):
         PulseObject.__init__(
             self,
             project,
+            project,
             uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type})
         )
 
@@ -453,7 +457,7 @@ class Config(PulseObject):
         self.product_user_root = None
         self.version_padding = 3
         self.version_prefix = "V"
-        PulseObject.__init__(self, project, uri="config")
+        PulseObject.__init__(self, project, project, uri="config")
 
     def get_user_products_list_filepath(self):
         return os.path.join(self.product_user_root, "products_list.pipe")
