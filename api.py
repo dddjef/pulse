@@ -12,6 +12,8 @@ import time
 
 TEMPLATE_NAME = "_template"
 # TODO : add meta data support
+# TODO : add a pulse object "get parent" method to replace get_resource, get_project
+
 
 class PulseError(Exception):
     def __init__(self, reason ):
@@ -29,6 +31,9 @@ class PulseObject:
     def __init__(self, project, uri):
         self.uri = uri
         self._project = project
+
+    def get_project(self):
+        return self._project
 
     def write_data(self):
         # get the storage data
@@ -312,7 +317,7 @@ class Work:
             self.directory,
             ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
         )
-    
+
         last_commit = Commit(self.resource, self.resource.last_version)
         last_commit.read_data()
 
@@ -341,9 +346,6 @@ class Resource(PulseObject):
             project,
             uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type})
         )
-        
-    def get_project(self):
-        return self._project
 
     def user_needs_lock(self, user=None):
         if not user:
