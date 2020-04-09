@@ -58,7 +58,8 @@ class TestBasic(unittest.TestCase):
     def test_complete_scenario(self):
         # create a connection
         cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
-        prj = cnx.create_project("prj_test", "S:", "T:")
+        cnx.create_project("prj_test", "S:", "T:")
+        prj = cnx.get_project("prj_test")
         # create a new template resource
         template = prj.get_pulse_node(self.uri_template)
         template.initialize_data()
@@ -125,6 +126,9 @@ class TestBasic(unittest.TestCase):
         anna_mdl_work.trash()
         for nd in prj.list_nodes("Resource", "*anna*"):
             print nd.uri
+
+
+
 
 
         # resource.set_lock(True)

@@ -11,7 +11,7 @@ import shutil
 import time
 
 TEMPLATE_NAME = "_template"
-
+# TODO : add meta data support
 
 class PulseError(Exception):
     def __init__(self, reason ):
@@ -52,7 +52,12 @@ class Product:
     def __init__(self, commit, product_type):
         self.commit = commit
         self.product_type = product_type
-        self.products_directory = pr.build_products_filepath(commit.get_resource().get_project(), commit.entity, commit.resource_type, commit.version)
+        self.products_directory = pr.build_products_filepath(
+            commit.get_resource().get_project(),
+            commit.entity,
+            commit.resource_type,
+            commit.version
+        )
         self.directory = self.products_directory + "\\" + product_type
         self._work_users_file = self.directory + "\\" + "work_users.pipe"
         self.uri = uri_tools.dict_to_string({
@@ -61,7 +66,7 @@ class Product:
             "product_type": product_type,
             "version": commit.version
         })
-        self.project_products_list = self.commit.get_resource().get_project().cfg.user_products_list_filepath
+        self.project_products_list = self.commit.get_resource().get_project().cfg.get_user_products_list_filepath()
 
     def add_work_user(self, work_directory):
         if os.path.exists(self._work_users_file):
@@ -144,6 +149,7 @@ class Commit(PulseObject):
 
     def get_resource(self):
         return self._resource
+
 
 class Work:
     def __init__(self, resource):
@@ -330,7 +336,11 @@ class Resource(PulseObject):
         self.resource_type = resource_type
         self.entity = entity
         self.work_directory = pr.build_work_filepath(project, self)
-        PulseObject.__init__(self, project, uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}))
+        PulseObject.__init__(
+            self,
+            project,
+            uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type})
+        )
         
     def get_project(self):
         return self._project
@@ -436,20 +446,22 @@ class Resource(PulseObject):
 
 
 class Config(PulseObject):
-    def __init__(self, project, work_user_root, product_user_root, version_padding=3, version_prefix="V"):
-        self.work_user_root = work_user_root
-        self.product_user_root = product_user_root
-        self.version_padding = version_padding
-        self.version_prefix = version_prefix
-        self.user_products_list_filepath = os.path.join(product_user_root, "products_list.pipe")
+    def __init__(self, project):
+        self.work_user_root = None
+        self.product_user_root = None
+        self.version_padding = 3
+        self.version_prefix = "V"
         PulseObject.__init__(self, project, uri="config")
+
+    def get_user_products_list_filepath(self):
+        return os.path.join(self.product_user_root, "products_list.pipe")
 
 
 class Project:
     def __init__(self, connection, project_name):
         self.cnx = connection
         self.name = project_name
-        self.cfg = None
+        self.cfg = Config(self)
 
     def get_pulse_node(self, uri_string):
         uri_dict = uri_tools.string_to_dict(uri_string)
@@ -465,14 +477,17 @@ class Project:
         return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]
 
     def purge_unused_user_products(self, unused_days=0):
-        for uri in fu.read_data(self.cfg.user_products_list_filepath):
+        for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
             product = self.get_pulse_node(uri)
             # convert unused days in seconds to compare with unused time
             if (product.get_unused_time()) > (unused_days*86400):
                 product.remove_from_user_products()
 
     def set_config(self, work_user_root, product_user_root, version_padding, version_prefix):
-        self.cfg = Config(self, work_user_root, product_user_root, version_padding, version_prefix)
+        self.cfg.work_user_root = work_user_root
+        self.cfg.product_user_root = product_user_root
+        self.cfg.version_padding = version_padding
+        self.cfg.version_prefix = version_prefix
         self.cfg.write_data()
 
 
@@ -488,4 +503,7 @@ class Connection:
         return project
 
     def get_project(self, project_name):
-        pass
+        project = Project(self, project_name)
+        if not project.cfg.read_data():
+            raise PulseError("project not found")
+        return project
