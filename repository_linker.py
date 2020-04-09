@@ -2,8 +2,7 @@ import os
 import shutil
 import message as msg
 
-work_repository_root = "D:\\pipe\\pulse\\test\\work_repository"
-product_repository_root = "D:\\pipe\\pulse\\test\\product_repository"
+repository_root = "D:\\pipe\\pulse\\test\\repo"
 repository_version_prefix = "V"
 repository_version_padding = 3
 # TODO : turn this module to a class to show clearly what functions is the interface
@@ -20,20 +19,18 @@ class PulseRepositoryError(Exception):
     def __str__(self):
         return self._reason
 
-def build_repository_path(root, commit):
+
+def build_repository_path(path_type, commit):
     """custom function to build a repository path
     """
-    if root == "work":
-        root = work_repository_root
-    elif root == "products":
-        root = product_repository_root
-    else:
-        raise PulseRepositoryError("unknown uri type")
-
-    entities = commit.entity.replace(":", "\\")
-    path = root + "\\" + commit.resource_type + "\\" + entities
-    path += "\\" + repository_version_prefix + str(commit.version).zfill(repository_version_padding)
-    return path
+    return os.path.join(
+        repository_root,
+        commit.get_project().name,
+        path_type,
+        commit.resource_type,
+        commit.entity.replace(":", "\\"),
+        repository_version_prefix + str(commit.version).zfill(repository_version_padding)
+    )
 
 
 def copy_folder_tree(source_folder, destination_folder):
