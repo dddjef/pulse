@@ -11,7 +11,6 @@ import shutil
 import time
 
 TEMPLATE_NAME = "_template"
-# TODO : add a pulse object "get parent" method to replace get_resource, get_project
 # TODO : define all hooks
 
 repo = repo_linker.PulseRepository()
@@ -30,14 +29,10 @@ class PulseError(Exception):
 
 
 class PulseObject:
-    def __init__(self, project, parent, uri, metas=None):
+    def __init__(self, project, uri, metas=None):
         self.uri = uri
         self._project = project
-        self._parent = parent
         self.metas = metas
-
-    def get_parent(self):
-        return self._parent
 
     def get_project(self):
         return self._project
@@ -141,6 +136,7 @@ class Product:
 class Commit(PulseObject):
     def __init__(self, resource, version, metas=None):
         self.uri = resource.uri + "@" + str(version)
+        self._resource = resource
         self.comment = ""
         self.files = []
         self.products_inputs = []
@@ -148,7 +144,7 @@ class Commit(PulseObject):
         self.resource_type = resource.resource_type
         self.version = version
         self.products = []
-        PulseObject.__init__(self, resource.get_project(), resource, self.uri, metas)
+        PulseObject.__init__(self, resource.get_project(), self.uri, metas)
 
     def get_product(self, product_type):
         self.read_data()
@@ -158,7 +154,7 @@ class Commit(PulseObject):
         return product
 
     def get_resource(self):
-        return self._parent
+        return self._resource
 
 
 class Work:
@@ -352,7 +348,6 @@ class Resource(PulseObject):
         PulseObject.__init__(
             self,
             project,
-            project,
             uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}),
             metas
         )
@@ -463,7 +458,7 @@ class Config(PulseObject):
         self.product_user_root = None
         self.version_padding = 3
         self.version_prefix = "V"
-        PulseObject.__init__(self, project, project, "config", metas)
+        PulseObject.__init__(self, project, "config", metas)
 
     def get_user_products_list_filepath(self):
         return os.path.join(self.product_user_root, "products_list.pipe")
