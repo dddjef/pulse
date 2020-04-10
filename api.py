@@ -11,9 +11,8 @@ import shutil
 import time
 
 TEMPLATE_NAME = "_template"
-# TODO : add meta data support
 # TODO : add a pulse object "get parent" method to replace get_resource, get_project
-
+# TODO : define all hooks
 
 repo = repo_linker.PulseRepository()
 
@@ -31,10 +30,11 @@ class PulseError(Exception):
 
 
 class PulseObject:
-    def __init__(self, project, parent, uri):
+    def __init__(self, project, parent, uri, metas=None):
         self.uri = uri
         self._project = project
         self._parent = parent
+        self.metas = metas
 
     def get_parent(self):
         return self._parent
@@ -139,7 +139,7 @@ class Product:
 
 
 class Commit(PulseObject):
-    def __init__(self, resource, version):
+    def __init__(self, resource, version, metas=None):
         self.uri = resource.uri + "@" + str(version)
         self.comment = ""
         self.files = []
@@ -148,7 +148,7 @@ class Commit(PulseObject):
         self.resource_type = resource.resource_type
         self.version = version
         self.products = []
-        PulseObject.__init__(self, resource.get_project(), resource, self.uri)
+        PulseObject.__init__(self, resource.get_project(), resource, self.uri, metas)
 
     def get_product(self, product_type):
         self.read_data()
@@ -342,7 +342,7 @@ class Work:
 
 
 class Resource(PulseObject):
-    def __init__(self, project, entity, resource_type):
+    def __init__(self, project, entity, resource_type, metas=None):
         self.lock = False
         self.lock_user = ''
         self.last_version = -1
@@ -353,7 +353,8 @@ class Resource(PulseObject):
             self,
             project,
             project,
-            uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type})
+            uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}),
+            metas
         )
 
     def user_needs_lock(self, user=None):
@@ -457,12 +458,12 @@ class Resource(PulseObject):
 
 
 class Config(PulseObject):
-    def __init__(self, project):
+    def __init__(self, project, metas=None):
         self.work_user_root = None
         self.product_user_root = None
         self.version_padding = 3
         self.version_prefix = "V"
-        PulseObject.__init__(self, project, project, uri="config")
+        PulseObject.__init__(self, project, project, "config", metas)
 
     def get_user_products_list_filepath(self):
         return os.path.join(self.product_user_root, "products_list.pipe")

@@ -1,7 +1,6 @@
 from pulse.api import *
 import unittest
-import string
-import random
+
 
 # TODO : unhandled error on missing resource type
 # TODO : test starting from another resource than template
@@ -30,38 +29,41 @@ def reset_files():
     print "FILES RESETED"
 
 
+def create_project(prj_name):
+    cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
+    cnx.create_project(prj_name, "S:", "T:")
+    return cnx, cnx.get_project(prj_name)
+
+
 class TestBasic(unittest.TestCase):
 
     def setUp(self):
         reset_files()
-        letters = string.ascii_lowercase
-        random_name = ''.join(random.choice(letters) for i in range(10))
-        resource_type = "modeling"
-        self.uri_template = TEMPLATE_NAME + "-" + resource_type
-        self.uri_test = "ch_anna" + "-" + resource_type
-        self.uri_rand = random_name + "-" + resource_type
 
-    @unittest.skip("demonstrating skipping")
+    # @unittest.skip("demonstrating skipping")
     def test_exceptions_resource(self):
         # test resource without template
-        with self.assertRaises(Exception):
-            create_resource(self.uri_test)
         # TODO : test resource with mis formed uri
         # test create an existing resource
-        create_resource(self.uri_template)
-        create_resource(self.uri_test)
-        with self.assertRaises(Exception):
-            create_resource(self.uri_test)
         # TODO : test get missing resource
+        pass
+
+    def test_metadata(self):
+        cnx, prj = create_project("prj_test")
+        prj.get_pulse_node(TEMPLATE_NAME + "-modeling").initialize_data()
+        anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling")
+        anna_mdl_resource.metas = {"site": "Paris"}
+        anna_mdl_resource.initialize_data()
+        prj = cnx.get_project("prj_test")
+        res = prj.get_pulse_node("ch_anna-modeling")
+        res.read_data()
+        self.assertTrue(res.metas["site"] == "Paris")
 
     def test_complete_scenario(self):
         # create a connection
-        cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
-        cnx.create_project("prj_test", "S:", "T:")
-        prj = cnx.get_project("prj_test")
+        cnx, prj = create_project("prj_test")
         # create a new template resource
-        template = prj.get_pulse_node(self.uri_template)
-        template.initialize_data()
+        template = prj.get_pulse_node(TEMPLATE_NAME + "-modeling").initialize_data()
         # checkout the template to edit it and save it
         work = template.checkout()
         open(work.directory + "\\template_work.txt", 'a').close()
@@ -125,15 +127,6 @@ class TestBasic(unittest.TestCase):
         anna_mdl_work.trash()
         for nd in prj.list_nodes("Resource", "*anna*"):
             print nd.uri
-
-
-
-
-
-        # resource.set_lock(True)
-        #
-        # print "============  commit"
-        # work.commit("very first time")
 
 
 if __name__ == '__main__':
