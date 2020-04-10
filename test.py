@@ -11,8 +11,7 @@ import random
 def reset_files():
     directories_to_clean = [
         r"D:\pipe\pulse\test\sandbox",
-        r"D:\pipe\pulse\test\work_repository",
-        r"D:\pipe\pulse\test\product_repository",
+        r"D:\pipe\pulse\test\repo",
         r"D:\pipe\pulse\test\DB",
         r"D:\pipe\pulse\test\user_products",
     ]

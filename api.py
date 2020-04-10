@@ -1,5 +1,5 @@
 import pulse.uri_tools as uri_tools
-import pulse.repository_linker as repo
+import pulse.repository_linker as repo_linker
 import pulse.path_resolver as pr
 from pulse.database_linker import DB
 import pulse.message as msg
@@ -15,8 +15,11 @@ TEMPLATE_NAME = "_template"
 # TODO : add a pulse object "get parent" method to replace get_resource, get_project
 
 
+repo = repo_linker.PulseRepository()
+
+
 class PulseError(Exception):
-    def __init__(self, reason ):
+    def __init__(self, reason):
         Exception.__init__(self)
         self._reason = reason
 
@@ -149,7 +152,6 @@ class Commit(PulseObject):
 
     def get_product(self, product_type):
         self.read_data()
-        print self.products
         if product_type not in self.products:
             raise Exception("Unknown product :" + product_type)
         product = Product(self, product_type)
@@ -312,7 +314,10 @@ class Work:
         return True
 
     def version_pipe_filepath(self, index):
-        return self.directory + "\\" + self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
+        return os.path.join(
+            self.directory,
+            self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
+        )
 
     def get_files_changes(self):
 
