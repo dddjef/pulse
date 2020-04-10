@@ -47,7 +47,7 @@ class PulseRepository:
     def __init__(self):
         pass
     
-    def copy_resource_commit(self, source_commit, target_commit):
+    def duplicate_commit(self, source_commit, target_commit):
         source_repo_work_path = build_repository_path("work", source_commit)
         source_repo_products_path = build_repository_path("products", source_commit)
         target_repo_work_path = build_repository_path("work", target_commit)
@@ -87,7 +87,7 @@ class PulseRepository:
         repo_work_path = build_repository_path("work", commit)
         # copy repo work to sandbox
         copy_folder_tree(repo_work_path, work_folder)
-        
+
     def download_product(self, product):
         """build_products_user_filepath
         """

@@ -385,7 +385,7 @@ class Resource(PulseObject):
             # copy work to a new version in repository
 
             commit = Commit(self, 0)
-            repo.copy_resource_commit(template_commit, commit)
+            repo.duplicate_commit(template_commit, commit)
             commit.files = template_commit.files
             commit.products_inputs = template_commit.products_inputs
 
