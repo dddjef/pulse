@@ -5,12 +5,12 @@ import unittest
 # TODO : unhandled error on missing resource type
 # TODO : test starting from another resource than template
 # TODO : test trashing an open file
-# TODO : add info on network drive
+# TODO : add info on minimal preparation to test
 
 def reset_files():
     directories_to_clean = [
         r"D:\pipe\pulse\test\sandbox",
-        r"D:\pipe\pulse\test\repo",
+        r"D:\pipe\pulse\test\repos",
         r"D:\pipe\pulse\test\DB",
         r"D:\pipe\pulse\test\user_products",
     ]
@@ -31,12 +31,25 @@ def reset_files():
 
 def create_test_project(prj_name="test"):
     cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
-    project = cnx.create_project(prj_name, "S:", "T:", repository_parameters={"root": "D:\\pipe\\pulse\\test\\repo"})
+    project = cnx.create_project(
+        prj_name,
+        "S:",
+        "T:",
+        repository_parameters={"root": "D:\\pipe\\pulse\\test\\repos\\default"}
+    )
     return cnx, project
 
 
-class TestBasic(unittest.TestCase):
+def create_template(prj, template_type):
+    template = prj.get_pulse_node(TEMPLATE_NAME + "-" + template_type).initialize_data()
+    # checkout the template to edit it and save it
+    work = template.checkout()
+    open(work.directory + "\\template_work.txt", 'a').close()
+    work.commit()
+    return template
 
+
+class TestBasic(unittest.TestCase):
     def setUp(self):
         reset_files()
 
@@ -59,15 +72,18 @@ class TestBasic(unittest.TestCase):
         res.read_data()
         self.assertTrue(res.metas["site"] == "Paris")
 
+    def test_multiples_repositories(self):
+        cnx, prj = create_test_project()
+        create_template(prj, "mdl")
+        cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
+        ftp_prj = cnx.create_project("testFTP", "S:\\ftp", "T:\\ftp",  repository_type="ftp_repo", repository_parameters={"root": "D:\\pipe\\pulse\\test\\repos\\ftp"})
+        create_template(ftp_prj, "mdl")
+
     def test_complete_scenario(self):
         # create a connection
         cnx, prj = create_test_project()
         # create a new template resource
-        template = prj.get_pulse_node(TEMPLATE_NAME + "-modeling").initialize_data()
-        # checkout the template to edit it and save it
-        work = template.checkout()
-        open(work.directory + "\\template_work.txt", 'a').close()
-        work.commit()
+        create_template(prj, "modeling")
         # create a resource based on this template
         anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling").initialize_data()
         self.assertEqual(anna_mdl_resource.last_version, 0)
