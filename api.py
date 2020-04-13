@@ -1,5 +1,4 @@
 import pulse.uri_tools as uri_tools
-import pulse.repository_linker as repo_linker
 import pulse.path_resolver as pr
 from pulse.database_linker import DB
 import pulse.message as msg
@@ -9,11 +8,11 @@ import os
 import file_utils as fu
 import shutil
 import time
+from ConfigParser import ConfigParser
+import imp
 
 TEMPLATE_NAME = "_template"
 # TODO : define all hooks
-
-repo = repo_linker.PulseRepository()
 
 
 class PulseError(Exception):
@@ -114,7 +113,7 @@ class Product:
         self.unregister_to_user_products()
 
     def download(self):
-        repo.download_product(self)
+        self.commit.get_project().repo.download_product(self)
         fu.write_data(self._work_users_file, [])
         self.register_to_user_products()
         # TODO : should download product inputs recursively
@@ -251,7 +250,7 @@ class Work:
 
         # copy work to a new version in repository
         commit = Commit(self.resource, self.version)
-        repo.upload_resource_commit(commit, self.directory, products_directory)
+        commit.get_project().repo.upload_resource_commit(commit, self.directory, products_directory)
 
         # register changes to database
         commit.comment = comment
@@ -366,7 +365,7 @@ class Resource(PulseObject):
             msg.new('INFO', "new template created for type : " + self.resource_type)
             # create the initial commit from an empty directory
             commit = Commit(self, 0)
-            repo.create_resource_empty_commit(commit)
+            self._project.repo.create_resource_empty_commit(commit)
             commit.products_inputs = []
             commit.files = []
 
@@ -381,7 +380,7 @@ class Resource(PulseObject):
             # copy work to a new version in repository
 
             commit = Commit(self, 0)
-            repo.duplicate_commit(template_commit, commit)
+            self._project.repo.duplicate_commit(template_commit, commit)
             commit.files = template_commit.files
             commit.products_inputs = template_commit.products_inputs
 
@@ -418,7 +417,7 @@ class Resource(PulseObject):
             return work
 
         # download the commit
-        repo.download_resource_commit(commit, destination_folder)
+        self._project.repo.download_work(commit, destination_folder)
 
         # create the work object
         work = Work(self)
@@ -458,6 +457,8 @@ class Config(PulseObject):
         self.product_user_root = None
         self.version_padding = 3
         self.version_prefix = "V"
+        self.repository_type = None
+        self.repository_parameters = {}
         PulseObject.__init__(self, project, "config", metas)
 
     def get_user_products_list_filepath(self):
@@ -469,6 +470,7 @@ class Project:
         self.cnx = connection
         self.name = project_name
         self.cfg = Config(self)
+        self.repo = None
 
     def get_pulse_node(self, uri_string):
         uri_dict = uri_tools.string_to_dict(uri_string)
@@ -490,12 +492,30 @@ class Project:
             if (product.get_unused_time()) > (unused_days*86400):
                 product.remove_from_user_products()
 
-    def set_config(self, work_user_root, product_user_root, version_padding, version_prefix):
+    def save_config(
+            self,
+            work_user_root,
+            product_user_root,
+            version_padding,
+            version_prefix,
+            repository_type,
+            repository_parameters
+    ):
         self.cfg.work_user_root = work_user_root
         self.cfg.product_user_root = product_user_root
         self.cfg.version_padding = version_padding
         self.cfg.version_prefix = version_prefix
+        self.cfg.repository_type = repository_type
+        self.cfg.repository_parameters = repository_parameters
         self.cfg.write_data()
+
+    def load_config(self):
+        self.cfg.read_data()
+        pulse_filepath = os.path.dirname(os.path.realpath(__file__))
+        repository = imp.load_source(
+            "repository",
+            os.path.join(pulse_filepath, "repository_adapters", self.cfg.repository_type + ".py"))
+        self.repo = repository.Repository(self.cfg.repository_parameters)
 
 
 class Connection:
@@ -503,10 +523,33 @@ class Connection:
         self.db = DB(connexion_data)
         self.user_name = self.db.get_user_name()
 
-    def create_project(self, project_name, work_user_root, product_user_root, version_padding=3, version_prefix="V"):
+    def create_project(self,
+                       project_name,
+                       work_user_root,
+                       product_user_root,
+                       version_padding=3,
+                       version_prefix="V",
+                       repository_type=None,
+                       repository_parameters=None
+                       ):
         project = Project(self, project_name)
+
+        pulse_filepath = os.path.dirname(os.path.realpath(__file__))
+        if not repository_type:
+            config = ConfigParser()
+            config.read(os.path.join(pulse_filepath, "repositories.ini"))
+            repository_type = config.get('global', 'default_adapter')
+
         self.db.create_project(project_name)
-        project.set_config(work_user_root, product_user_root, version_padding, version_prefix)
+        project.save_config(
+                            work_user_root,
+                            product_user_root,
+                            version_padding,
+                            version_prefix,
+                            repository_type,
+                            repository_parameters
+                            )
+        project.load_config()
         return project
 
     def get_project(self, project_name):

@@ -5,7 +5,7 @@ import unittest
 # TODO : unhandled error on missing resource type
 # TODO : test starting from another resource than template
 # TODO : test trashing an open file
-
+# TODO : add info on network drive
 
 def reset_files():
     directories_to_clean = [
@@ -29,10 +29,10 @@ def reset_files():
     print "FILES RESETED"
 
 
-def create_project(prj_name):
+def create_test_project(prj_name="test"):
     cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
-    cnx.create_project(prj_name, "S:", "T:")
-    return cnx, cnx.get_project(prj_name)
+    project = cnx.create_project(prj_name, "S:", "T:", repository_parameters={"root": "D:\\pipe\\pulse\\test\\repo"})
+    return cnx, project
 
 
 class TestBasic(unittest.TestCase):
@@ -49,19 +49,19 @@ class TestBasic(unittest.TestCase):
         pass
 
     def test_metadata(self):
-        cnx, prj = create_project("prj_test")
+        cnx, prj = create_test_project()
         prj.get_pulse_node(TEMPLATE_NAME + "-modeling").initialize_data()
         anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling")
         anna_mdl_resource.metas = {"site": "Paris"}
         anna_mdl_resource.initialize_data()
-        prj = cnx.get_project("prj_test")
+        prj = cnx.get_project(prj.name)
         res = prj.get_pulse_node("ch_anna-modeling")
         res.read_data()
         self.assertTrue(res.metas["site"] == "Paris")
 
     def test_complete_scenario(self):
         # create a connection
-        cnx, prj = create_project("prj_test")
+        cnx, prj = create_test_project()
         # create a new template resource
         template = prj.get_pulse_node(TEMPLATE_NAME + "-modeling").initialize_data()
         # checkout the template to edit it and save it
