@@ -1,7 +1,7 @@
 import os
 import shutil
 import pulse.message as msg
-from pulse.repository_adapters.interface_class import PulseRepository
+from pulse.repository_adapters.interface_class import *
 
 
 def copy_folder_tree(source_folder, destination_folder):
