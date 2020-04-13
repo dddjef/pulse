@@ -1,6 +1,5 @@
 import pulse.uri_tools as uri_tools
 import pulse.path_resolver as pr
-from pulse.database_linker import DB
 import pulse.message as msg
 import pulse.hooks as hooks
 import json
@@ -500,7 +499,7 @@ class Project:
             version_prefix,
             repository_type,
             repository_parameters
-    ):
+            ):
         self.cfg.work_user_root = work_user_root
         self.cfg.product_user_root = product_user_root
         self.cfg.version_padding = version_padding
@@ -510,17 +509,19 @@ class Project:
         self.cfg.write_data()
 
     def load_config(self):
-        self.cfg.read_data()
-        pulse_filepath = os.path.dirname(os.path.realpath(__file__))
-        repository = imp.load_source(
-            "repository",
-            os.path.join(pulse_filepath, "repository_adapters", self.cfg.repository_type + ".py"))
-        self.repo = repository.Repository(self.cfg.repository_parameters)
+        if not self.cfg.read_data():
+            raise PulseError("No configuration found for project" + self.name)
+        self.repo = import_adapter("repository", self.cfg.repository_type).Repository(self.cfg.repository_parameters)
 
 
 class Connection:
-    def __init__(self, connexion_data):
-        self.db = DB(connexion_data)
+    def __init__(self, connexion_data, database_type=None):
+        pulse_filepath = os.path.dirname(os.path.realpath(__file__))
+        if not database_type:
+            config = ConfigParser()
+            config.read(os.path.join(pulse_filepath, "config.ini"))
+            database_type = config.get('database', 'default_adapter')
+        self.db = import_adapter("database", database_type).Database(connexion_data)
         self.user_name = self.db.get_user_name()
 
     def create_project(self,
@@ -554,6 +555,10 @@ class Connection:
 
     def get_project(self, project_name):
         project = Project(self, project_name)
-        if not project.cfg.read_data():
-            raise PulseError("project not found")
+        project.load_config()
         return project
+
+
+def import_adapter(adapter_type, adapter_name):
+    pulse_filepath = os.path.dirname(os.path.realpath(__file__))
+    return imp.load_source(adapter_type, os.path.join(pulse_filepath, adapter_type + "_adapters", adapter_name + ".py"))
