@@ -538,8 +538,8 @@ class Connection:
         pulse_filepath = os.path.dirname(os.path.realpath(__file__))
         if not repository_type:
             config = ConfigParser()
-            config.read(os.path.join(pulse_filepath, "repositories.ini"))
-            repository_type = config.get('global', 'default_adapter')
+            config.read(os.path.join(pulse_filepath, "config.ini"))
+            repository_type = config.get('repository', 'default_adapter')
 
         self.db.create_project(project_name)
         project.save_config(
