@@ -17,7 +17,7 @@ def copy_folder_tree(source_folder, destination_folder):
 
 class Repository(PulseRepository):
     def __init__(self, parameters):
-        self.root = parameters["root"] + "_ftp"
+        self.root = parameters["root"]
         self.version_prefix = "V"
         self.version_padding = 3
         PulseRepository.__init__(self)

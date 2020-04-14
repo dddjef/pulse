@@ -1,21 +1,20 @@
 from pulse.api import *
 import unittest
-
+import os
 
 # TODO : unhandled error on missing resource type
 # TODO : test starting from another resource than template
 # TODO : test trashing an open file
-# TODO : add info on minimal preparation to test
+
+test_dir = os.path.dirname(__file__)
+db = os.path.join(test_dir, "DB")
+user_works = os.path.join(test_dir, "works")
+user_products = os.path.join(test_dir, "products")
+repos = os.path.join(test_dir, "repos")
+
 
 def reset_files():
-    directories_to_clean = [
-        r"D:\pipe\pulse\test\sandbox",
-        r"D:\pipe\pulse\test\repos",
-        r"D:\pipe\pulse\test\DB",
-        r"D:\pipe\pulse\test\user_products",
-    ]
-
-    for directory in directories_to_clean:
+    for directory in [db, user_products, user_works, repos]:
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
             try:
@@ -30,12 +29,12 @@ def reset_files():
 
 
 def create_test_project(prj_name="test"):
-    cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
+    cnx = Connection({"DB_root": db})
     project = cnx.create_project(
         prj_name,
-        "S:",
-        "T:",
-        repository_parameters={"root": "D:\\pipe\\pulse\\test\\repos\\default"}
+        user_works,
+        user_products,
+        repository_parameters={"root": os.path.join(repos, "default")}
     )
     return cnx, project
 
@@ -71,13 +70,21 @@ class TestBasic(unittest.TestCase):
         res = prj.get_pulse_node("ch_anna-modeling")
         res.read_data()
         self.assertTrue(res.metas["site"] == "Paris")
+        reset_files()
 
     def test_multiples_repositories(self):
         cnx, prj = create_test_project()
         create_template(prj, "mdl")
-        cnx = Connection({"DB_root": "D:\\pipe\\pulse\\test\\DB"})
-        ftp_prj = cnx.create_project("testFTP", "S:\\ftp", "T:\\ftp",  repository_type="ftp_repo", repository_parameters={"root": "D:\\pipe\\pulse\\test\\repos\\ftp"})
+        cnx = Connection({"DB_root": db})
+        ftp_prj = cnx.create_project(
+            "testFTP",
+            user_works + "\\ftp",
+            user_products + "\\ftp",
+            repository_type="ftp_repo",
+            repository_parameters={"root": repos}
+        )
         create_template(ftp_prj, "mdl")
+        reset_files()
 
     def test_complete_scenario(self):
         # create a connection
@@ -143,6 +150,7 @@ class TestBasic(unittest.TestCase):
         anna_mdl_work.trash()
         for nd in prj.list_nodes("Resource", "*anna*"):
             print nd.uri
+        reset_files()
 
 
 if __name__ == '__main__':
