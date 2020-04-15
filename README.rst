@@ -35,7 +35,7 @@ post commit, pre checkout, post checkout, etc...
 Q/A
 ===
 
-My artists works all in the same location, is it interesting to use Pulse?
+My artists work all in the same location, what's the point to use Pulse?
     Yes! Pulse act like a local cache, even with to leverage server access even in the same network
 
 
