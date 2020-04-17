@@ -30,20 +30,23 @@ def reset_files():
 
 def create_test_project(prj_name="test"):
     cnx = Connection({"DB_root": db})
-    project = cnx.create_project(
+    prj = cnx.create_project(
         prj_name,
         user_works,
         user_products,
         repository_parameters={"root": os.path.join(repos, "default")}
     )
-    return cnx, project
+    create_template(prj, "surfacing")
+    create_template(prj, "rigging")
+    create_template(prj, "anim")
+    return cnx, prj
 
 
 def create_template(prj, template_type):
     template = prj.get_pulse_node(TEMPLATE_NAME + "-" + template_type).initialize_data()
     # checkout the template to edit it and save it
     work = template.checkout()
-    open(work.directory + "\\template_work.txt", 'a').close()
+    open(work.get_directory() + "\\template_work.txt", 'a').close()
     work.commit()
     return template
 
@@ -52,7 +55,7 @@ class TestBasic(unittest.TestCase):
     def setUp(self):
         reset_files()
 
-    # @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")
     def test_exceptions_resource(self):
         # test resource without template
         # TODO : test resource with mis formed uri
@@ -60,6 +63,7 @@ class TestBasic(unittest.TestCase):
         # TODO : test get missing resource
         pass
 
+    @unittest.skip("demonstrating skipping")
     def test_metadata(self):
         cnx, prj = create_test_project()
         prj.get_pulse_node(TEMPLATE_NAME + "-modeling").initialize_data()
@@ -72,7 +76,8 @@ class TestBasic(unittest.TestCase):
         self.assertTrue(res.metas["site"] == "Paris")
         reset_files()
 
-    def test_multiples_repositories(self):
+    @unittest.skip("demonstrating skipping")
+    def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
         create_template(prj, "mdl")
         cnx = Connection({"DB_root": db})
@@ -86,6 +91,21 @@ class TestBasic(unittest.TestCase):
         create_template(ftp_prj, "mdl")
         reset_files()
 
+    def test_shot_scenario(self):
+        cnx, prj = create_test_project()
+        anna_surf_resource = prj.get_pulse_node("ch_anna-surfacing").initialize_data()
+        anna_surf_work = anna_surf_resource.checkout()
+        product_folder = anna_surf_work.create_product("textures").get_directory()
+        open(product_folder + "\\product_file.txt", 'a').close()
+        anna_surf_work.commit(comment="test generated product")
+        anna_rig_resource = prj.get_pulse_node("ch_anna-rigging").initialize_data()
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_actor_anim = anna_rig_work.create_product("actor_anim")
+        anna_actor_anim.add_product_input("ch_anna-surfacing-textures@1")
+        # TODO : the work commit could transform a WorkProduct node into a Product node. This could lead to errors
+        anna_rig_work.commit()
+
+    @unittest.skip("demonstrating skipping")
     def test_complete_scenario(self):
         # create a connection
         cnx, prj = create_test_project()
