@@ -47,9 +47,9 @@ def write_data(filepath, data):
         json.dump(data, write_file, indent=4, sort_keys=True)
 
 
-def remove_empty_parents_directory(directory):
+def remove_empty_parents_directory(directory, root_dirs):
     while not os.listdir(directory):
         os.rmdir(directory)
         directory = os.path.dirname(directory)
-        if directory.endswith(":"):
+        if directory.endswith(":") or directory in root_dirs:
             break

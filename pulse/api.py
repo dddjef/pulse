@@ -14,7 +14,6 @@ TEMPLATE_NAME = "_template"
 PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
 
-
 class PulseError(Exception):
     def __init__(self, reason):
         Exception.__init__(self)
@@ -37,6 +36,7 @@ class PulseObject:
         return self._project
 
     def write_data(self):
+        # TODO : tag the stored attribute with a suffix to avoid to use reserved variable for nothing
         # get the storage data
         data = dict((name, getattr(self, name)) for name in vars(self) if not name.startswith('_'))
         self._project.cnx.db.write(self._project.name, self.__class__.__name__, self.uri, data)
@@ -54,11 +54,12 @@ class PulseObject:
             return False
 
 
-class Product:
+class Product(PulseObject):
     def __init__(self, commit, product_type):
-        self.commit = commit
+        self._commit = commit
         self.product_type = product_type
         # TODO : the get products directory should be a commit function
+        # TODO : the project could be an attribute at creation
         self.products_directory = pr.build_products_filepath(
             commit.get_resource().get_project(),
             commit.entity,
@@ -66,7 +67,7 @@ class Product:
             commit.version
         )
         self.directory = self.products_directory + "\\" + product_type
-        self.products_inputs_file = self.directory + "\\products_inputs.pipe"
+        self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
         self.products_inputs = []
         self._work_users_file = self.directory + "\\" + "work_users.pipe"
         self.uri = uri_tools.dict_to_string({
@@ -75,8 +76,13 @@ class Product:
             "product_type": product_type,
             "version": commit.version
         })
-        self.project_products_list = self.commit.get_resource().get_project().cfg.get_user_products_list_filepath()
+        self.project_products_list = self._commit.get_resource().get_project().cfg.get_user_products_list_filepath()
+        PulseObject.__init__(self, commit.get_resource().get_project(), self.uri)
 
+    def get_commit(self):
+        return self._commit
+
+    # TODO : rename all functions work users" by something for product too
     def add_work_user(self, work_directory):
         if os.path.exists(self._work_users_file):
             product_work_users = self.get_work_users()
@@ -98,6 +104,13 @@ class Product:
             return []
         return fu.read_data(self._work_users_file)
 
+    def get_inputs(self):
+        print "product file", self.products_inputs_file
+        if not os.path.exists(self.products_inputs_file):
+            return []
+        with open(self.products_inputs_file, "r") as read_file:
+            return json.load(read_file)
+
     def get_unused_time(self):
         users = self.get_work_users()
         if users:
@@ -107,22 +120,34 @@ class Product:
         else:
             return time.time() - os.path.getctime(self.directory)
 
-    def remove_from_user_products(self):
+    def remove_from_user_products(self, recursive_clean=False):
         if len(self.get_work_users()) > 0:
-            raise Exception("Can't remove a product. It still in use by work")
+            raise PulseError("Can't remove a product still in use")
+
+        # unregister from its inputs
+        for uri in self.get_inputs():
+            product_input = self._commit.get_resource().get_project().get_pulse_node(uri)
+            product_input.remove_work_user(self.directory)
+            if recursive_clean:
+                try:
+                    product_input.remove_from_user_products(recursive_clean=True)
+                except PulseError:
+                    pass
+
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
-        fu.remove_empty_parents_directory(os.path.dirname(self.directory))
+        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.get_project().cfg.product_user_root])
+        msg.new('INFO', "product remove for user path " + self.uri)
         self.unregister_to_user_products()
 
     def download(self):
         if os.path.exists(self.directory):
             return
-        self.commit.get_project().repo.download_product(self)
+        self._commit.get_project().repo.download_product(self)
         fu.write_data(self._work_users_file, [])
         self.register_to_user_products()
         for uri in self.products_inputs:
-            product = self.commit.get_project().get_pulse_node(uri)
+            product = self._commit.get_project().get_pulse_node(uri)
             product.download()
             product.add_work_user(self.directory)
 
@@ -164,29 +189,55 @@ class Commit(PulseObject):
         return self._resource
 
 
-class WorkNode:
+class Work:
     def __init__(self, resource):
         self.project = resource.get_project()
         self.resource = resource
-        self.products_inputs_file = self.get_directory() + PRODUCT_INPUTS_FILENAME
+        self.directory = pr.build_work_filepath(self.project, self.resource)
+        self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
+        self.version = None
+        self.data_file = self.directory + "\\work.pipe"
 
-    def get_directory(self):
-        pass
+    def get_product_directory(self, product_type):
+        return os.path.join(self.get_products_directory(), product_type)
 
-    def get_product_inputs(self):
-        if not os.path.exists(self.products_inputs_file):
+    @staticmethod
+    def _get_inputs(products_inputs_file):
+        if not os.path.exists(products_inputs_file):
             return []
-        with open(self.products_inputs_file, "r") as read_file:
+        with open(products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def add_product_input(self, uri):
+    def initialize_product_directory(self, product_type):
+        directory = self.get_product_directory(product_type)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        return directory
+
+    def get_work_inputs(self):
+        return self._get_inputs(self.products_inputs_file)
+
+    def get_product_inputs(self, product_type):
+        inputs_file = os.path.join(self.get_product_directory(product_type), PRODUCT_INPUTS_FILENAME)
+        return self._get_inputs(inputs_file)
+
+    def add_work_input(self, uri):
+        product = self._add_input(self.products_inputs_file, uri)
+        product.add_work_user(self.directory)
+
+    def add_product_input(self, product_type, uri):
+        inputs_file = os.path.join(self.get_product_directory(product_type), PRODUCT_INPUTS_FILENAME)
+        product = self._add_input(inputs_file, uri)
+        product.add_work_user(self.get_product_directory(product_type))
+
+    def _add_input(self, products_inputs_file, uri):
         # add it to the work product inputs
-        product_inputs = self.get_product_inputs()
+        product_inputs = self._get_inputs(products_inputs_file)
         if uri in product_inputs:
             msg.new("DEBUG", "product already exists in user products")
         else:
             product_inputs.append(uri)
-            fu.write_data(self.products_inputs_file, product_inputs)
+            fu.write_data(products_inputs_file, product_inputs)
 
         product = self.project.get_pulse_node(uri)
 
@@ -196,51 +247,32 @@ class WorkNode:
                 raise PulseError("Can't register unknown product " + uri)
             product.download()
             msg.new("INFO", "product added to user products")
+        return product
 
-        # add work user
-        product.add_work_user(self.get_directory())
+    def remove_work_input(self, uri):
+        product = self._remove_product_inputs(uri, self.products_inputs_file)
+        product.remove_work_user(self.directory)
 
-    def remove_product_inputs(self, uri):
+    def remove_product_input(self,  product_type, uri):
+        inputs_file = os.path.join(self.get_product_directory(product_type), PRODUCT_INPUTS_FILENAME)
+        product = self._remove_product_inputs(uri, inputs_file)
+        product.remove_work_user(self.get_product_directory(product_type))
+
+    def _remove_product_inputs(self, uri, products_inputs_file):
         # remove it from the work data
-        product_inputs = self.get_product_inputs()
+        product_inputs = self._get_inputs(products_inputs_file)
         if uri in product_inputs:
             product_inputs.remove(uri)
-            fu.write_data(self.products_inputs_file, product_inputs)
+            fu.write_data(products_inputs_file, product_inputs)
         # remove work from product users
         product = self.project.get_pulse_node(uri)
-        product.remove_work_user(self.get_directory())
-
-
-class WorkProduct(WorkNode):
-    def __init__(self, work, product_type):
-        self.work = work
-        self.product_type = product_type
-        WorkNode.__init__(self, work.resource)
-
-    def get_directory(self):
-        return os.path.join(self.work.get_products_directory(), self.product_type)
-
-    def initialize_directory(self):
-        directory = self.get_directory()
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-
-class Work(WorkNode):
-    def __init__(self, resource):
-        self.version = None
-        WorkNode.__init__(self, resource)
-        self.data_file = self.get_directory() + "\\work.pipe"
-
-    def get_directory(self):
-        return pr.build_work_filepath(self.project, self.resource)
+        return product
 
     def write(self):
-
         # remove old version file
         old_version_file = self.version_pipe_filepath(self.resource.last_version)
         if os.path.exists(old_version_file):
-            os.remove(os.path.join(self.get_directory(), old_version_file))
+            os.remove(os.path.join(self.directory, old_version_file))
 
         # create the new version file
         new_version_file = self.version_pipe_filepath(self.version)
@@ -290,15 +322,15 @@ class Work(WorkNode):
 
         # copy work to a new version in repository
         commit = Commit(self.resource, self.version)
-        commit.get_project().repo.upload_resource_commit(commit, self.get_directory(), products_directory)
+        commit.get_project().repo.upload_resource_commit(commit, self.directory, products_directory)
 
         # register changes to database
         commit.comment = comment
         commit.files = fu.get_directory_content(
-            self.get_directory(),
+            self.directory,
             ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
         )
-        commit.products_inputs = self.get_product_inputs()
+        commit.products_inputs = self.get_work_inputs()
         commit.products = os.listdir(products_directory)
         # if there's no product, delete the products version directory
         if not commit.products:
@@ -308,6 +340,8 @@ class Work(WorkNode):
             for product_type in commit.products:
                 product = Product(commit, product_type)
                 product.register_to_user_products()
+                product.products_inputs = self.get_product_inputs(product_type)
+                product.write_data()
 
         commit.write_data()
         self.resource.last_version = self.version
@@ -323,41 +357,45 @@ class Work(WorkNode):
     def trash(self):
         # test the work and products folder are movable
         products_directory = self.get_products_directory()
-        for path in [self.get_directory(), products_directory]:
+        for path in [self.directory, products_directory]:
             if not fu.test_path_write_access(path):
                 raise PulseError("can't move folder " + path)
+
+        # unregister from products
+        for product_uri in self.get_work_inputs():
+            product = self.resource.get_project().get_pulse_node(product_uri)
+            print "unregister from ", product.uri
+            if not os.path.exists(product.directory):
+                continue
+            product.remove_work_user(self.directory)
 
         # create the trash work directory
         trash_directory = pr.build_project_trash_filepath(self.project, self)
         os.makedirs(trash_directory)
 
         # move folders
-        shutil.move(self.get_directory(), trash_directory + "\\WORK")
+        shutil.move(self.directory, trash_directory + "\\WORK")
         shutil.move(products_directory, trash_directory + "\\PRODUCTS")
 
-        # recursively remove products directories if there are empty
-        fu.remove_empty_parents_directory(os.path.dirname(products_directory))
+        # recursively remove works directories if they are empty
+        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.work_user_root])
 
-        # unregister from products
-        for product_uri in self.get_product_inputs():
-            product = self.resource.get_project().get_pulse_node(product_uri)
-            if not os.path.exists(product.directory):
-                continue
-            product.remove_work_user(self.get_directory())
+        # recursively remove products directories if they are empty
+        fu.remove_empty_parents_directory(os.path.dirname(products_directory), [self.project.cfg.product_user_root])
 
         msg.new('INFO', "work move to trash " + trash_directory)
         return True
 
     def version_pipe_filepath(self, index):
         return os.path.join(
-            self.get_directory(),
+            self.directory,
             self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
         )
 
     def get_files_changes(self):
 
         current_work_files = fu.get_directory_content(
-            self.get_directory(),
+            self.directory,
             ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
         )
 
@@ -374,19 +412,6 @@ class Work(WorkNode):
 
     def get_products_directory(self):
         return pr.build_products_filepath(self.project, self.resource.entity, self.resource.resource_type, self.version)
-
-    def get_product(self, product_type):
-        product = WorkProduct(self, product_type)
-        if not os.path.exists(product.get_directory()):
-            raise PulseError("product does not exists")
-        return product
-
-    def create_product(self, product_type):
-        product = WorkProduct(self, product_type)
-        if os.path.exists(product.get_directory()):
-            raise PulseError("product already exists")
-        product.initialize_directory()
-        return product
 
 
 class Resource(PulseObject):
@@ -475,11 +500,10 @@ class Resource(PulseObject):
         # create the work object
         work = Work(self)
         work.version = self.last_version + 1
-        work.products_inputs = commit.products_inputs
         work.write()
 
         # download requested input products if needed
-        for uri in work.products_inputs:
+        for uri in work.get_work_inputs():
             product = self._project.get_pulse_node(uri)
             product.download()
             product.add_work_user(self.work_directory)
@@ -538,11 +562,14 @@ class Project:
         return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]
 
     def purge_unused_user_products(self, unused_days=0):
+        # TODO : should ignore the error of an used product if the product is in the purged list
+        purged_products = []
         for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
             product = self.get_pulse_node(uri)
             # convert unused days in seconds to compare with unused time
-            if (product.get_unused_time()) > (unused_days*86400):
-                product.remove_from_user_products()
+            print uri, product.get_unused_time()
+            if product.get_unused_time() > (unused_days*86400):
+                product.remove_from_user_products(recursive_clean=True)
 
     def save_config(
             self,

@@ -46,8 +46,9 @@ def create_template(prj, template_type):
     template = prj.get_pulse_node(TEMPLATE_NAME + "-" + template_type).initialize_data()
     # checkout the template to edit it and save it
     work = template.checkout()
-    open(work.get_directory() + "\\template_work.txt", 'a').close()
+    open(work.directory + "\\template_work.txt", 'a').close()
     work.commit()
+    work.trash()
     return template
 
 
@@ -55,28 +56,20 @@ class TestBasic(unittest.TestCase):
     def setUp(self):
         reset_files()
 
-    @unittest.skip("demonstrating skipping")
-    def test_exceptions_resource(self):
-        # test resource without template
-        # TODO : test resource with mis formed uri
-        # test create an existing resource
-        # TODO : test get missing resource
-        pass
+    def tearDown(self):
+        reset_files()
 
-    @unittest.skip("demonstrating skipping")
     def test_metadata(self):
         cnx, prj = create_test_project()
         prj.get_pulse_node(TEMPLATE_NAME + "-modeling").initialize_data()
-        anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling")
-        anna_mdl_resource.metas = {"site": "Paris"}
-        anna_mdl_resource.initialize_data()
-        prj = cnx.get_project(prj.name)
-        res = prj.get_pulse_node("ch_anna-modeling")
-        res.read_data()
-        self.assertTrue(res.metas["site"] == "Paris")
-        reset_files()
+        # anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling")
+        # anna_mdl_resource.metas = {"site": "Paris"}
+        # anna_mdl_resource.initialize_data()
+        # prj = cnx.get_project(prj.name)
+        # res = prj.get_pulse_node("ch_anna-modeling")
+        # res.read_data()
+        # self.assertTrue(res.metas["site"] == "Paris")
 
-    @unittest.skip("demonstrating skipping")
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
         create_template(prj, "mdl")
@@ -89,23 +82,26 @@ class TestBasic(unittest.TestCase):
             repository_parameters={"root": repos}
         )
         create_template(ftp_prj, "mdl")
-        reset_files()
 
     def test_shot_scenario(self):
         cnx, prj = create_test_project()
         anna_surf_resource = prj.get_pulse_node("ch_anna-surfacing").initialize_data()
         anna_surf_work = anna_surf_resource.checkout()
-        product_folder = anna_surf_work.create_product("textures").get_directory()
+        product_folder = anna_surf_work.initialize_product_directory("textures")
         open(product_folder + "\\product_file.txt", 'a').close()
         anna_surf_work.commit(comment="test generated product")
         anna_rig_resource = prj.get_pulse_node("ch_anna-rigging").initialize_data()
         anna_rig_work = anna_rig_resource.checkout()
-        anna_actor_anim = anna_rig_work.create_product("actor_anim")
-        anna_actor_anim.add_product_input("ch_anna-surfacing-textures@1")
-        # TODO : the work commit could transform a WorkProduct node into a Product node. This could lead to errors
+        anna_rig_work.initialize_product_directory("actor_anim")
+        anna_rig_work.add_product_input("actor_anim", "ch_anna-surfacing-textures@1")
         anna_rig_work.commit()
+        anna_rig_work.trash()
+        anna_surf_work.trash()
+        prj.purge_unused_user_products()
+        anim_resource = prj.get_pulse_node("sh003-anim").initialize_data()
+        anim_work = anim_resource.checkout()
+        anim_work.add_work_input("ch_anna-rigging-actor_anim@1")
 
-    @unittest.skip("demonstrating skipping")
     def test_complete_scenario(self):
         # create a connection
         cnx, prj = create_test_project()
@@ -143,10 +139,10 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 
-        hat_mdl_work.add_product_input(anna_mdl_resource, 2, "ABC")
+        hat_mdl_work.add_work_input("ch_anna-modeling-ABC@2")
         # test the product registration
         hat_mdl_work.read()
-        self.assertEqual(hat_mdl_work.products_inputs[0], "ch_anna-modeling-ABC@2")
+        self.assertEqual(hat_mdl_work.get_work_inputs()[0], "ch_anna-modeling-ABC@2")
         anna_mdl_v2_abc = anna_mdl_v2.get_product("ABC")
         # check the work registration to product
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_work_users())
@@ -166,12 +162,12 @@ class TestBasic(unittest.TestCase):
         prj.purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
-        hat_mdl_work.remove_product_inputs(anna_mdl_resource, 2, "ABC")
+        hat_mdl_work.remove_work_input("ch_anna-modeling-ABC@2")
         anna_mdl_work.trash()
         for nd in prj.list_nodes("Resource", "*anna*"):
             print nd.uri
-        reset_files()
 
 
 if __name__ == '__main__':
     unittest.main()
+    reset_files()
