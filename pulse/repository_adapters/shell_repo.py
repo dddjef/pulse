@@ -79,6 +79,6 @@ class Repository(PulseRepository):
         """build_products_user_filepath
         """
         # build_products_repository_path
-        product_repo_path = self.build_path("products", product.get_commit()) + "\\" + product.product_type
+        product_repo_path = self.build_path("products", product.commit) + "\\" + product.product_type
         # copy repo products type to products_user_filepath
         copy_folder_tree(product_repo_path, product.directory)

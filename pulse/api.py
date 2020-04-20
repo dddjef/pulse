@@ -14,6 +14,7 @@ TEMPLATE_NAME = "_template"
 PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
 
+
 class PulseError(Exception):
     def __init__(self, reason):
         Exception.__init__(self)
@@ -31,14 +32,14 @@ class PulseObject:
         self.uri = uri
         self._project = project
         self.metas = metas
+        self._storage_vars = []
 
     def get_project(self):
         return self._project
 
     def write_data(self):
-        # TODO : tag the stored attribute with a suffix to avoid to use reserved variable for nothing
-        # get the storage data
-        data = dict((name, getattr(self, name)) for name in vars(self) if not name.startswith('_'))
+        # write the data to db
+        data = dict((name, getattr(self, name)) for name in self._storage_vars if not name.startswith("_"))
         self._project.cnx.db.write(self._project.name, self.__class__.__name__, self.uri, data)
 
     def read_data(self):
@@ -56,8 +57,9 @@ class PulseObject:
 
 class Product(PulseObject):
     def __init__(self, commit, product_type):
-        self._commit = commit
+        self.commit = commit
         self.product_type = product_type
+        # TODO : use the _project attr in all this class
         # TODO : the get products directory should be a commit function
         # TODO : the project could be an attribute at creation
         self.products_directory = pr.build_products_filepath(
@@ -76,11 +78,12 @@ class Product(PulseObject):
             "product_type": product_type,
             "version": commit.version
         })
-        self.project_products_list = self._commit.get_resource().get_project().cfg.get_user_products_list_filepath()
+        self.project_products_list = self.commit.get_resource().get_project().cfg.get_user_products_list_filepath()
         PulseObject.__init__(self, commit.get_resource().get_project(), self.uri)
+        self._storage_vars = ['product_type', 'products_inputs', 'uri']
 
     def get_commit(self):
-        return self._commit
+        return self.commit
 
     # TODO : rename all functions work users" by something for product too
     def add_work_user(self, work_directory):
@@ -126,7 +129,7 @@ class Product(PulseObject):
 
         # unregister from its inputs
         for uri in self.get_inputs():
-            product_input = self._commit.get_resource().get_project().get_pulse_node(uri)
+            product_input = self.commit.get_resource().get_project().get_pulse_node(uri)
             product_input.remove_work_user(self.directory)
             if recursive_clean:
                 try:
@@ -143,11 +146,11 @@ class Product(PulseObject):
     def download(self):
         if os.path.exists(self.directory):
             return
-        self._commit.get_project().repo.download_product(self)
+        self.commit.get_project().repo.download_product(self)
         fu.write_data(self._work_users_file, [])
         self.register_to_user_products()
         for uri in self.products_inputs:
-            product = self._commit.get_project().get_pulse_node(uri)
+            product = self.commit.get_project().get_pulse_node(uri)
             product.download()
             product.add_work_user(self.directory)
 
@@ -177,6 +180,7 @@ class Commit(PulseObject):
         self.version = version
         self.products = []
         PulseObject.__init__(self, resource.get_project(), self.uri, metas)
+        self._storage_vars = ['version', 'uri', 'products', 'files', 'comment']
 
     def get_product(self, product_type):
         self.read_data()
@@ -428,6 +432,7 @@ class Resource(PulseObject):
             uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}),
             metas
         )
+        self._storage_vars = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity']
 
     def user_needs_lock(self, user=None):
         if not user:
@@ -536,6 +541,7 @@ class Config(PulseObject):
         self.repository_type = None
         self.repository_parameters = {}
         PulseObject.__init__(self, project, "config", metas)
+        self._storage_vars = vars(self)
 
     def get_user_products_list_filepath(self):
         return os.path.join(self.product_user_root, "products_list.pipe")
