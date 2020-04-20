@@ -66,11 +66,10 @@ class Product(PulseObject):
         PulseObject.__init__(self, commit.get_project(), self.uri)
         self.commit = commit
         self.product_type = product_type
-        # TODO : the project could be an attribute at creation
         self.directory = commit.products_directory + "\\" + product_type
         self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
         self.products_inputs = []
-        self._work_users_file = self.directory + "\\" + "work_users.pipe"
+        self.work_users_file = self.directory + "\\" + "work_users.pipe"
 
         self.project_products_list = self._project.cfg.get_user_products_list_filepath()
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
@@ -80,25 +79,25 @@ class Product(PulseObject):
 
     # TODO : rename all functions work users" by something for product too
     def add_work_user(self, work_directory):
-        if os.path.exists(self._work_users_file):
+        if os.path.exists(self.work_users_file):
             product_work_users = self.get_work_users()
         else:
             product_work_users = []
 
         if work_directory not in product_work_users:
             product_work_users.append(work_directory)
-            fu.write_data(self._work_users_file, product_work_users)
+            fu.write_data(self.work_users_file, product_work_users)
 
     def remove_work_user(self, work_directory):
         product_work_users = self.get_work_users()
         if work_directory in product_work_users:
             product_work_users.remove(work_directory)
-            fu.write_data(self._work_users_file, product_work_users)
+            fu.write_data(self.work_users_file, product_work_users)
 
     def get_work_users(self):
-        if not os.path.exists(self._work_users_file):
+        if not os.path.exists(self.work_users_file):
             return []
-        return fu.read_data(self._work_users_file)
+        return fu.read_data(self.work_users_file)
 
     def get_inputs(self):
         if not os.path.exists(self.products_inputs_file):
@@ -110,8 +109,8 @@ class Product(PulseObject):
         users = self.get_work_users()
         if users:
             return -1
-        if os.path.exists(self._work_users_file):
-            return time.time() - os.path.getmtime(self._work_users_file) + 0.01
+        if os.path.exists(self.work_users_file):
+            return time.time() - os.path.getmtime(self.work_users_file) + 0.01
         else:
             return time.time() - os.path.getctime(self.directory)
 
@@ -139,7 +138,7 @@ class Product(PulseObject):
         if os.path.exists(self.directory):
             return
         self.commit.get_project().repo.download_product(self)
-        fu.write_data(self._work_users_file, [])
+        fu.write_data(self.work_users_file, [])
         self.register_to_user_products()
         for uri in self.products_inputs:
             product = self._project.get_pulse_node(uri)
