@@ -363,7 +363,6 @@ class Work:
         # unregister from products
         for product_uri in self.get_work_inputs():
             product = self.resource.get_project().get_pulse_node(product_uri)
-            print "unregister from ", product.uri
             if not os.path.exists(product.directory):
                 continue
             product.remove_product_user(self.directory)
@@ -563,11 +562,8 @@ class Project:
         return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]
 
     def purge_unused_user_products(self, unused_days=0):
-        # TODO : should ignore the error of an used product if the product is in the purged list
         for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
             product = self.get_pulse_node(uri)
-            # convert unused days in seconds to compare with unused time
-            print uri, product.get_unused_time()
             if product.get_unused_time() > (unused_days*86400):
                 product.remove_from_user_products(recursive_clean=True)
 
