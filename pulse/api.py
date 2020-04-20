@@ -76,7 +76,6 @@ class Product(PulseObject):
     def get_commit(self):
         return self.commit
 
-    # TODO : rename all functions work users" by something for product too
     def add_product_user(self, user_directory):
         if os.path.exists(self.work_users_file):
             product_work_users = self.get_product_users()
@@ -565,7 +564,6 @@ class Project:
 
     def purge_unused_user_products(self, unused_days=0):
         # TODO : should ignore the error of an used product if the product is in the purged list
-        purged_products = []
         for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
             product = self.get_pulse_node(uri)
             # convert unused days in seconds to compare with unused time
