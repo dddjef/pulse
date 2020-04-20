@@ -145,7 +145,7 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(hat_mdl_work.get_work_inputs()[0], "ch_anna-modeling-ABC@2")
         anna_mdl_v2_abc = anna_mdl_v2.get_product("ABC")
         # check the work registration to product
-        self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_work_users())
+        self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
         # check you can't remove a product if it's used by a work
         with self.assertRaises(Exception):
             anna_mdl_v2_abc.remove_from_user_products()
@@ -155,7 +155,7 @@ class TestBasic(unittest.TestCase):
         # trash the hat
 
         hat_mdl_work.trash()
-        self.assertTrue(hat_mdl_work.directory not in anna_mdl_v2_abc.get_work_users())
+        self.assertTrue(hat_mdl_work.directory not in anna_mdl_v2_abc.get_product_users())
         # check the unused time for the product
         self.assertTrue(anna_mdl_v2_abc.get_unused_time() > 0)
         # remove the product

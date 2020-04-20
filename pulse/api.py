@@ -70,7 +70,6 @@ class Product(PulseObject):
         self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
         self.products_inputs = []
         self.work_users_file = self.directory + "\\" + "work_users.pipe"
-
         self.project_products_list = self._project.cfg.get_user_products_list_filepath()
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
 
@@ -78,23 +77,23 @@ class Product(PulseObject):
         return self.commit
 
     # TODO : rename all functions work users" by something for product too
-    def add_work_user(self, work_directory):
+    def add_product_user(self, user_directory):
         if os.path.exists(self.work_users_file):
-            product_work_users = self.get_work_users()
+            product_work_users = self.get_product_users()
         else:
             product_work_users = []
 
-        if work_directory not in product_work_users:
-            product_work_users.append(work_directory)
+        if user_directory not in product_work_users:
+            product_work_users.append(user_directory)
             fu.write_data(self.work_users_file, product_work_users)
 
-    def remove_work_user(self, work_directory):
-        product_work_users = self.get_work_users()
-        if work_directory in product_work_users:
-            product_work_users.remove(work_directory)
+    def remove_product_user(self, user_directory):
+        product_work_users = self.get_product_users()
+        if user_directory in product_work_users:
+            product_work_users.remove(user_directory)
             fu.write_data(self.work_users_file, product_work_users)
 
-    def get_work_users(self):
+    def get_product_users(self):
         if not os.path.exists(self.work_users_file):
             return []
         return fu.read_data(self.work_users_file)
@@ -106,7 +105,7 @@ class Product(PulseObject):
             return json.load(read_file)
 
     def get_unused_time(self):
-        users = self.get_work_users()
+        users = self.get_product_users()
         if users:
             return -1
         if os.path.exists(self.work_users_file):
@@ -115,13 +114,13 @@ class Product(PulseObject):
             return time.time() - os.path.getctime(self.directory)
 
     def remove_from_user_products(self, recursive_clean=False):
-        if len(self.get_work_users()) > 0:
+        if len(self.get_product_users()) > 0:
             raise PulseError("Can't remove a product still in use")
 
         # unregister from its inputs
         for uri in self.get_inputs():
             product_input = self._project.get_pulse_node(uri)
-            product_input.remove_work_user(self.directory)
+            product_input.remove_product_user(self.directory)
             if recursive_clean:
                 try:
                     product_input.remove_from_user_products(recursive_clean=True)
@@ -143,7 +142,7 @@ class Product(PulseObject):
         for uri in self.products_inputs:
             product = self._project.get_pulse_node(uri)
             product.download()
-            product.add_work_user(self.directory)
+            product.add_product_user(self.directory)
 
     def register_to_user_products(self):
         try:
@@ -224,12 +223,12 @@ class Work:
 
     def add_work_input(self, uri):
         product = self._add_input(self.products_inputs_file, uri)
-        product.add_work_user(self.directory)
+        product.add_product_user(self.directory)
 
     def add_product_input(self, product_type, uri):
         inputs_file = os.path.join(self.get_product_directory(product_type), PRODUCT_INPUTS_FILENAME)
         product = self._add_input(inputs_file, uri)
-        product.add_work_user(self.get_product_directory(product_type))
+        product.add_product_user(self.get_product_directory(product_type))
 
     def _add_input(self, products_inputs_file, uri):
         # add it to the work product inputs
@@ -252,12 +251,12 @@ class Work:
 
     def remove_work_input(self, uri):
         product = self._remove_product_inputs(uri, self.products_inputs_file)
-        product.remove_work_user(self.directory)
+        product.remove_product_user(self.directory)
 
     def remove_product_input(self,  product_type, uri):
         inputs_file = os.path.join(self.get_product_directory(product_type), PRODUCT_INPUTS_FILENAME)
         product = self._remove_product_inputs(uri, inputs_file)
-        product.remove_work_user(self.get_product_directory(product_type))
+        product.remove_product_user(self.get_product_directory(product_type))
 
     def _remove_product_inputs(self, uri, products_inputs_file):
         # remove it from the work data
@@ -368,7 +367,7 @@ class Work:
             print "unregister from ", product.uri
             if not os.path.exists(product.directory):
                 continue
-            product.remove_work_user(self.directory)
+            product.remove_product_user(self.directory)
 
         # create the trash work directory
         trash_directory = pr.build_project_trash_filepath(self.project, self)
@@ -508,7 +507,7 @@ class Resource(PulseObject):
         for uri in work.get_work_inputs():
             product = self._project.get_pulse_node(uri)
             product.download()
-            product.add_work_user(self.work_directory)
+            product.add_product_user(self.work_directory)
 
         msg.new('INFO', "resource check out in : " + destination_folder)
         return work
