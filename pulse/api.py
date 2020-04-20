@@ -57,13 +57,19 @@ class PulseObject:
 
 class Product(PulseObject):
     def __init__(self, commit, product_type):
+        self.uri = uri_tools.dict_to_string({
+            "entity": commit.entity,
+            "resource_type": commit.resource_type,
+            "product_type": product_type,
+            "version": commit.version
+        })
+        PulseObject.__init__(self, commit.get_project(), self.uri)
         self.commit = commit
         self.product_type = product_type
-        # TODO : use the _project attr in all this class
         # TODO : the get products directory should be a commit function
         # TODO : the project could be an attribute at creation
         self.products_directory = pr.build_products_filepath(
-            commit.get_resource().get_project(),
+            self._project,
             commit.entity,
             commit.resource_type,
             commit.version
@@ -72,14 +78,8 @@ class Product(PulseObject):
         self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
         self.products_inputs = []
         self._work_users_file = self.directory + "\\" + "work_users.pipe"
-        self.uri = uri_tools.dict_to_string({
-            "entity": commit.entity,
-            "resource_type": commit.resource_type,
-            "product_type": product_type,
-            "version": commit.version
-        })
-        self.project_products_list = self.commit.get_resource().get_project().cfg.get_user_products_list_filepath()
-        PulseObject.__init__(self, commit.get_resource().get_project(), self.uri)
+
+        self.project_products_list = self._project.cfg.get_user_products_list_filepath()
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
 
     def get_commit(self):
@@ -108,7 +108,6 @@ class Product(PulseObject):
         return fu.read_data(self._work_users_file)
 
     def get_inputs(self):
-        print "product file", self.products_inputs_file
         if not os.path.exists(self.products_inputs_file):
             return []
         with open(self.products_inputs_file, "r") as read_file:
@@ -129,7 +128,7 @@ class Product(PulseObject):
 
         # unregister from its inputs
         for uri in self.get_inputs():
-            product_input = self.commit.get_resource().get_project().get_pulse_node(uri)
+            product_input = self._project.get_pulse_node(uri)
             product_input.remove_work_user(self.directory)
             if recursive_clean:
                 try:
@@ -139,7 +138,7 @@ class Product(PulseObject):
 
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
-        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.get_project().cfg.product_user_root])
+        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self._project.cfg.product_user_root])
         msg.new('INFO', "product remove for user path " + self.uri)
         self.unregister_to_user_products()
 
@@ -150,7 +149,7 @@ class Product(PulseObject):
         fu.write_data(self._work_users_file, [])
         self.register_to_user_products()
         for uri in self.products_inputs:
-            product = self.commit.get_project().get_pulse_node(uri)
+            product = self._project.get_pulse_node(uri)
             product.download()
             product.add_work_user(self.directory)
 
