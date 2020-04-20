@@ -66,15 +66,8 @@ class Product(PulseObject):
         PulseObject.__init__(self, commit.get_project(), self.uri)
         self.commit = commit
         self.product_type = product_type
-        # TODO : the get products directory should be a commit function
         # TODO : the project could be an attribute at creation
-        self.products_directory = pr.build_products_filepath(
-            self._project,
-            commit.entity,
-            commit.resource_type,
-            commit.version
-        )
-        self.directory = self.products_directory + "\\" + product_type
+        self.directory = commit.products_directory + "\\" + product_type
         self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
         self.products_inputs = []
         self._work_users_file = self.directory + "\\" + "work_users.pipe"
@@ -170,6 +163,7 @@ class Product(PulseObject):
 class Commit(PulseObject):
     def __init__(self, resource, version, metas=None):
         self.uri = resource.uri + "@" + str(version)
+        PulseObject.__init__(self, resource.get_project(), self.uri, metas)
         self._resource = resource
         self.comment = ""
         self.files = []
@@ -178,7 +172,12 @@ class Commit(PulseObject):
         self.resource_type = resource.resource_type
         self.version = version
         self.products = []
-        PulseObject.__init__(self, resource.get_project(), self.uri, metas)
+        self.products_directory = pr.build_products_filepath(
+            self._project,
+            self.entity,
+            self.resource_type,
+            self.version
+        )
         self._storage_vars = ['version', 'uri', 'products', 'files', 'comment']
 
     def get_product(self, product_type):
