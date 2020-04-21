@@ -27,7 +27,7 @@ class Repository(PulseRepository):
         """
         return os.path.join(
             self.root,
-            commit.get_project().name,
+            commit.project.name,
             path_type,
             commit.resource_type,
             commit.entity.replace(":", "\\"),

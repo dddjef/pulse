@@ -30,20 +30,17 @@ class PulseError(Exception):
 class PulseObject:
     def __init__(self, project, uri, metas=None):
         self.uri = uri
-        self._project = project
+        self.project = project
         self.metas = metas
         self._storage_vars = []
-
-    def get_project(self):
-        return self._project
 
     def write_data(self):
         # write the data to db
         data = dict((name, getattr(self, name)) for name in self._storage_vars if not name.startswith("_"))
-        self._project.cnx.db.write(self._project.name, self.__class__.__name__, self.uri, data)
+        self.project.cnx.db.write(self.project.name, self.__class__.__name__, self.uri, data)
 
     def read_data(self):
-        data = self._project.cnx.db.read(self._project.name, self.__class__.__name__, self.uri)
+        data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
         if data:
             for k in data:
                 if k not in vars(self):
@@ -58,57 +55,55 @@ class PulseObject:
 class Product(PulseObject):
     def __init__(self, commit, product_type):
         self.uri = uri_tools.dict_to_string({
-            "entity": commit.entity,
-            "resource_type": commit.resource_type,
+            "entity": commit.resource.entity,
+            "resource_type": commit.resource.resource_type,
             "product_type": product_type,
             "version": commit.version
         })
-        PulseObject.__init__(self, commit.get_project(), self.uri)
+        PulseObject.__init__(self, commit.project, self.uri)
         self.commit = commit
         self.product_type = product_type
-        self.directory = commit.products_directory + "\\" + product_type
-        self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
-        self.products_inputs = []
-        self.work_users_file = self.directory + "\\" + "work_users.pipe"
-        self.project_products_list = self._project.cfg.get_user_products_list_filepath()
+        self.directory = commit.get_products_directory() + "\\" + product_type
+        self.product_users_file = self.directory + "\\" + "product_users.pipe"
+        self._project_products_list = self.project.cfg.get_user_products_list_filepath()
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
+        products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
+        if not os.path.exists(products_inputs_file):
+            self.products_inputs = []
+        else:
+            with open(products_inputs_file, "r") as read_file:
+                self.products_inputs = json.load(read_file)
 
     def get_commit(self):
         return self.commit
 
     def add_product_user(self, user_directory):
-        if os.path.exists(self.work_users_file):
+        if os.path.exists(self.product_users_file):
             product_work_users = self.get_product_users()
         else:
             product_work_users = []
 
         if user_directory not in product_work_users:
             product_work_users.append(user_directory)
-            fu.write_data(self.work_users_file, product_work_users)
+            fu.write_data(self.product_users_file, product_work_users)
 
     def remove_product_user(self, user_directory):
         product_work_users = self.get_product_users()
         if user_directory in product_work_users:
             product_work_users.remove(user_directory)
-            fu.write_data(self.work_users_file, product_work_users)
+            fu.write_data(self.product_users_file, product_work_users)
 
     def get_product_users(self):
-        if not os.path.exists(self.work_users_file):
+        if not os.path.exists(self.product_users_file):
             return []
-        return fu.read_data(self.work_users_file)
-
-    def get_inputs(self):
-        if not os.path.exists(self.products_inputs_file):
-            return []
-        with open(self.products_inputs_file, "r") as read_file:
-            return json.load(read_file)
+        return fu.read_data(self.product_users_file)
 
     def get_unused_time(self):
         users = self.get_product_users()
         if users:
             return -1
-        if os.path.exists(self.work_users_file):
-            return time.time() - os.path.getmtime(self.work_users_file) + 0.01
+        if os.path.exists(self.product_users_file):
+            return time.time() - os.path.getmtime(self.product_users_file) + 0.01
         else:
             return time.time() - os.path.getctime(self.directory)
 
@@ -117,8 +112,8 @@ class Product(PulseObject):
             raise PulseError("Can't remove a product still in use")
 
         # unregister from its inputs
-        for uri in self.get_inputs():
-            product_input = self._project.get_pulse_node(uri)
+        for uri in self.products_inputs:
+            product_input = self.project.get_pulse_node(uri)
             product_input.remove_product_user(self.directory)
             if recursive_clean:
                 try:
@@ -128,53 +123,47 @@ class Product(PulseObject):
 
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
-        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self._project.cfg.product_user_root])
+        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.product_user_root])
         msg.new('INFO', "product remove for user path " + self.uri)
         self.unregister_to_user_products()
 
     def download(self):
         if os.path.exists(self.directory):
             return
-        self.commit.get_project().repo.download_product(self)
-        fu.write_data(self.work_users_file, [])
+        self.commit.project.repo.download_product(self)
+        fu.write_data(self.product_users_file, [])
         self.register_to_user_products()
         for uri in self.products_inputs:
-            product = self._project.get_pulse_node(uri)
+            product = self.project.get_pulse_node(uri)
             product.download()
             product.add_product_user(self.directory)
 
     def register_to_user_products(self):
         try:
-            products_list = fu.read_data(self.project_products_list)
+            products_list = fu.read_data(self._project_products_list)
         except IOError:
             products_list = []
         products_list.append(self.uri)
-        fu.write_data(self.project_products_list, products_list)
+        fu.write_data(self._project_products_list, products_list)
 
     def unregister_to_user_products(self):
-        products_list = fu.read_data(self.project_products_list)
+        products_list = fu.read_data(self._project_products_list)
         products_list.remove(self.uri)
-        fu.write_data(self.project_products_list, products_list)
+        fu.write_data(self._project_products_list, products_list)
 
 
 class Commit(PulseObject):
     def __init__(self, resource, version, metas=None):
         self.uri = resource.uri + "@" + str(version)
-        PulseObject.__init__(self, resource.get_project(), self.uri, metas)
-        self._resource = resource
+        PulseObject.__init__(self, resource.project, self.uri, metas)
+        self.resource = resource
         self.comment = ""
         self.files = []
         self.products_inputs = []
         self.entity = resource.entity
         self.resource_type = resource.resource_type
-        self.version = version
+        self.version = int(version)
         self.products = []
-        self.products_directory = pr.build_products_filepath(
-            self._project,
-            self.entity,
-            self.resource_type,
-            self.version
-        )
         self._storage_vars = ['version', 'uri', 'products', 'files', 'comment']
 
     def get_product(self, product_type):
@@ -184,13 +173,18 @@ class Commit(PulseObject):
         product = Product(self, product_type)
         return product
 
-    def get_resource(self):
-        return self._resource
+    def get_products_directory(self):
+        return pr.build_products_filepath(
+            self.project,
+            self.entity,
+            self.resource_type,
+            self.version
+        )
 
 
 class Work:
     def __init__(self, resource):
-        self.project = resource.get_project()
+        self.project = resource.project
         self.resource = resource
         self.directory = pr.build_work_filepath(self.project, self.resource)
         self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
@@ -199,6 +193,9 @@ class Work:
 
     def get_product_directory(self, product_type):
         return os.path.join(self.get_products_directory(), product_type)
+
+    def get_product(self, product_type):
+        return Product(self, product_type)
 
     @staticmethod
     def _get_inputs(products_inputs_file):
@@ -238,6 +235,7 @@ class Work:
             product_inputs.append(uri)
             fu.write_data(products_inputs_file, product_inputs)
 
+        # TODO : manage unpublished product
         product = self.project.get_pulse_node(uri)
 
         # download product if needed
@@ -276,7 +274,7 @@ class Work:
         # create the new version file
         new_version_file = self.version_pipe_filepath(self.version)
         with open(new_version_file, "w") as write_file:
-            json.dump({"created_by": self.resource.get_project().cnx.user_name}, write_file, indent=4, sort_keys=True)
+            json.dump({"created_by": self.resource.project.cnx.user_name}, write_file, indent=4, sort_keys=True)
 
         # remove the old version file
         old_version_file = self.version_pipe_filepath(self.version-1)
@@ -321,7 +319,7 @@ class Work:
 
         # copy work to a new version in repository
         commit = Commit(self.resource, self.version)
-        commit.get_project().repo.upload_resource_commit(commit, self.directory, products_directory)
+        commit.project.repo.upload_resource_commit(commit, self.directory, products_directory)
 
         # register changes to database
         commit.comment = comment
@@ -362,7 +360,7 @@ class Work:
 
         # unregister from products
         for product_uri in self.get_work_inputs():
-            product = self.resource.get_project().get_pulse_node(product_uri)
+            product = self.resource.project.get_pulse_node(product_uri)
             if not os.path.exists(product.directory):
                 continue
             product.remove_product_user(self.directory)
@@ -430,7 +428,7 @@ class Resource(PulseObject):
 
     def user_needs_lock(self, user=None):
         if not user:
-            user = self._project.cnx.user_name
+            user = self.project.cnx.user_name
         return self.lock and self.lock_user != user
 
     def initialize_data(self, template_resource=None):
@@ -442,13 +440,13 @@ class Resource(PulseObject):
             msg.new('INFO', "new template created for type : " + self.resource_type)
             # create the initial commit from an empty directory
             commit = Commit(self, 0)
-            self._project.repo.create_resource_empty_commit(commit)
+            self.project.repo.create_resource_empty_commit(commit)
             commit.products_inputs = []
             commit.files = []
 
         else:
             if not template_resource:
-                template_resource = Resource(self._project, TEMPLATE_NAME, self.resource_type)
+                template_resource = Resource(self.project, TEMPLATE_NAME, self.resource_type)
 
             if not template_resource.read_data():
                 raise Exception("no resource found for " + template_resource.uri)
@@ -457,7 +455,7 @@ class Resource(PulseObject):
             # copy work to a new version in repository
 
             commit = Commit(self, 0)
-            self._project.repo.duplicate_commit(template_commit, commit)
+            self.project.repo.duplicate_commit(template_commit, commit)
             commit.files = template_commit.files
             commit.products_inputs = template_commit.products_inputs
 
@@ -494,7 +492,7 @@ class Resource(PulseObject):
             return work
 
         # download the commit
-        self._project.repo.download_work(commit, destination_folder)
+        self.project.repo.download_work(commit, destination_folder)
 
         # create the work object
         work = Work(self)
@@ -503,7 +501,7 @@ class Resource(PulseObject):
 
         # download requested input products if needed
         for uri in work.get_work_inputs():
-            product = self._project.get_pulse_node(uri)
+            product = self.project.get_pulse_node(uri)
             product.download()
             product.add_product_user(self.work_directory)
 
@@ -519,7 +517,7 @@ class Resource(PulseObject):
 
         self.lock = state
         if not user:
-            self.lock_user = self._project.get_user_name()
+            self.lock_user = self.project.get_user_name()
         else:
             self.lock_user = user
         self.write_data()
@@ -534,8 +532,10 @@ class Config(PulseObject):
         self.version_prefix = "V"
         self.repository_type = None
         self.repository_parameters = {}
+        self._storage_vars = vars(self).keys()
+        # self._storage_vars = vars(self).keys().remove("project")
         PulseObject.__init__(self, project, "config", metas)
-        self._storage_vars = vars(self)
+        self._storage_vars = [k for k in vars(self).keys() if k != "project"]
 
     def get_user_products_list_filepath(self):
         return os.path.join(self.product_user_root, "products_list.pipe")
@@ -551,12 +551,20 @@ class Project:
     def get_pulse_node(self, uri_string):
         uri_dict = uri_tools.string_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
-        if uri_dict['version'] == -1:
+        if not uri_dict['version']:
             return resource
         commit = Commit(resource, uri_dict['version'])
         if uri_dict['product_type'] == "":
             return commit
-        return commit.get_product(uri_dict["product_type"])
+        if commit.read_data():
+            return commit.get_product(uri_dict["product_type"])
+        else:
+            work = Work(resource)
+            work.read()
+            if work.version == commit.version:
+                return work.get_product(uri_dict["product_type"])
+            else:
+                raise PulseError("Unknown version : " + uri_string)
 
     def list_nodes(self, entity_type, uri_pattern):
         return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]

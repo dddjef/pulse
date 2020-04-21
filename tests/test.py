@@ -93,9 +93,10 @@ class TestBasic(unittest.TestCase):
         anna_rig_resource = prj.get_pulse_node("ch_anna-rigging").initialize_data()
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_work.initialize_product_directory("actor_anim")
+        # TODO : normalize the add input to product in oo
         anna_rig_work.add_product_input("actor_anim", "ch_anna-surfacing-textures@1")
-        anna_rig_work.commit()
-        anna_rig_work.trash()
+        #anna_rig_work.commit()
+        #anna_rig_work.trash()
         anna_surf_work.trash()
         prj.purge_unused_user_products()
         anim_resource = prj.get_pulse_node("sh003-anim").initialize_data()
