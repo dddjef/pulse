@@ -102,6 +102,8 @@ class TestBasic(unittest.TestCase):
         anim_resource = prj.get_pulse_node("sh003-anim").initialize_data()
         anim_work = anim_resource.checkout()
         anim_work.add_work_input("ch_anna-rigging-actor_anim@1")
+        with self.assertRaises(PulseError):
+            anim_work.commit()
 
     def test_complete_scenario(self):
         # create a connection

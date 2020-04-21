@@ -310,7 +310,13 @@ class Work:
         if not self.get_files_changes():
             raise PulseError("no file change to commit")
 
-        # TODO : check all product inputs are registered
+        # check all inputs are registered
+        for input_uri in self.get_work_inputs():
+            product = self.project.get_pulse_node(input_uri)
+            if not isinstance(product.commit, Commit):
+                raise PulseError("Work can't be committed, it uses an unpublished product : " + input_uri)
+
+        # TODO : check all products inputs are registered
 
         # launch the pre commit hook
         hooks.pre_commit(self)
@@ -333,7 +339,7 @@ class Work:
         if not commit.products:
             os.rmdir(products_directory)
         else:
-            # register products to user products list
+            # register work products to user products list
             for product_type in commit.products:
                 product = Product(commit, product_type)
                 product.register_to_user_products()
