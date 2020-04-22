@@ -14,6 +14,7 @@ from pulse.database_adapters.interface_class import PulseDatabaseError
 TEMPLATE_NAME = "_template"
 PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
+# TODO : add a purge trash function
 
 
 class PulseError(Exception):
@@ -108,7 +109,6 @@ class Product(PulseObject):
     def remove_from_user_products(self, recursive_clean=False):
         if len(self.get_product_users()) > 0:
             raise PulseError("Can't remove a product still in use")
-
         # unregister from its inputs
         for uri in self.products_inputs:
             product_input = self.project.get_pulse_node(uri)
@@ -165,8 +165,13 @@ class Commit(PulseObject):
         self._storage_vars = ['version', 'uri', 'products', 'files', 'comment']
 
     def get_product(self, product_type):
-        # self.read_data()
         return Product(self, product_type).read_data()
+
+    def create_product(self, product_type, inputs):
+        product = Product(self, product_type)
+        product.products_inputs = inputs
+        product.write_data()
+        return product
 
     def get_products_directory(self):
         return pr.build_products_filepath(
@@ -177,60 +182,29 @@ class Commit(PulseObject):
         )
 
 
-class Work:
-    def __init__(self, resource):
-        self.project = resource.project
-        self.resource = resource
-        self.directory = pr.build_work_filepath(self.project, self.resource)
-        self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
-        self.version = None
-        self.data_file = self.directory + "\\work.pipe"
+class LocalNode:
+    def __init__(self, project, directory):
+        self.directory = directory
+        self.products_inputs_file = os.path.join(directory, PRODUCT_INPUTS_FILENAME)
+        self.project = project
 
-    def get_product_directory(self, product_type):
-        return os.path.join(self.get_products_directory(), product_type)
-
-    def get_product(self, product_type):
-        return Product(self, product_type)
-
-    @staticmethod
-    def _get_inputs(products_inputs_file):
-        if not os.path.exists(products_inputs_file):
+    def get_inputs(self):
+        if not os.path.exists(self.products_inputs_file):
+            msg.new("DEBUG", "missing inputs file : " + self.products_inputs_file)
             return []
-        with open(products_inputs_file, "r") as read_file:
+        with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def initialize_product_directory(self, product_type):
-        directory = self.get_product_directory(product_type)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        return directory
-
-    def get_work_inputs(self):
-        return self._get_inputs(self.products_inputs_file)
-
-    def get_product_inputs(self, product_type):
-        inputs_file = os.path.join(self.get_product_directory(product_type), PRODUCT_INPUTS_FILENAME)
-        return self._get_inputs(inputs_file)
-
-    def add_work_input(self, uri):
-        product = self._add_input(self.products_inputs_file, uri)
-        product.add_product_user(self.directory)
-
-    def add_product_input(self, product_type, uri):
-        inputs_file = os.path.join(self.get_product_directory(product_type), PRODUCT_INPUTS_FILENAME)
-        product = self._add_input(inputs_file, uri)
-        product.add_product_user(self.get_product_directory(product_type))
-
-    def _add_input(self, products_inputs_file, uri):
+    def add_input(self, uri):
         # add it to the work product inputs
-        product_inputs = self._get_inputs(products_inputs_file)
+        product_inputs = self.get_inputs()
         if uri in product_inputs:
             msg.new("DEBUG", "product already exists in user products")
         else:
             product_inputs.append(uri)
-            fu.write_data(products_inputs_file, product_inputs)
+            fu.write_data(self.products_inputs_file, product_inputs)
 
-        # TODO : manage unpublished product
+        # FIXME : this could be an issue on workProduct
         product = self.project.get_pulse_node(uri)
 
         # download product if needed
@@ -239,26 +213,47 @@ class Work:
                 raise PulseError("Can't register unknown product " + uri)
             product.download()
             msg.new("INFO", "product added to user products")
-        return product
 
-    def remove_work_input(self, uri):
-        product = self._remove_product_inputs(uri, self.products_inputs_file)
-        product.remove_product_user(self.directory)
+        product.add_product_user(self.directory)
 
-    def remove_product_input(self,  product_type, uri):
-        inputs_file = os.path.join(self.get_product_directory(product_type), PRODUCT_INPUTS_FILENAME)
-        product = self._remove_product_inputs(uri, inputs_file)
-        product.remove_product_user(self.get_product_directory(product_type))
-
-    def _remove_product_inputs(self, uri, products_inputs_file):
+    def remove_input(self, uri):
         # remove it from the work data
-        product_inputs = self._get_inputs(products_inputs_file)
+        product_inputs = self.get_inputs()
         if uri in product_inputs:
             product_inputs.remove(uri)
-            fu.write_data(products_inputs_file, product_inputs)
+            fu.write_data(self.products_inputs_file, product_inputs)
         # remove work from product users
         product = self.project.get_pulse_node(uri)
-        return product
+        product.remove_product_user(self.directory)
+
+
+class ProductWork(Product, LocalNode):
+    def __init__(self, work, product_type):
+        Product.__init__(self, work, product_type)
+        LocalNode.__init__(self, work.project, self.directory)
+
+    def initialize(self):
+        os.makedirs(self.directory)
+        return self
+
+
+class Work(LocalNode):
+    def __init__(self, resource):
+        LocalNode.__init__(self, resource.project, pr.build_work_filepath(resource.project, resource))
+        self.resource = resource
+        self.version = None
+        self.data_file = self.directory + "\\work.pipe"
+
+    def get_product(self, product_type):
+        return ProductWork(self, product_type)
+
+    def list_products(self):
+        return os.listdir(self.get_products_directory())
+
+    def create_product(self, product_type):
+        if product_type in self.list_products():
+            raise PulseError("product already exists : " + product_type)
+        return ProductWork(self, product_type).initialize()
 
     def write(self):
         # remove old version file
@@ -309,7 +304,7 @@ class Work:
             raise PulseError("no file change to commit")
 
         # check all inputs are registered
-        for input_uri in self.get_work_inputs():
+        for input_uri in self.get_inputs():
             product = self.project.get_pulse_node(input_uri)
             if not isinstance(product.commit, Commit):
                 raise PulseError("Work can't be committed, it uses an unpublished product : " + input_uri)
@@ -331,18 +326,17 @@ class Work:
             self.directory,
             ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
         )
-        commit.products_inputs = self.get_work_inputs()
-        commit.products = os.listdir(products_directory)
+        commit.products_inputs = self.get_inputs()
+        commit.products = self.list_products()
         # if there's no product, delete the products version directory
         if not commit.products:
             os.rmdir(products_directory)
         else:
             # register work products to user products list
             for product_type in commit.products:
-                product = Product(commit, product_type)
+                local_product = self.get_product(product_type)
+                product = commit.create_product(product_type, local_product.get_inputs())
                 product.register_to_user_products()
-                product.products_inputs = self.get_product_inputs(product_type)
-                product.write_data()
 
         commit.write_data()
         self.resource.last_version = self.version
@@ -362,9 +356,16 @@ class Work:
             if not fu.test_path_write_access(path):
                 raise PulseError("can't move folder " + path)
 
+        # check workProducts are not in use
+        # TODO : add a test for this
+        for product_type in self.list_products():
+            product = self.get_product(product_type)
+            if product.get_product_users():
+                raise PulseError("work can't be trashed if its product is used : " + product_type)
+
         # unregister from products
-        for product_uri in self.get_work_inputs():
-            product = self.resource.project.get_pulse_node(product_uri)
+        for product_uri in self.get_inputs():
+            product = self.project.get_pulse_node(product_uri)
             if not os.path.exists(product.directory):
                 continue
             product.remove_product_user(self.directory)
@@ -393,7 +394,6 @@ class Work:
         )
 
     def get_files_changes(self):
-
         current_work_files = fu.get_directory_content(
             self.directory,
             ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
@@ -505,7 +505,7 @@ class Resource(PulseObject):
         work.write()
 
         # download requested input products if needed
-        for uri in work.get_work_inputs():
+        for uri in work.get_inputs():
             product = self.project.get_pulse_node(uri)
             product.download()
             product.add_product_user(self.work_directory)

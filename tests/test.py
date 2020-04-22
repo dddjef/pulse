@@ -87,33 +87,33 @@ class TestBasic(unittest.TestCase):
         cnx, prj = create_test_project()
         anna_surf_resource = prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
-        anna_surf_product_folder = anna_surf_work.initialize_product_directory("textures")
-        open(anna_surf_product_folder + "\\product_file.txt", 'a').close()
+        anna_surf_textures = anna_surf_work.create_product("textures")
+        open(anna_surf_textures.directory + "\\product_file.txt", 'a').close()
         anna_surf_work.commit(comment="test generated product")
         anna_rig_resource = prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_work.initialize_product_directory("actor_anim")
-        # TODO : normalize the add input to product in oo
-        anna_rig_work.add_product_input("actor_anim", "ch_anna-surfacing-textures@1")
+        anna_rig_actor = anna_rig_work.create_product("actor_anim")
+        anna_rig_actor.add_input("ch_anna-surfacing-textures@1")
         anna_rig_work.commit()
         anna_rig_work.trash()
         anna_surf_work.trash()
         prj.purge_unused_user_products()
-        self.assertFalse(os.path.exists(anna_surf_product_folder))
+        self.assertFalse(os.path.exists(anna_surf_textures.directory))
         anim_resource = prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
-        anim_work.add_work_input("ch_anna-rigging-actor_anim@1")
-        self.assertTrue(os.path.exists(anna_surf_product_folder))
+        anim_work.add_input("ch_anna-rigging-actor_anim@1")
+        self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
     def test_work_cannot_commit_with_unpublished_inputs(self):
         cnx, prj = create_test_project()
         anna_surf_resource = prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
-        product_folder = anna_surf_work.initialize_product_directory("textures")
+        anna_surf_textures = anna_surf_work.create_product("textures")
+        product_folder = anna_surf_textures.directory
         open(product_folder + "\\product_file.txt", 'a').close()
         anna_rig_resource = prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_work.add_work_input("ch_anna-surfacing-textures@1")
+        anna_rig_work.add_input("ch_anna-surfacing-textures@1")
         with self.assertRaises(PulseError):
             anna_rig_work.commit()
 
@@ -143,9 +143,8 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a product
-        abc_dir = anna_mdl_work.get_products_directory() + "\\ABC"
-        os.mkdir(abc_dir)
-        open(abc_dir + "\\test.abc", 'a').close()
+        abc_product = anna_mdl_work.create_product("ABC")
+        open(abc_product.directory + "\\test.abc", 'a').close()
         # create a new commit
         anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
         self.assertEqual(anna_mdl_resource.last_version, 2)
@@ -154,12 +153,13 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 
-        hat_mdl_work.add_work_input("ch_anna-modeling-ABC@2")
+        hat_mdl_work.add_input("ch_anna-modeling-ABC@2")
         # test the product registration
         hat_mdl_work.read()
-        self.assertEqual(hat_mdl_work.get_work_inputs()[0], "ch_anna-modeling-ABC@2")
+        self.assertEqual(hat_mdl_work.get_inputs()[0], "ch_anna-modeling-ABC@2")
         anna_mdl_v2_abc = anna_mdl_v2.get_product("ABC")
         # check the work registration to product
+
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
         # check you can't remove a product if it's used by a work
         with self.assertRaises(Exception):
@@ -177,7 +177,7 @@ class TestBasic(unittest.TestCase):
         prj.purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
-        hat_mdl_work.remove_work_input("ch_anna-modeling-ABC@2")
+        hat_mdl_work.remove_input("ch_anna-modeling-ABC@2")
         anna_mdl_work.trash()
         for nd in prj.list_nodes("Resource", "*anna*"):
             print nd.uri
