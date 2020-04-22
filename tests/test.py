@@ -56,8 +56,8 @@ class TestBasic(unittest.TestCase):
     def setUp(self):
         reset_files()
 
-    def tearDown(self):
-        reset_files()
+    # def tearDown(self):
+    #     reset_files()
 
     def test_metadata(self):
         cnx, prj = create_test_project()
@@ -83,27 +83,39 @@ class TestBasic(unittest.TestCase):
         )
         create_template(ftp_prj, "mdl")
 
-    def test_shot_scenario(self):
+    def test_recursive_dependencies_download(self):
         cnx, prj = create_test_project()
         anna_surf_resource = prj.get_pulse_node("ch_anna-surfacing").initialize_data()
         anna_surf_work = anna_surf_resource.checkout()
-        product_folder = anna_surf_work.initialize_product_directory("textures")
-        open(product_folder + "\\product_file.txt", 'a').close()
+        anna_surf_product_folder = anna_surf_work.initialize_product_directory("textures")
+        open(anna_surf_product_folder + "\\product_file.txt", 'a').close()
         anna_surf_work.commit(comment="test generated product")
         anna_rig_resource = prj.get_pulse_node("ch_anna-rigging").initialize_data()
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_work.initialize_product_directory("actor_anim")
         # TODO : normalize the add input to product in oo
         anna_rig_work.add_product_input("actor_anim", "ch_anna-surfacing-textures@1")
-        #anna_rig_work.commit()
-        #anna_rig_work.trash()
+        anna_rig_work.commit()
+        anna_rig_work.trash()
         anna_surf_work.trash()
         prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(anna_surf_product_folder))
         anim_resource = prj.get_pulse_node("sh003-anim").initialize_data()
         anim_work = anim_resource.checkout()
         anim_work.add_work_input("ch_anna-rigging-actor_anim@1")
+        self.assertTrue(os.path.exists(anna_surf_product_folder))
+
+    def work_cannot_commit_with_unpublished_inputs(self):
+        cnx, prj = create_test_project()
+        anna_surf_resource = prj.get_pulse_node("ch_anna-surfacing").initialize_data()
+        anna_surf_work = anna_surf_resource.checkout()
+        product_folder = anna_surf_work.initialize_product_directory("textures")
+        open(product_folder + "\\product_file.txt", 'a').close()
+        anna_rig_resource = prj.get_pulse_node("ch_anna-rigging").initialize_data()
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_work.add_work_input("actor_anim", "ch_anna-surfacing-textures@1")
         with self.assertRaises(PulseError):
-            anim_work.commit()
+            anna_rig_work.commit()
 
     def test_complete_scenario(self):
         # create a connection
