@@ -9,6 +9,7 @@ import shutil
 import time
 from ConfigParser import ConfigParser
 import imp
+from pulse.database_adapters.interface_class import PulseDatabaseError
 
 TEMPLATE_NAME = "_template"
 PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
@@ -41,15 +42,12 @@ class PulseObject:
 
     def read_data(self):
         data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
-        if data:
-            for k in data:
-                if k not in vars(self):
-                    msg.new('DEBUG', "missing attribute in object : " + k)
-                    continue
-                setattr(self, k, data[k])
-            return True
-        else:
-            return False
+        for k in data:
+            if k not in vars(self):
+                msg.new('DEBUG', "missing attribute in object : " + k)
+                continue
+            setattr(self, k, data[k])
+        return self
 
 
 class Product(PulseObject):
@@ -167,11 +165,8 @@ class Commit(PulseObject):
         self._storage_vars = ['version', 'uri', 'products', 'files', 'comment']
 
     def get_product(self, product_type):
-        self.read_data()
-        if product_type not in self.products:
-            raise Exception("Unknown product :" + product_type)
-        product = Product(self, product_type)
-        return product
+        # self.read_data()
+        return Product(self, product_type).read_data()
 
     def get_products_directory(self):
         return pr.build_products_filepath(
@@ -291,9 +286,12 @@ class Work:
             json.dump({"version": self.version}, write_file, indent=4, sort_keys=True)
 
     def read(self):
+        if not os.path.exists(self.directory):
+            raise PulseError("work does not exists : " + self.directory)
         with open(self.data_file, "r") as read_file:
             work_data = json.load(read_file)
         self.version = work_data["version"]
+        return self
 
     def commit(self, comment=""):
         # check current the user permission
@@ -439,8 +437,11 @@ class Resource(PulseObject):
 
     def initialize_data(self, template_resource=None):
         # test the resource does not already exists
-        if self.read_data():
+        try:
+            self.read_data()
             raise Exception("resource already exists : " + self.uri)
+        except PulseDatabaseError:
+            pass
 
         if self.entity == TEMPLATE_NAME:
             msg.new('INFO', "new template created for type : " + self.resource_type)
@@ -472,30 +473,28 @@ class Resource(PulseObject):
         msg.new('INFO', "resource initialized : " + self.uri)
         return self
 
-    def get_commit(self, index):
-        if index == "last":
-            index = self.last_version
-        commit = Commit(self, index)
-        if not commit.read_data():
-            return None
-        return commit
+    def get_index(self, version_name):
+        if version_name == "last":
+            return self.last_version
+        return int(version_name)
+
+    def get_commit(self, version):
+        return Commit(self, self.get_index(version)).read_data()
+
+    def get_work(self):
+        return Work(self).read()
 
     def checkout(self, index="last"):
         """Download the resource work files in the user sandbox.
         Download related dependencies if they are not available in products path
         """
         commit = self.get_commit(index)
-        if not commit:
-            raise PulseError("resource has no commit named " + commit.uri)
-
         destination_folder = self.work_directory
 
         # abort if the resource is already in user sandbox
         if os.path.exists(destination_folder):
             msg.new('INFO', "the resource was already in your sandbox")
-            work = Work(self)
-            work.read()
-            return work
+            return Work(self).read()
 
         # download the commit
         self.project.repo.download_work(commit, destination_folder)
@@ -557,20 +556,21 @@ class Project:
     def get_pulse_node(self, uri_string):
         uri_dict = uri_tools.string_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
+        resource.read_data()
         if not uri_dict['version']:
             return resource
-        commit = Commit(resource, uri_dict['version'])
+        index = resource.get_index(uri_dict['version'])
         if uri_dict['product_type'] == "":
-            return commit
-        if commit.read_data():
-            return commit.get_product(uri_dict["product_type"])
+            return resource.get_commit(index)
         else:
-            work = Work(resource)
-            work.read()
-            if work.version == commit.version:
-                return work.get_product(uri_dict["product_type"])
-            else:
-                raise PulseError("Unknown version : " + uri_string)
+            try:
+                commit = resource.get_commit(index)
+            except PulseDatabaseError:
+                commit = resource.get_work()
+                if commit.version != index:
+                    raise PulseError("Unknown product : " + uri_string)
+
+            return commit.get_product(uri_dict["product_type"])
 
     def list_nodes(self, entity_type, uri_pattern):
         return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]
@@ -599,9 +599,14 @@ class Project:
         self.cfg.write_data()
 
     def load_config(self):
-        if not self.cfg.read_data():
-            raise PulseError("No configuration found for project" + self.name)
+        self.cfg.read_data()
         self.repo = import_adapter("repository", self.cfg.repository_type).Repository(self.cfg.repository_parameters)
+
+    def get_resource(self, entity, resource_type):
+        return Resource(self, entity, resource_type).read_data()
+
+    def create_resource(self, entity, resource_type, metas=None):
+        return Resource(self, entity, resource_type, metas).initialize_data()
 
 
 class Connection:

@@ -43,7 +43,7 @@ def create_test_project(prj_name="test"):
 
 
 def create_template(prj, template_type):
-    template = prj.get_pulse_node(TEMPLATE_NAME + "-" + template_type).initialize_data()
+    template = prj.create_resource(TEMPLATE_NAME, template_type)
     # checkout the template to edit it and save it
     work = template.checkout()
     open(work.directory + "\\template_work.txt", 'a').close()
@@ -61,7 +61,7 @@ class TestBasic(unittest.TestCase):
 
     def test_metadata(self):
         cnx, prj = create_test_project()
-        prj.get_pulse_node(TEMPLATE_NAME + "-modeling").initialize_data()
+        prj.create_resource(TEMPLATE_NAME, "modeling")
         # anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling")
         # anna_mdl_resource.metas = {"site": "Paris"}
         # anna_mdl_resource.initialize_data()
@@ -85,12 +85,12 @@ class TestBasic(unittest.TestCase):
 
     def test_recursive_dependencies_download(self):
         cnx, prj = create_test_project()
-        anna_surf_resource = prj.get_pulse_node("ch_anna-surfacing").initialize_data()
+        anna_surf_resource = prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         anna_surf_product_folder = anna_surf_work.initialize_product_directory("textures")
         open(anna_surf_product_folder + "\\product_file.txt", 'a').close()
         anna_surf_work.commit(comment="test generated product")
-        anna_rig_resource = prj.get_pulse_node("ch_anna-rigging").initialize_data()
+        anna_rig_resource = prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_work.initialize_product_directory("actor_anim")
         # TODO : normalize the add input to product in oo
@@ -100,20 +100,20 @@ class TestBasic(unittest.TestCase):
         anna_surf_work.trash()
         prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(anna_surf_product_folder))
-        anim_resource = prj.get_pulse_node("sh003-anim").initialize_data()
+        anim_resource = prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
         anim_work.add_work_input("ch_anna-rigging-actor_anim@1")
         self.assertTrue(os.path.exists(anna_surf_product_folder))
 
-    def work_cannot_commit_with_unpublished_inputs(self):
+    def test_work_cannot_commit_with_unpublished_inputs(self):
         cnx, prj = create_test_project()
-        anna_surf_resource = prj.get_pulse_node("ch_anna-surfacing").initialize_data()
+        anna_surf_resource = prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         product_folder = anna_surf_work.initialize_product_directory("textures")
         open(product_folder + "\\product_file.txt", 'a').close()
-        anna_rig_resource = prj.get_pulse_node("ch_anna-rigging").initialize_data()
+        anna_rig_resource = prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_work.add_work_input("actor_anim", "ch_anna-surfacing-textures@1")
+        anna_rig_work.add_work_input("ch_anna-surfacing-textures@1")
         with self.assertRaises(PulseError):
             anna_rig_work.commit()
 
@@ -123,7 +123,7 @@ class TestBasic(unittest.TestCase):
         # create a new template resource
         create_template(prj, "modeling")
         # create a resource based on this template
-        anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling").initialize_data()
+        anna_mdl_resource = prj.create_resource("ch_anna", "modeling")
         self.assertEqual(anna_mdl_resource.last_version, 0)
 
         # checkout, and check directories are created
@@ -150,7 +150,7 @@ class TestBasic(unittest.TestCase):
         anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
         self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
-        hat_mdl_resource = prj.get_pulse_node("hat-modeling").initialize_data()
+        hat_mdl_resource = prj.create_resource("hat", "modeling")
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 

@@ -38,7 +38,7 @@ class Database(PulseDatabase):
     def read(self, project_name, entity_type, uri):
         json_filepath = self._get_json_filepath(project_name, entity_type, uri)
         if not os.path.exists(json_filepath):
-            return None
+            raise PulseDatabaseError("no data for : " + project_name + ", " + entity_type + ", " + uri)
         with open(json_filepath, "r") as read_file:
             data = json.load(read_file)
         return data
