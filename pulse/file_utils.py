@@ -47,6 +47,29 @@ def write_data(filepath, data):
         json.dump(data, write_file, indent=4, sort_keys=True)
 
 
+def json_list_remove(json_path, item):
+    json_list = read_data(json_path)
+    json_list.remove(item)
+    write_data(json_path, json_list)
+
+
+def json_list_append(json_path, item):
+    if not os.path.exists(json_path):
+        json_list = []
+    else:
+        json_list = read_data(json_path)
+    if item not in json_list:
+        json_list.append(item)
+        write_data(json_path, json_list)
+
+
+def json_list_get(json_path):
+    if not os.path.exists(json_path):
+        return []
+    else:
+        return read_data(json_path)
+
+
 def remove_empty_parents_directory(directory, root_dirs):
     while not os.listdir(directory):
         os.rmdir(directory)

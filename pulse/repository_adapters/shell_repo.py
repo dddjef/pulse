@@ -75,10 +75,10 @@ class Repository(PulseRepository):
         # copy repo work to sandbox
         copy_folder_tree(repo_work_path, work_folder)
 
-    def download_product(self, product):
+    def download_product(self, local_product):
         """build_products_user_filepath
         """
         # build_products_repository_path
-        product_repo_path = self.build_path("products", product.commit) + "\\" + product.product_type
+        product_repo_path = self.build_path("products", local_product.parent) + "\\" + local_product.product_type
         # copy repo products type to products_user_filepath
-        copy_folder_tree(product_repo_path, product.directory)
+        copy_folder_tree(product_repo_path, local_product.directory)

@@ -15,7 +15,7 @@ TEMPLATE_NAME = "_template"
 PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
 # TODO : add a purge trash function
-
+# TODO : move the initialize methods to creator function
 
 class PulseError(Exception):
     def __init__(self, reason):
@@ -38,7 +38,7 @@ class PulseObject:
 
     def write_data(self):
         # write the data to db
-        data = dict((name, getattr(self, name)) for name in self._storage_vars if not name.startswith("_"))
+        data = dict((name, getattr(self, name)) for name in self._storage_vars)
         self.project.cnx.db.write(self.project.name, self.__class__.__name__, self.uri, data)
 
     def read_data(self):
@@ -62,92 +62,52 @@ class Product(PulseObject):
         PulseObject.__init__(self, commit.project, self.uri)
         self.commit = commit
         self.product_type = product_type
-        self.directory = commit.get_products_directory() + "\\" + product_type
-        self.product_users_file = self.directory + "\\" + "product_users.pipe"
         self._project_products_list = self.project.cfg.get_user_products_list_filepath()
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
-        products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
-        if not os.path.exists(products_inputs_file):
-            self.products_inputs = []
-        else:
-            with open(products_inputs_file, "r") as read_file:
-                self.products_inputs = json.load(read_file)
 
-    def get_commit(self):
-        return self.commit
+    def download(self):
+        local_copy = LocalProduct(self.commit, self.product_type)
+        self.project.repo.download_product(local_copy)
+        fu.write_data(local_copy.product_users_file, [])
+        self.register_to_user_products()
+        for uri in local_copy.get_inputs():
+            product = self.project.get_pulse_node(uri)
+            local_product = product.download()
+            local_product.add_product_user(local_copy.directory)
+        return local_copy
 
-    def add_product_user(self, user_directory):
-        if os.path.exists(self.product_users_file):
-            product_work_users = self.get_product_users()
-        else:
-            product_work_users = []
+    def get_local_copy(self):
+        local_product = LocalProduct(self.commit, self.product_type)
+        if not os.path.exists(local_product.directory):
+            return None
+        return local_product
 
-        if user_directory not in product_work_users:
-            product_work_users.append(user_directory)
-            fu.write_data(self.product_users_file, product_work_users)
+    def register_to_user_products(self):
+        fu.json_list_append(self._project_products_list, self.uri)
 
-    def remove_product_user(self, user_directory):
-        product_work_users = self.get_product_users()
-        if user_directory in product_work_users:
-            product_work_users.remove(user_directory)
-            fu.write_data(self.product_users_file, product_work_users)
-
-    def get_product_users(self):
-        if not os.path.exists(self.product_users_file):
-            return []
-        return fu.read_data(self.product_users_file)
-
-    def get_unused_time(self):
-        users = self.get_product_users()
-        if users:
-            return -1
-        if os.path.exists(self.product_users_file):
-            return time.time() - os.path.getmtime(self.product_users_file) + 0.01
-        else:
-            return time.time() - os.path.getctime(self.directory)
+    def unregister_to_user_products(self):
+        fu.json_list_remove(self._project_products_list, self.uri)
 
     def remove_from_user_products(self, recursive_clean=False):
-        if len(self.get_product_users()) > 0:
+        local_copy = self.get_local_copy()
+        if len(local_copy.get_product_users()) > 0:
             raise PulseError("Can't remove a product still in use")
         # unregister from its inputs
-        for uri in self.products_inputs:
+        for uri in local_copy.get_inputs():
             product_input = self.project.get_pulse_node(uri)
-            product_input.remove_product_user(self.directory)
+            local_product_input = product_input.get_local_copy()
+            local_product_input.remove_product_user(local_copy.directory)
             if recursive_clean:
                 try:
                     product_input.remove_from_user_products(recursive_clean=True)
                 except PulseError:
                     pass
 
-        shutil.rmtree(self.directory)
+        shutil.rmtree(local_copy.directory)
         # remove also the version directory if it's empty now
-        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.product_user_root])
+        fu.remove_empty_parents_directory(os.path.dirname(local_copy.directory), [self.project.cfg.product_user_root])
         msg.new('INFO', "product remove for user path " + self.uri)
         self.unregister_to_user_products()
-
-    def download(self):
-        if os.path.exists(self.directory):
-            return
-        self.commit.project.repo.download_product(self)
-        fu.write_data(self.product_users_file, [])
-        self.register_to_user_products()
-        for uri in self.products_inputs:
-            product = self.project.get_pulse_node(uri)
-            product.download()
-            product.add_product_user(self.directory)
-
-    def register_to_user_products(self):
-        try:
-            products_list = fu.read_data(self._project_products_list)
-        except IOError:
-            products_list = []
-        products_list.append(self.uri)
-        fu.write_data(self._project_products_list, products_list)
-
-    def unregister_to_user_products(self):
-        products_list = fu.read_data(self._project_products_list)
-        products_list.remove(self.uri)
-        fu.write_data(self._project_products_list, products_list)
 
 
 class Commit(PulseObject):
@@ -167,12 +127,6 @@ class Commit(PulseObject):
     def get_product(self, product_type):
         return Product(self, product_type).read_data()
 
-    def create_product(self, product_type, inputs):
-        product = Product(self, product_type)
-        product.products_inputs = inputs
-        product.write_data()
-        return product
-
     def get_products_directory(self):
         return pr.build_products_filepath(
             self.project,
@@ -182,70 +136,78 @@ class Commit(PulseObject):
         )
 
 
-class LocalNode:
+class WorkNode:
     def __init__(self, project, directory):
         self.directory = directory
         self.products_inputs_file = os.path.join(directory, PRODUCT_INPUTS_FILENAME)
         self.project = project
 
     def get_inputs(self):
-        if not os.path.exists(self.products_inputs_file):
-            msg.new("DEBUG", "missing inputs file : " + self.products_inputs_file)
-            return []
-        with open(self.products_inputs_file, "r") as read_file:
-            return json.load(read_file)
+        return fu.json_list_get(self.products_inputs_file)
 
-    def add_input(self, uri):
-        # add it to the work product inputs
-        product_inputs = self.get_inputs()
-        if uri in product_inputs:
-            msg.new("DEBUG", "product already exists in user products")
+    def add_input(self, local_product):
+        if not os.path.exists(local_product.directory):
+            # if the product is not on disk, try to download it
+            local_product = self.project.get_pulse_node(local_product.uri).download()
+        fu.json_list_append(self.products_inputs_file, local_product.uri)
+        local_product.add_product_user(self.directory)
+
+    def remove_input(self, local_product):
+        fu.json_list_remove(self.products_inputs_file, local_product.uri)
+        local_product.remove_product_user(self.directory)
+
+
+class LocalProduct:
+    def __init__(self, parent, product_type):
+        self.uri = uri_tools.dict_to_string({
+            "entity": parent.resource.entity,
+            "resource_type": parent.resource.resource_type,
+            "product_type": product_type,
+            "version": parent.version
+        })
+        self.parent = parent
+        self.product_type = product_type
+        self.directory = os.path.join(parent.get_products_directory(), product_type)
+        self.product_users_file = self.directory + "\\" + "product_users.pipe"
+        self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
+
+    def get_inputs(self):
+        return fu.json_list_get(self.products_inputs_file)
+
+    def add_product_user(self, user_directory):
+        fu.json_list_append(self.product_users_file, user_directory)
+
+    def remove_product_user(self, user_directory):
+        fu.json_list_remove(self.product_users_file, user_directory)
+
+    def get_product_users(self):
+        return fu.json_list_get(self.product_users_file)
+
+    def get_unused_time(self):
+        users = self.get_product_users()
+        if users:
+            return -1
+        if os.path.exists(self.product_users_file):
+            return time.time() - os.path.getmtime(self.product_users_file) + 0.01
         else:
-            product_inputs.append(uri)
-            fu.write_data(self.products_inputs_file, product_inputs)
-
-        # FIXME : this could be an issue on workProduct
-        product = self.project.get_pulse_node(uri)
-
-        # download product if needed
-        if not os.path.exists(product.directory):
-            if not product.read_data():
-                raise PulseError("Can't register unknown product " + uri)
-            product.download()
-            msg.new("INFO", "product added to user products")
-
-        product.add_product_user(self.directory)
-
-    def remove_input(self, uri):
-        # remove it from the work data
-        product_inputs = self.get_inputs()
-        if uri in product_inputs:
-            product_inputs.remove(uri)
-            fu.write_data(self.products_inputs_file, product_inputs)
-        # remove work from product users
-        product = self.project.get_pulse_node(uri)
-        product.remove_product_user(self.directory)
+            return time.time() - os.path.getctime(self.directory)
 
 
-class ProductWork(Product, LocalNode):
+class WorkProduct(LocalProduct, WorkNode):
     def __init__(self, work, product_type):
-        Product.__init__(self, work, product_type)
-        LocalNode.__init__(self, work.project, self.directory)
-
-    def initialize(self):
-        os.makedirs(self.directory)
-        return self
+        LocalProduct.__init__(self, work, product_type)
+        WorkNode.__init__(self, work.project, self.directory)
 
 
-class Work(LocalNode):
+class Work(WorkNode):
     def __init__(self, resource):
-        LocalNode.__init__(self, resource.project, pr.build_work_filepath(resource.project, resource))
+        WorkNode.__init__(self, resource.project, pr.build_work_filepath(resource.project, resource))
         self.resource = resource
         self.version = None
         self.data_file = self.directory + "\\work.pipe"
 
     def get_product(self, product_type):
-        return ProductWork(self, product_type)
+        return WorkProduct(self, product_type)
 
     def list_products(self):
         return os.listdir(self.get_products_directory())
@@ -253,7 +215,9 @@ class Work(LocalNode):
     def create_product(self, product_type):
         if product_type in self.list_products():
             raise PulseError("product already exists : " + product_type)
-        return ProductWork(self, product_type).initialize()
+        work_product = WorkProduct(self, product_type)
+        os.makedirs(work_product.directory)
+        return work_product
 
     def write(self):
         # remove old version file
@@ -306,10 +270,8 @@ class Work(LocalNode):
         # check all inputs are registered
         for input_uri in self.get_inputs():
             product = self.project.get_pulse_node(input_uri)
-            if not isinstance(product.commit, Commit):
+            if isinstance(product, WorkProduct):
                 raise PulseError("Work can't be committed, it uses an unpublished product : " + input_uri)
-
-        # TODO : check all products inputs are registered
 
         # launch the pre commit hook
         hooks.pre_commit(self)
@@ -334,8 +296,12 @@ class Work(LocalNode):
         else:
             # register work products to user products list
             for product_type in commit.products:
-                local_product = self.get_product(product_type)
-                product = commit.create_product(product_type, local_product.get_inputs())
+                work_product = self.get_product(product_type)
+
+                product = Product(commit, product_type)
+                product.products_inputs = work_product.get_inputs()
+                product.write_data()
+
                 product.register_to_user_products()
 
         commit.write_data()
@@ -365,10 +331,10 @@ class Work(LocalNode):
 
         # unregister from products
         for product_uri in self.get_inputs():
-            product = self.project.get_pulse_node(product_uri)
-            if not os.path.exists(product.directory):
+            local_product = self.project.get_pulse_node(product_uri).get_local_copy()
+            if not local_product:
                 continue
-            product.remove_product_user(self.directory)
+            local_product.remove_product_user(self.directory)
 
         # create the trash work directory
         trash_directory = pr.build_project_trash_filepath(self.project, self)
@@ -507,8 +473,8 @@ class Resource(PulseObject):
         # download requested input products if needed
         for uri in work.get_inputs():
             product = self.project.get_pulse_node(uri)
-            product.download()
-            product.add_product_user(self.work_directory)
+            local_product = product.download()
+            local_product.add_product_user(self.work_directory)
 
         msg.new('INFO', "resource check out in : " + destination_folder)
         return work
@@ -578,7 +544,8 @@ class Project:
     def purge_unused_user_products(self, unused_days=0):
         for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
             product = self.get_pulse_node(uri)
-            if product.get_unused_time() > (unused_days*86400):
+            local_product = product.get_local_copy()
+            if local_product.get_unused_time() > (unused_days*86400):
                 product.remove_from_user_products(recursive_clean=True)
 
     def save_config(

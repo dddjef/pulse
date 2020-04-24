@@ -93,7 +93,7 @@ class TestBasic(unittest.TestCase):
         anna_rig_resource = prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input("ch_anna-surfacing-textures@1")
+        anna_rig_actor.add_input(anna_surf_textures)
         anna_rig_work.commit()
         anna_rig_work.trash()
         anna_surf_work.trash()
@@ -101,7 +101,7 @@ class TestBasic(unittest.TestCase):
         self.assertFalse(os.path.exists(anna_surf_textures.directory))
         anim_resource = prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
-        anim_work.add_input("ch_anna-rigging-actor_anim@1")
+        anim_work.add_input(anna_rig_actor)
         self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
     def test_work_cannot_commit_with_unpublished_inputs(self):
@@ -113,7 +113,7 @@ class TestBasic(unittest.TestCase):
         open(product_folder + "\\product_file.txt", 'a').close()
         anna_rig_resource = prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_work.add_input("ch_anna-surfacing-textures@1")
+        anna_rig_work.add_input(anna_surf_textures)
         with self.assertRaises(PulseError):
             anna_rig_work.commit()
 
@@ -143,8 +143,8 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a product
-        abc_product = anna_mdl_work.create_product("ABC")
-        open(abc_product.directory + "\\test.abc", 'a').close()
+        anna_mdl_v2_abc = anna_mdl_work.create_product("ABC")
+        open(anna_mdl_v2_abc.directory + "\\test.abc", 'a').close()
         # create a new commit
         anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
         self.assertEqual(anna_mdl_resource.last_version, 2)
@@ -153,11 +153,10 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 
-        hat_mdl_work.add_input("ch_anna-modeling-ABC@2")
+        hat_mdl_work.add_input(anna_mdl_v2_abc)
         # test the product registration
         hat_mdl_work.read()
         self.assertEqual(hat_mdl_work.get_inputs()[0], "ch_anna-modeling-ABC@2")
-        anna_mdl_v2_abc = anna_mdl_v2.get_product("ABC")
         # check the work registration to product
 
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
@@ -177,7 +176,7 @@ class TestBasic(unittest.TestCase):
         prj.purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
-        hat_mdl_work.remove_input("ch_anna-modeling-ABC@2")
+        hat_mdl_work.remove_input(anna_mdl_v2_abc)
         anna_mdl_work.trash()
         for nd in prj.list_nodes("Resource", "*anna*"):
             print nd.uri
