@@ -532,9 +532,17 @@ class Project:
         except PulseDatabaseError:
             return None
 
-    def duplicate_resource(self, entity, resource_type, source_resource, source_version="last", metas=None):
+    def create_resource(self, entity, resource_type, metas=None, source_resource=None, source_version="last"):
         if self.get_resource(entity, resource_type):
             raise PulseError("Resource already exists " + entity + ", " + resource_type)
+
+        if entity == TEMPLATE_NAME:
+            raise PulseError("entity name reserved for template : " + entity)
+
+        if not source_resource:
+            source_resource = self.get_resource(TEMPLATE_NAME, resource_type)
+            if not source_resource:
+                raise PulseError("No template found for :" + resource_type)
 
         resource = Resource(self, entity, resource_type, metas)
         commit = Commit(resource, 0)
@@ -549,13 +557,6 @@ class Project:
         resource.write_data()
         return resource
 
-    def create_resource(self, entity, resource_type, metas=None):
-        if entity == TEMPLATE_NAME:
-            raise PulseError("entity name reserved for template : " + entity)
-        template_resource = self.get_resource(TEMPLATE_NAME, resource_type)
-        if not template_resource:
-            raise PulseError("no template found for this resource type : " + resource_type)
-        return self.duplicate_resource(entity, resource_type, template_resource, metas=metas)
 
     def create_template(self, resource_type, metas=None):
         template_resource = self.get_resource(TEMPLATE_NAME, resource_type)
