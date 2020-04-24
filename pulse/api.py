@@ -17,6 +17,7 @@ PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : add a purge trash function
 # TODO : move the initialize methods to creator function
 
+
 class PulseError(Exception):
     def __init__(self, reason):
         Exception.__init__(self)
@@ -217,6 +218,7 @@ class Work(WorkNode):
             raise PulseError("product already exists : " + product_type)
         work_product = WorkProduct(self, product_type)
         os.makedirs(work_product.directory)
+        open(work_product.products_inputs_file, 'a').close()
         return work_product
 
     def write(self):
@@ -237,7 +239,6 @@ class Work(WorkNode):
 
         # create a new products folder
         os.makedirs(self.get_products_directory())
-        # TODO : add the input_products file
         # TODO : dissociate the create empty product folder to lighten the work consultation behaviour.
 
         # write data to json

@@ -5,6 +5,7 @@ import os
 # TODO : unhandled error on missing resource type
 # TODO : test starting from another resource than template
 # TODO : test trashing an open file
+# TODO : add the repository notion to resource
 
 test_dir = os.path.dirname(__file__)
 db = os.path.join(test_dir, "DB")
@@ -146,7 +147,7 @@ class TestBasic(unittest.TestCase):
         anna_mdl_v2_abc = anna_mdl_work.create_product("ABC")
         open(anna_mdl_v2_abc.directory + "\\test.abc", 'a').close()
         # create a new commit
-        anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
+        anna_mdl_work.commit("some abc produced")
         self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
         hat_mdl_resource = prj.create_resource("hat", "modeling")
