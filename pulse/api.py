@@ -129,12 +129,7 @@ class Commit(PulseObject):
         return Product(self, product_type).read_data()
 
     def get_products_directory(self):
-        return pr.build_products_filepath(
-            self.project,
-            self.entity,
-            self.resource_type,
-            self.version
-        )
+        return pr.build_products_filepath(self.resource, self.version)
 
 
 class WorkNode:
@@ -202,7 +197,7 @@ class WorkProduct(LocalProduct, WorkNode):
 
 class Work(WorkNode):
     def __init__(self, resource):
-        WorkNode.__init__(self, resource.project, pr.build_work_filepath(resource.project, resource))
+        WorkNode.__init__(self, resource.project, resource.work_directory)
         self.resource = resource
         self.version = None
         self.data_file = self.directory + "\\work.pipe"
@@ -218,7 +213,6 @@ class Work(WorkNode):
             raise PulseError("product already exists : " + product_type)
         work_product = WorkProduct(self, product_type)
         os.makedirs(work_product.directory)
-        open(work_product.products_inputs_file, 'a').close()
         return work_product
 
     def write(self):
@@ -338,7 +332,7 @@ class Work(WorkNode):
             local_product.remove_product_user(self.directory)
 
         # create the trash work directory
-        trash_directory = pr.build_project_trash_filepath(self.project, self)
+        trash_directory = pr.build_project_trash_filepath(self)
         os.makedirs(trash_directory)
 
         # move folders
@@ -378,7 +372,7 @@ class Work(WorkNode):
         return diff
 
     def get_products_directory(self):
-        return pr.build_products_filepath(self.project, self.resource.entity, self.resource.resource_type, self.version)
+        return pr.build_products_filepath(self.resource, self.version)
 
 
 class Resource(PulseObject):
@@ -388,13 +382,13 @@ class Resource(PulseObject):
         self.last_version = -1
         self.resource_type = resource_type
         self.entity = entity
-        self.work_directory = pr.build_work_filepath(project, self)
         PulseObject.__init__(
             self,
             project,
             uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}),
             metas
         )
+        self.work_directory = pr.build_work_filepath(self)
         self._storage_vars = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity']
 
     def user_needs_lock(self, user=None):
