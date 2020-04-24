@@ -557,7 +557,6 @@ class Project:
         resource.write_data()
         return resource
 
-
     def create_template(self, resource_type, metas=None):
         template_resource = self.get_resource(TEMPLATE_NAME, resource_type)
         if template_resource:
