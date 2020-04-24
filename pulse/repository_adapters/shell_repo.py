@@ -29,8 +29,8 @@ class Repository(PulseRepository):
             self.root,
             commit.project.name,
             path_type,
-            commit.resource_type,
-            commit.entity.replace(":", "\\"),
+            commit.resource.resource_type,
+            commit.resource.entity.replace(":", "\\"),
             self.version_prefix + str(commit.version).zfill(self.version_padding)
         )
 

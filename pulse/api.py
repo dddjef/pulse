@@ -15,7 +15,6 @@ TEMPLATE_NAME = "_template"
 PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
 # TODO : add a purge trash function
-# TODO : move the initialize methods to creator function
 
 
 class PulseError(Exception):
@@ -119,8 +118,6 @@ class Commit(PulseObject):
         self.comment = ""
         self.files = []
         self.products_inputs = []
-        self.entity = resource.entity
-        self.resource_type = resource.resource_type
         self.version = int(version)
         self.products = []
         self._storage_vars = ['version', 'uri', 'products', 'files', 'comment']
@@ -233,7 +230,6 @@ class Work(WorkNode):
 
         # create a new products folder
         os.makedirs(self.get_products_directory())
-        # TODO : dissociate the create empty product folder to lighten the work consultation behaviour.
 
         # write data to json
         with open(self.data_file, "w") as write_file:
