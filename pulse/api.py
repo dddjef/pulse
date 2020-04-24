@@ -396,44 +396,6 @@ class Resource(PulseObject):
             user = self.project.cnx.user_name
         return self.lock and self.lock_user != user
 
-    def initialize_data(self, template_resource=None):
-        # test the resource does not already exists
-        try:
-            self.read_data()
-            raise Exception("resource already exists : " + self.uri)
-        except PulseDatabaseError:
-            pass
-
-        if self.entity == TEMPLATE_NAME:
-            msg.new('INFO', "new template created for type : " + self.resource_type)
-            # create the initial commit from an empty directory
-            commit = Commit(self, 0)
-            self.project.repo.create_resource_empty_commit(commit)
-            commit.products_inputs = []
-            commit.files = []
-
-        else:
-            if not template_resource:
-                template_resource = Resource(self.project, TEMPLATE_NAME, self.resource_type)
-
-            if not template_resource.read_data():
-                raise Exception("no resource found for " + template_resource.uri)
-
-            template_commit = template_resource.get_commit("last")
-            # copy work to a new version in repository
-
-            commit = Commit(self, 0)
-            self.project.repo.duplicate_commit(template_commit, commit)
-            commit.files = template_commit.files
-            commit.products_inputs = template_commit.products_inputs
-
-        commit.write_data()
-        self.last_version = 0
-        self.write_data()
-
-        msg.new('INFO', "resource initialized : " + self.uri)
-        return self
-
     def get_index(self, version_name):
         if version_name == "last":
             return self.last_version
@@ -565,10 +527,51 @@ class Project:
         self.repo = import_adapter("repository", self.cfg.repository_type).Repository(self.cfg.repository_parameters)
 
     def get_resource(self, entity, resource_type):
-        return Resource(self, entity, resource_type).read_data()
+        try:
+            return Resource(self, entity, resource_type).read_data()
+        except PulseDatabaseError:
+            return None
+
+    def duplicate_resource(self, entity, resource_type, source_resource, source_version="last", metas=None):
+        if self.get_resource(entity, resource_type):
+            raise PulseError("Resource already exists " + entity + ", " + resource_type)
+
+        resource = Resource(self, entity, resource_type, metas)
+        commit = Commit(resource, 0)
+        source_commit = source_resource.get_commit(source_version)
+
+        # copy work to a new version in repository
+        self.repo.duplicate_commit(source_commit, commit)
+        commit.files = source_commit.files
+        commit.products_inputs = source_commit.products_inputs
+        commit.write_data()
+        resource.last_version = 0
+        resource.write_data()
+        return resource
 
     def create_resource(self, entity, resource_type, metas=None):
-        return Resource(self, entity, resource_type, metas).initialize_data()
+        if entity == TEMPLATE_NAME:
+            raise PulseError("entity name reserved for template : " + entity)
+        template_resource = self.get_resource(TEMPLATE_NAME, resource_type)
+        if not template_resource:
+            raise PulseError("no template found for this resource type : " + resource_type)
+        return self.duplicate_resource(entity, resource_type, template_resource, metas=metas)
+
+    def create_template(self, resource_type, metas=None):
+        template_resource = self.get_resource(TEMPLATE_NAME, resource_type)
+        if template_resource:
+            raise PulseError("there's already a template for this resource type : " + resource_type)
+
+        template_resource = Resource(self, TEMPLATE_NAME, resource_type, metas)
+        # create the initial commit from an empty directory
+        commit = Commit(template_resource, 0)
+        self.repo.create_resource_empty_commit(commit)
+        commit.products_inputs = []
+        commit.files = []
+        commit.write_data()
+        template_resource.last_version = 0
+        template_resource.write_data()
+        return template_resource
 
 
 class Connection:

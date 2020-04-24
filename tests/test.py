@@ -44,7 +44,7 @@ def create_test_project(prj_name="test"):
 
 
 def create_template(prj, template_type):
-    template = prj.create_resource(TEMPLATE_NAME, template_type)
+    template = prj.create_template(template_type)
     # checkout the template to edit it and save it
     work = template.checkout()
     open(work.directory + "\\template_work.txt", 'a').close()
@@ -62,7 +62,7 @@ class TestBasic(unittest.TestCase):
 
     def test_metadata(self):
         cnx, prj = create_test_project()
-        prj.create_resource(TEMPLATE_NAME, "modeling")
+        prj.create_template("modeling")
         # anna_mdl_resource = prj.get_pulse_node("ch_anna-modeling")
         # anna_mdl_resource.metas = {"site": "Paris"}
         # anna_mdl_resource.initialize_data()
