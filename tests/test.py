@@ -71,18 +71,13 @@ class TestBasic(unittest.TestCase):
         # res.read_data()
         # self.assertTrue(res.metas["site"] == "Paris")
 
+    # TODO : do test for resources with different repositories
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
-        create_template(prj, "mdl")
-        cnx = Connection({"DB_root": db})
-        ftp_prj = cnx.create_project(
-            "testFTP",
-            user_works + "\\ftp",
-            user_products + "\\ftp",
-            default_repository_type="ftp_repo",
-            default_repository_parameters={"root": repos}
-        )
-        create_template(ftp_prj, "mdl")
+        prj.create_template("mdl")
+        prj.cfg.add_repository("serverB", "shell_repo", {"root": os.path.join(repos, "server_2")})
+        prj.create_template("rig", repository="serverB")
+        self.assertTrue(os.path.exists(os.path.join(repos, "server_2\\test\\work\\rig\\_template")))
 
     def test_recursive_dependencies_download(self):
         cnx, prj = create_test_project()

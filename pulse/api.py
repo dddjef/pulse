@@ -274,7 +274,8 @@ class Work(WorkNode):
 
         # copy work to a new version in repository
         commit = Commit(self.resource, self.version)
-        commit.project.repositories[self.resource.repository].upload_resource_commit(commit, self.directory, products_directory)
+        commit.project.repositories[self.resource.repository].upload_resource_commit(
+            commit, self.directory, products_directory)
 
         # register changes to database
         commit.comment = comment
@@ -481,6 +482,22 @@ class Config(PulseObject):
             "parameters": repository_parameters
         }
         self.write_data()
+        self.project.load_config()
+
+    def remove_repository(self, repository_name):
+        del self.repositories[repository_name]
+        self.write_data()
+        self.project.load_config()
+
+    def edit_repository(self, repository_name, repository_type, repository_parameters):
+        if repository_name not in self.repositories:
+            raise PulseError("Repository does not exists : " + repository_name)
+        self.repositories[repository_name] = {
+            "type": repository_type,
+            "parameters": repository_parameters
+        }
+        self.write_data()
+        self.project.load_config()
 
 
 class Project:
