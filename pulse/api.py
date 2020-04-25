@@ -15,6 +15,9 @@ TEMPLATE_NAME = "_template"
 PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
 # TODO : add a purge trash function
+# TODO : create resource should not write anything on repo. Only duplicate resource will.
+#  When one checkout the resource for the first time
+# if there's no commit, it get the template data under the work v001
 
 
 class PulseError(Exception):
@@ -30,10 +33,10 @@ class PulseError(Exception):
 
 
 class PulseObject:
-    def __init__(self, project, uri, metas=None):
+    def __init__(self, project, uri):
         self.uri = uri
         self.project = project
-        self.metas = metas
+        self.metas = {}
         self._storage_vars = []
 
     def write_data(self):
@@ -67,7 +70,7 @@ class Product(PulseObject):
 
     def download(self):
         local_copy = LocalProduct(self.commit, self.product_type)
-        self.project.repo.download_product(local_copy)
+        self.project.repositories[self.commit.resource.repository].download_product(local_copy)
         fu.write_data(local_copy.product_users_file, [])
         self.register_to_user_products()
         for uri in local_copy.get_inputs():
@@ -111,9 +114,9 @@ class Product(PulseObject):
 
 
 class Commit(PulseObject):
-    def __init__(self, resource, version, metas=None):
+    def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
-        PulseObject.__init__(self, resource.project, self.uri, metas)
+        PulseObject.__init__(self, resource.project, self.uri)
         self.resource = resource
         self.comment = ""
         self.files = []
@@ -271,7 +274,7 @@ class Work(WorkNode):
 
         # copy work to a new version in repository
         commit = Commit(self.resource, self.version)
-        commit.project.repo.upload_resource_commit(commit, self.directory, products_directory)
+        commit.project.repositories[self.resource.repository].upload_resource_commit(commit, self.directory, products_directory)
 
         # register changes to database
         commit.comment = comment
@@ -372,20 +375,20 @@ class Work(WorkNode):
 
 
 class Resource(PulseObject):
-    def __init__(self, project, entity, resource_type, metas=None):
+    def __init__(self, project, entity, resource_type):
         self.lock = False
         self.lock_user = ''
         self.last_version = -1
         self.resource_type = resource_type
         self.entity = entity
+        self.repository = None
         PulseObject.__init__(
             self,
             project,
-            uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type}),
-            metas
+            uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type})
         )
         self.work_directory = pr.build_work_filepath(self)
-        self._storage_vars = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity']
+        self._storage_vars = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
     def user_needs_lock(self, user=None):
         if not user:
@@ -416,7 +419,7 @@ class Resource(PulseObject):
             return Work(self).read()
 
         # download the commit
-        self.project.repo.download_work(commit, destination_folder)
+        self.project.repositories[self.repository].download_work(commit, destination_folder)
 
         # create the work object
         work = Work(self)
@@ -448,21 +451,36 @@ class Resource(PulseObject):
         msg.new('INFO', 'resource lock state is now ' + str(state))
 
 
+class Repository(PulseObject):
+    def __init__(self, project, name, repo_type, parameters):
+        self.name = name
+        self.type = repo_type
+        self.parameters = parameters
+        PulseObject.__init__(self, project, name)
+
+
 class Config(PulseObject):
-    def __init__(self, project, metas=None):
+    def __init__(self, project):
         self.work_user_root = None
         self.product_user_root = None
         self.version_padding = 3
         self.version_prefix = "V"
-        self.repository_type = None
-        self.repository_parameters = {}
+        self.repositories = {}
         self._storage_vars = vars(self).keys()
-        # self._storage_vars = vars(self).keys().remove("project")
-        PulseObject.__init__(self, project, "config", metas)
+        PulseObject.__init__(self, project, "config")
         self._storage_vars = [k for k in vars(self).keys() if k != "project"]
 
     def get_user_products_list_filepath(self):
         return os.path.join(self.product_user_root, "products_list.pipe")
+
+    def add_repository(self, repository_name, repository_type, repository_parameters):
+        if repository_name in self.repositories:
+            raise PulseError("Repository already exists : " + repository_name)
+        self.repositories[repository_name] = {
+            "type": repository_type,
+            "parameters": repository_parameters
+        }
+        self.write_data()
 
 
 class Project:
@@ -470,7 +488,7 @@ class Project:
         self.cnx = connection
         self.name = project_name
         self.cfg = Config(self)
-        self.repo = None
+        self.repositories = {}
 
     def get_pulse_node(self, uri_string):
         uri_dict = uri_tools.string_to_dict(uri_string)
@@ -507,20 +525,18 @@ class Project:
             product_user_root,
             version_padding,
             version_prefix,
-            repository_type,
-            repository_parameters
             ):
         self.cfg.work_user_root = work_user_root
         self.cfg.product_user_root = product_user_root
         self.cfg.version_padding = version_padding
         self.cfg.version_prefix = version_prefix
-        self.cfg.repository_type = repository_type
-        self.cfg.repository_parameters = repository_parameters
         self.cfg.write_data()
 
     def load_config(self):
         self.cfg.read_data()
-        self.repo = import_adapter("repository", self.cfg.repository_type).Repository(self.cfg.repository_parameters)
+        for repo_name in self.cfg.repositories:
+            repo = self.cfg.repositories[repo_name]
+            self.repositories[repo_name] = import_adapter("repository", repo['type']).Repository(repo['parameters'])
 
     def get_resource(self, entity, resource_type):
         try:
@@ -528,7 +544,7 @@ class Project:
         except PulseDatabaseError:
             return None
 
-    def create_resource(self, entity, resource_type, metas=None, source_resource=None, source_version="last"):
+    def create_resource(self, entity, resource_type, source_resource=None, source_version="last", repository="default"):
         if self.get_resource(entity, resource_type):
             raise PulseError("Resource already exists " + entity + ", " + resource_type)
 
@@ -540,12 +556,13 @@ class Project:
             if not source_resource:
                 raise PulseError("No template found for :" + resource_type)
 
-        resource = Resource(self, entity, resource_type, metas)
+        resource = Resource(self, entity, resource_type)
+        resource.repository = repository
         commit = Commit(resource, 0)
         source_commit = source_resource.get_commit(source_version)
 
         # copy work to a new version in repository
-        self.repo.duplicate_commit(source_commit, commit)
+        self.repositories[repository].duplicate_commit(source_commit, commit)
         commit.files = source_commit.files
         commit.products_inputs = source_commit.products_inputs
         commit.write_data()
@@ -553,15 +570,16 @@ class Project:
         resource.write_data()
         return resource
 
-    def create_template(self, resource_type, metas=None):
+    def create_template(self, resource_type, repository="default"):
         template_resource = self.get_resource(TEMPLATE_NAME, resource_type)
         if template_resource:
             raise PulseError("there's already a template for this resource type : " + resource_type)
 
-        template_resource = Resource(self, TEMPLATE_NAME, resource_type, metas)
+        template_resource = Resource(self, TEMPLATE_NAME, resource_type)
+        template_resource.repository = repository
         # create the initial commit from an empty directory
         commit = Commit(template_resource, 0)
-        self.repo.create_resource_empty_commit(commit)
+        self.repositories[repository].create_resource_empty_commit(commit)
         commit.products_inputs = []
         commit.files = []
         commit.write_data()
@@ -586,26 +604,24 @@ class Connection:
                        product_user_root,
                        version_padding=3,
                        version_prefix="V",
-                       repository_type=None,
-                       repository_parameters=None
+                       default_repository_type=None,
+                       default_repository_parameters=None
                        ):
         project = Project(self, project_name)
 
         pulse_filepath = os.path.dirname(os.path.realpath(__file__))
-        if not repository_type:
-            config = ConfigParser()
-            config.read(os.path.join(pulse_filepath, "config.ini"))
-            repository_type = config.get('repository', 'default_adapter')
+
+        config = ConfigParser()
+        config.read(os.path.join(pulse_filepath, "config.ini"))
+        if not default_repository_type:
+            default_repository_type = config.get('repository', 'default_adapter')
+        if not default_repository_parameters:
+            default_repository_parameters = config.get('repository', 'default_parameters')
+        # TODO : get version padding and prefix from cfg
 
         self.db.create_project(project_name)
-        project.save_config(
-                            work_user_root,
-                            product_user_root,
-                            version_padding,
-                            version_prefix,
-                            repository_type,
-                            repository_parameters
-                            )
+        project.save_config(work_user_root, product_user_root, version_padding, version_prefix)
+        project.cfg.add_repository("default", default_repository_type, default_repository_parameters)
         project.load_config()
         return project
 

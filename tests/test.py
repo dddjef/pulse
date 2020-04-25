@@ -35,7 +35,7 @@ def create_test_project(prj_name="test"):
         prj_name,
         user_works,
         user_products,
-        repository_parameters={"root": os.path.join(repos, "default")}
+        default_repository_parameters={"root": os.path.join(repos, "default")}
     )
     create_template(prj, "surfacing")
     create_template(prj, "rigging")
@@ -79,8 +79,8 @@ class TestBasic(unittest.TestCase):
             "testFTP",
             user_works + "\\ftp",
             user_products + "\\ftp",
-            repository_type="ftp_repo",
-            repository_parameters={"root": repos}
+            default_repository_type="ftp_repo",
+            default_repository_parameters={"root": repos}
         )
         create_template(ftp_prj, "mdl")
 
