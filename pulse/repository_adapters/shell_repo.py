@@ -33,18 +33,6 @@ class Repository(PulseRepository):
             commit.resource.entity.replace(":", "\\"),
             self.version_prefix + str(commit.version).zfill(self.version_padding)
         )
-
-    def duplicate_commit(self, source_commit, target_commit):
-        source_repo_work_path = self.build_path("work", source_commit)
-        source_repo_products_path = self.build_path("products", source_commit)
-        target_repo_work_path = self.build_path("work", target_commit)
-        target_repo_products_path = self.build_path("products", target_commit)
-        copy_folder_tree(source_repo_work_path, target_repo_work_path)
-        copy_folder_tree(source_repo_products_path, target_repo_products_path)    
-    
-    def create_resource_empty_commit(self, commit):
-        os.makedirs(self.build_path("work", commit))
-        os.makedirs(self.build_path("products", commit))
         
     def upload_resource_commit(self, commit, work_folder, products_folder=None):
         """create a new resource default folders and file from a resource template
