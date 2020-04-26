@@ -3,7 +3,8 @@ import unittest
 import os
 
 # TODO : test trashing an open file
-
+# TODO : add test for acting on a non local product
+# TODO : test manipulating trashed work (add a trashed product to inputs)
 
 test_dir = os.path.dirname(__file__)
 db = os.path.join(test_dir, "DB")
