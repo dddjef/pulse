@@ -2,7 +2,6 @@ from pulse.api import *
 import unittest
 import os
 
-# TODO : unhandled error on missing resource type
 # TODO : test trashing an open file
 
 
@@ -69,6 +68,15 @@ class TestBasic(unittest.TestCase):
         # res = prj.get_pulse_node("ch_anna-modeling")
         # res.read_data()
         # self.assertTrue(res.metas["site"] == "Paris")
+
+    def test_checkout_with_missing_template(self):
+        cnx, prj = create_test_project()
+        resource = prj.create_resource("clay", "shader")
+        with self.assertRaises(PulseError):
+            resource.checkout()
+        prj.create_template("shader")
+        with self.assertRaises(PulseError):
+            resource.checkout()
 
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
