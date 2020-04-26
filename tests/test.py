@@ -3,7 +3,6 @@ import unittest
 import os
 
 # TODO : test trashing an open file
-# TODO : add test for acting on a non local product
 # TODO : test manipulating trashed work (add a trashed product to inputs)
 
 test_dir = os.path.dirname(__file__)
@@ -59,6 +58,17 @@ class TestBasic(unittest.TestCase):
 
     # def tearDown(self):
     #     reset_files()
+
+    def test_error_on_commit_product(self):
+        cnx, prj = create_test_project()
+        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl_work = anna_mdl.checkout()
+        anna_mdl_work.create_product("abc")
+        anna_mdl_v1 = anna_mdl_work.commit()
+        anna_mdl_work.trash()
+        prj.purge_unused_user_products()
+        product = anna_mdl_v1.get_product("abc")
+        self.assertTrue(product.get_unused_time(), -1)
 
     def test_metadata(self):
         cnx, prj = create_test_project()

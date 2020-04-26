@@ -78,6 +78,8 @@ class Product:
         return fu.json_list_get(self.product_users_file)
 
     def get_unused_time(self):
+        if not os.path.exists(self.directory):
+            return -1
         users = self.get_product_users()
         if users:
             return -1
