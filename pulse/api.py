@@ -20,7 +20,27 @@ PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : add "force" option to trash or remove product to avoid dependency check
 
 
+def check_is_on_disk(f):
+    def deco(*args, **kw):
+        if not os.path.exists(args[0].directory):
+            raise PulseMissingNode("Missing work space : " + args[0].directory)
+        return f(*args, **kw)
+    return deco
+
+
 class PulseError(Exception):
+    def __init__(self, reason):
+        Exception.__init__(self)
+        self._reason = reason
+
+    def reason(self):
+        return self._reason
+
+    def __str__(self):
+        return self._reason
+
+
+class PulseMissingNode(Exception):
     def __init__(self, reason):
         Exception.__init__(self)
         self._reason = reason
@@ -66,6 +86,7 @@ class Product:
         self.product_type = product_type
         self.directory = os.path.join(parent.get_products_directory(), product_type)
         self.product_users_file = self.directory + "\\" + "product_users.pipe"
+        # TODO : this could be removed (with the variable PRODUCT_INPUTS_FILENAME)
         self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
 
     def add_product_user(self, user_directory):
@@ -189,12 +210,15 @@ class Work(WorkNode):
         self.version = None
         self.data_file = self.directory + "\\work.pipe"
 
+    @check_is_on_disk
     def get_product(self, product_type):
         return WorkProduct(self, product_type)
 
+    @check_is_on_disk
     def list_products(self):
         return os.listdir(self.get_products_directory())
 
+    @check_is_on_disk
     def create_product(self, product_type):
         if product_type in self.list_products():
             raise PulseError("product already exists : " + product_type)
@@ -202,6 +226,7 @@ class Work(WorkNode):
         os.makedirs(work_product.directory)
         return work_product
 
+    @check_is_on_disk
     def write(self):
         # remove old version file
         old_version_file = self.version_pipe_filepath(self.resource.last_version)
@@ -225,6 +250,7 @@ class Work(WorkNode):
         with open(self.data_file, "w") as write_file:
             json.dump({"version": self.version}, write_file, indent=4, sort_keys=True)
 
+    @check_is_on_disk
     def read(self):
         if not os.path.exists(self.directory):
             raise PulseError("work does not exists : " + self.directory)
@@ -233,6 +259,7 @@ class Work(WorkNode):
         self.version = work_data["version"]
         return self
 
+    @check_is_on_disk
     def commit(self, comment=""):
         # check current the user permission
         if self.resource.user_needs_lock():
@@ -295,6 +322,7 @@ class Work(WorkNode):
         msg.new('INFO', "New version published : " + str(self.resource.last_version))
         return commit
 
+    @check_is_on_disk
     def trash(self):
         # test the work and products folder are movable
         products_directory = self.get_products_directory()
@@ -330,12 +358,14 @@ class Work(WorkNode):
         msg.new('INFO', "work move to trash " + trash_directory)
         return True
 
+    @check_is_on_disk
     def version_pipe_filepath(self, index):
         return os.path.join(
             self.directory,
             self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
         )
 
+    @check_is_on_disk
     def get_files_changes(self):
         current_work_files = fu.get_directory_content(
             self.directory,
@@ -532,6 +562,8 @@ class Project:
         return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]
 
     def purge_unused_user_products(self, unused_days=0):
+        if not os.path.exists(self.cfg.get_user_products_list_filepath()):
+            return
         for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
             product = self.get_pulse_node(uri)
             if product.get_unused_time() > (unused_days*86400):

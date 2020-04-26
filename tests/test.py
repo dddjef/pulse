@@ -3,7 +3,7 @@ import unittest
 import os
 
 # TODO : test trashing an open file
-# TODO : test manipulating trashed work (add a trashed product to inputs)
+# TODO : test manipulating trashed work : add input to trashed work
 
 test_dir = os.path.dirname(__file__)
 db = os.path.join(test_dir, "DB")
@@ -69,6 +69,24 @@ class TestBasic(unittest.TestCase):
         prj.purge_unused_user_products()
         product = anna_mdl_v1.get_product("abc")
         self.assertTrue(product.get_unused_time(), -1)
+
+    def test_manipulating_trashed_work(self):
+        cnx, prj = create_test_project()
+        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl_work = anna_mdl.checkout()
+        anna_mdl_v1_abc = anna_mdl_work.create_product("abc")
+        anna_mdl_work.trash()
+        prj.purge_unused_user_products()
+        anna_surf_work = prj.create_resource("anna", "surfacing").checkout()
+        # add a trashed product
+        with self.assertRaises(PulseMissingNode):
+            anna_surf_work.add_input(anna_mdl_v1_abc)
+        # create product on a trashed work
+        with self.assertRaises(PulseMissingNode):
+            anna_mdl_work.create_product("abc")
+        # commit a trashed work
+        with self.assertRaises(PulseMissingNode):
+            anna_mdl_work.commit()
 
     def test_metadata(self):
         cnx, prj = create_test_project()
