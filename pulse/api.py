@@ -16,6 +16,8 @@ PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
 # TODO : add a purge trash function
 # TODO : standardize the object.get_ return None or Error if there's nothing to get
+# TODO : add a superclass for PulseNode, different from DBnode
+# TODO : add "force" option to trash or remove product to avoid dependency check
 
 
 class PulseError(Exception):
@@ -66,9 +68,6 @@ class Product:
         self.product_users_file = self.directory + "\\" + "product_users.pipe"
         self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
 
-    def get_inputs(self):
-        return fu.json_list_get(self.products_inputs_file)
-
     def add_product_user(self, user_directory):
         fu.json_list_append(self.product_users_file, user_directory)
 
@@ -92,13 +91,14 @@ class CommitProduct(PulseObject, Product):
     def __init__(self, parent, product_type):
         Product.__init__(self, parent, product_type)
         PulseObject.__init__(self, parent.project, self.uri)
+        self.products_inputs = []
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
 
     def download(self):
         self.project.repositories[self.parent.resource.repository].download_product(self)
         fu.write_data(self.product_users_file, [])
         self.register_to_user_products()
-        for uri in self.get_inputs():
+        for uri in self.products_inputs:
             product = self.project.get_pulse_node(uri)
             product.download()
             product.add_product_user(self.directory)
@@ -114,7 +114,7 @@ class CommitProduct(PulseObject, Product):
         if len(self.get_product_users()) > 0:
             raise PulseError("Can't remove a product still in use")
         # unregister from its inputs
-        for uri in self.get_inputs():
+        for uri in self.products_inputs:
             product_input = self.project.get_pulse_node(uri)
             product_input.remove_product_user(self.directory)
             if recursive_clean:
@@ -156,7 +156,10 @@ class WorkNode:
         self.project = project
 
     def get_inputs(self):
-        return fu.json_list_get(self.products_inputs_file)
+        inputs = []
+        for uri in fu.json_list_get(self.products_inputs_file):
+            inputs.append(self.project.get_pulse_node(uri))
+        return inputs
 
     def add_input(self, product):
         if not os.path.exists(product.directory):
@@ -175,9 +178,6 @@ class WorkProduct(Product, WorkNode):
     def __init__(self, work, product_type):
         Product.__init__(self, work, product_type)
         WorkNode.__init__(self, work.project, self.directory)
-
-    def get_local_copy(self):
-        return self
 
 
 class Work(WorkNode):
@@ -246,10 +246,9 @@ class Work(WorkNode):
             raise PulseError("no file change to commit")
 
         # check all inputs are registered
-        for input_uri in self.get_inputs():
-            product = self.project.get_pulse_node(input_uri)
+        for product in self.get_inputs():
             if isinstance(product, WorkProduct):
-                raise PulseError("Work can't be committed, it uses an unpublished product : " + input_uri)
+                raise PulseError("Work can't be committed, it uses an unpublished product : " + product.uri)
 
         # launch the pre commit hook
         hooks.pre_commit(self)
@@ -278,7 +277,7 @@ class Work(WorkNode):
                 work_product = self.get_product(product_type)
 
                 product = CommitProduct(commit, product_type)
-                product.products_inputs = work_product.get_inputs()
+                product.products_inputs = [x.uri for x in work_product.get_inputs()]
                 product.write_data()
 
                 product.register_to_user_products()
@@ -308,11 +307,9 @@ class Work(WorkNode):
                 raise PulseError("work can't be trashed if its product is used : " + product_type)
 
         # unregister from products
-        for product_uri in self.get_inputs():
-            input_product = self.project.get_pulse_node(product_uri)
-            if not input_product:
-                continue
-            input_product.remove_product_user(self.directory)
+        for input_product in self.get_inputs():
+            if os.path.exists(input_product.directory):
+                input_product.remove_product_user(self.directory)
 
         # create the trash work directory
         trash_directory = pr.build_project_trash_filepath(self)
@@ -433,8 +430,7 @@ class Resource(PulseObject):
         work.write()
 
         # download requested input products if needed
-        for uri in work.get_inputs():
-            product = self.project.get_pulse_node(uri)
+        for product in work.get_inputs():
             product.download()
             product.add_product_user(self.work_directory)
 
