@@ -3,7 +3,6 @@ import unittest
 import os
 
 # TODO : test trashing an open file
-# TODO : test manipulating trashed work : add input to trashed work
 
 test_dir = os.path.dirname(__file__)
 db = os.path.join(test_dir, "DB")

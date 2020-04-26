@@ -12,12 +12,12 @@ import imp
 from pulse.database_adapters.interface_class import PulseDatabaseError
 
 TEMPLATE_NAME = "_template"
-PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
 # TODO : add a purge trash function
 # TODO : standardize the object.get_ return None or Error if there's nothing to get
 # TODO : add a superclass for PulseNode, different from DBnode
 # TODO : add "force" option to trash or remove product to avoid dependency check
+# TODO : add a Work.remove_product method
 
 
 def check_is_on_disk(f):
@@ -86,8 +86,6 @@ class Product:
         self.product_type = product_type
         self.directory = os.path.join(parent.get_products_directory(), product_type)
         self.product_users_file = self.directory + "\\" + "product_users.pipe"
-        # TODO : this could be removed (with the variable PRODUCT_INPUTS_FILENAME)
-        self.products_inputs_file = os.path.join(self.directory, PRODUCT_INPUTS_FILENAME)
 
     def add_product_user(self, user_directory):
         fu.json_list_append(self.product_users_file, user_directory)
@@ -175,7 +173,7 @@ class Commit(PulseObject):
 class WorkNode:
     def __init__(self, project, directory):
         self.directory = directory
-        self.products_inputs_file = os.path.join(directory, PRODUCT_INPUTS_FILENAME)
+        self.products_inputs_file = os.path.join(directory, "product_inputs.pipe")
         self.project = project
 
     def get_inputs(self):
