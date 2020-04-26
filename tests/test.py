@@ -35,6 +35,7 @@ def create_test_project(prj_name="test"):
         user_products,
         default_repository_parameters={"root": os.path.join(repos, "default")}
     )
+    create_template(prj, "mdl")
     create_template(prj, "surfacing")
     create_template(prj, "rigging")
     create_template(prj, "anim")
@@ -78,9 +79,19 @@ class TestBasic(unittest.TestCase):
         with self.assertRaises(PulseError):
             resource.checkout()
 
+    def test_trashing_work_errors(self):
+        cnx, prj = create_test_project()
+        anna_mdl_work = prj.create_resource("anna", "mdl").checkout()
+        anna_mdl_abc = anna_mdl_work.create_product("abc")
+        anna_surf_work = prj.create_resource("anna", "surfacing").checkout()
+        anna_surf_work.add_input(anna_mdl_abc)
+        with self.assertRaises(PulseError):
+            anna_mdl_work.trash()
+        anna_surf_work.trash()
+        anna_mdl_work.trash()
+
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
-        prj.create_template("mdl")
         prj.cfg.add_repository("serverB", "shell_repo", {"root": os.path.join(repos, "server_2")})
         template_resource = prj.create_template("rig", repository="serverB")
         template_work = template_resource.checkout()

@@ -192,6 +192,9 @@ class WorkProduct(LocalProduct, WorkNode):
         LocalProduct.__init__(self, work, product_type)
         WorkNode.__init__(self, work.project, self.directory)
 
+    def get_local_copy(self):
+        return self
+
 
 class Work(WorkNode):
     def __init__(self, resource):
@@ -315,7 +318,6 @@ class Work(WorkNode):
                 raise PulseError("can't move folder " + path)
 
         # check workProducts are not in use
-        # TODO : add a test for this
         for product_type in self.list_products():
             product = self.get_product(product_type)
             if product.get_product_users():
@@ -536,13 +538,13 @@ class Project:
         if uri_dict['product_type'] == "":
             return resource.get_commit(index)
         else:
-            commit = resource.get_commit(index)
-            if not commit:
-                commit = resource.get_work()
-            if commit.version != index:
+            product_parent = resource.get_commit(index)
+            if not product_parent:
+                product_parent = resource.get_work()
+            if product_parent.version != index:
                 raise PulseError("Unknown product : " + uri_string)
 
-            return commit.get_product(uri_dict["product_type"])
+            return product_parent.get_product(uri_dict["product_type"])
 
     def list_nodes(self, entity_type, uri_pattern):
         return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]
