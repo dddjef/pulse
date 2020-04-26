@@ -87,6 +87,14 @@ class TestBasic(unittest.TestCase):
         with self.assertRaises(PulseMissingNode):
             anna_mdl_work.commit()
 
+    def test_trash_product(self):
+        cnx, prj = create_test_project()
+        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl_work = anna_mdl.checkout()
+        abc_product = anna_mdl_work.create_product("abc")
+        anna_mdl_work.trash_product("abc")
+        self.assertFalse(os.path.exists(abc_product.directory))
+
     def test_metadata(self):
         cnx, prj = create_test_project()
         prj.create_template("modeling")

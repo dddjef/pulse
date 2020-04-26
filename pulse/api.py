@@ -17,7 +17,7 @@ TEMPLATE_NAME = "_template"
 # TODO : standardize the object.get_ return None or Error if there's nothing to get
 # TODO : add a superclass for PulseNode, different from DBnode
 # TODO : add "force" option to trash or remove product to avoid dependency check
-# TODO : add a Work.remove_product method
+# TODO : turn the pulse directory to read only on creation
 
 
 def check_is_on_disk(f):
@@ -223,6 +223,30 @@ class Work(WorkNode):
         work_product = WorkProduct(self, product_type)
         os.makedirs(work_product.directory)
         return work_product
+
+    @check_is_on_disk
+    def trash_product(self, product_type):
+        if product_type not in self.list_products():
+            raise PulseError("product does not exists : " + product_type)
+        product = WorkProduct(self, product_type)
+
+        if not fu.test_path_write_access(product.directory):
+            raise PulseError("can't move folder " + product.directory)
+
+        if product.get_product_users():
+            raise PulseError("work can't be trashed if its product is used : " + product_type)
+
+        # unregister from products
+        for input_product in product.get_inputs():
+            if os.path.exists(input_product.directory):
+                input_product.remove_product_user(self.directory)
+
+        # create the trash work directory
+        trash_directory = pr.build_project_trash_filepath(self)
+        os.makedirs(trash_directory)
+
+        # move folder
+        shutil.move(product.directory, os.path.join(trash_directory, "PRODUCTS", product_type))
 
     @check_is_on_disk
     def write(self):
