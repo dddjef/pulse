@@ -3,9 +3,8 @@ import unittest
 import os
 
 # TODO : unhandled error on missing resource type
-# TODO : test starting from another resource than template
 # TODO : test trashing an open file
-# TODO : add the repository notion to resource
+
 
 test_dir = os.path.dirname(__file__)
 db = os.path.join(test_dir, "DB")
@@ -71,12 +70,14 @@ class TestBasic(unittest.TestCase):
         # res.read_data()
         # self.assertTrue(res.metas["site"] == "Paris")
 
-    # TODO : do test for resources with different repositories
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
         prj.create_template("mdl")
         prj.cfg.add_repository("serverB", "shell_repo", {"root": os.path.join(repos, "server_2")})
-        prj.create_template("rig", repository="serverB")
+        template_resource = prj.create_template("rig", repository="serverB")
+        template_work = template_resource.checkout()
+        open(template_work.directory + "\\template_work.txt", 'a').close()
+        template_work.commit()
         self.assertTrue(os.path.exists(os.path.join(repos, "server_2\\test\\work\\rig\\_template")))
 
     def test_recursive_dependencies_download(self):
@@ -126,24 +127,20 @@ class TestBasic(unittest.TestCase):
         anna_mdl_work = anna_mdl_resource.checkout()
         self.assertTrue(os.path.exists(anna_mdl_work.directory))
         self.assertTrue(os.path.exists(anna_mdl_work.get_products_directory()))
-        # should have no change
-        self.assertEqual(anna_mdl_work.get_files_changes(), [])
-        # commit should failed, since there's no change
-        with self.assertRaises(PulseError):
-            anna_mdl_work.commit("very first time")
         # create a new file in work directory and try to commit again
+        anna_mdl_work.commit("very first time")
         new_file = "\\test_complete.txt"
         open(anna_mdl_work.directory + new_file, 'a').close()
         self.assertEqual(anna_mdl_work.get_files_changes(), [(new_file, 'added')])
-        anna_mdl_work.commit("very first time")
-        self.assertEqual(anna_mdl_resource.last_version, 1)
+        anna_mdl_work.commit("add a file")
+        self.assertEqual(anna_mdl_resource.last_version, 2)
 
         # create a product
         anna_mdl_v2_abc = anna_mdl_work.create_product("ABC")
         open(anna_mdl_v2_abc.directory + "\\test.abc", 'a').close()
         # create a new commit
         anna_mdl_work.commit("some abc produced")
-        self.assertEqual(anna_mdl_resource.last_version, 2)
+        self.assertEqual(anna_mdl_resource.last_version, 3)
         # create a new resource
         hat_mdl_resource = prj.create_resource("hat", "modeling")
         self.assertEqual(hat_mdl_resource.last_version, 0)
@@ -152,7 +149,7 @@ class TestBasic(unittest.TestCase):
         hat_mdl_work.add_input(anna_mdl_v2_abc)
         # test the product registration
         hat_mdl_work.read()
-        self.assertEqual(hat_mdl_work.get_inputs()[0], "ch_anna-modeling-ABC@2")
+        self.assertEqual(hat_mdl_work.get_inputs()[0], "ch_anna-modeling-ABC@3")
         # check the work registration to product
 
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())

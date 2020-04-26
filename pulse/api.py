@@ -15,9 +15,7 @@ TEMPLATE_NAME = "_template"
 PRODUCT_INPUTS_FILENAME = "product_inputs.pipe"
 # TODO : define all hooks
 # TODO : add a purge trash function
-# TODO : create resource should not write anything on repo. Only duplicate resource will.
-#  When one checkout the resource for the first time
-# if there's no commit, it get the template data under the work v001
+# TODO : standardize the object.get_ return None or Error if there's nothing to get
 
 
 class PulseError(Exception):
@@ -252,10 +250,9 @@ class Work(WorkNode):
             return
 
         # check the work is up to date
-        if not self.version == self.resource.last_version + 1:
-            last_version_name = self.project.cfg.VERSION_PREFIX
-            last_version_name += str(self.resource.last_version).zfill(self.project.cfg.VERSION_PADDING)
-            raise PulseError("Your version is deprecated, it should be " + last_version_name)
+        expected_version = self.resource.last_version + 1
+        if not self.version == expected_version:
+            raise PulseError("Your version is deprecated, it should be " + str(expected_version))
 
         # check the work status
         if not self.get_files_changes():
@@ -361,9 +358,13 @@ class Work(WorkNode):
         )
 
         last_commit = Commit(self.resource, self.resource.last_version)
-        last_commit.read_data()
+        try:
+            last_commit.read_data()
+            last_files = last_commit.files
+        except PulseDatabaseError:
+            last_files = []
 
-        diff = fu.compare_directory_content(current_work_files, last_commit.files)
+        diff = fu.compare_directory_content(current_work_files, last_files)
 
         # add products
         for path in os.listdir(self.get_products_directory()):
@@ -379,7 +380,7 @@ class Resource(PulseObject):
     def __init__(self, project, entity, resource_type):
         self.lock = False
         self.lock_user = ''
-        self.last_version = -1
+        self.last_version = 0
         self.resource_type = resource_type
         self.entity = entity
         self.repository = None
@@ -402,25 +403,43 @@ class Resource(PulseObject):
         return int(version_name)
 
     def get_commit(self, version):
-        return Commit(self, self.get_index(version)).read_data()
+        try:
+            return Commit(self, self.get_index(version)).read_data()
+        except PulseDatabaseError:
+            return None
 
     def get_work(self):
         return Work(self).read()
 
-    def checkout(self, index="last"):
+    def checkout(self, index="last", destination_folder=None):
         """Download the resource work files in the user sandbox.
         Download related dependencies if they are not available in products path
         """
-        commit = self.get_commit(index)
-        destination_folder = self.work_directory
+        if not destination_folder:
+            destination_folder = self.work_directory
 
         # abort if the resource is already in user sandbox
         if os.path.exists(destination_folder):
             msg.new('INFO', "the resource was already in your sandbox")
             return Work(self).read()
 
-        # download the commit
-        self.project.repositories[self.repository].download_work(commit, destination_folder)
+        commit = self.get_commit(index)
+
+        if not commit:
+            if self.entity == TEMPLATE_NAME:
+                os.makedirs(destination_folder)
+            else:
+                template_resource = self.project.get_resource(TEMPLATE_NAME, self.resource_type)
+                if not template_resource:
+                    raise PulseError("no template found for : " + self.resource_type)
+                template_commit = template_resource.get_commit("last")
+                if not template_commit:
+                    raise PulseError("no commit found for template : " + template_resource.uri)
+
+                self.project.repositories[template_resource.repository].download_work(
+                    template_commit, destination_folder)
+        else:
+            self.project.repositories[self.repository].download_work(commit, destination_folder)
 
         # create the work object
         work = Work(self)
@@ -517,12 +536,11 @@ class Project:
         if uri_dict['product_type'] == "":
             return resource.get_commit(index)
         else:
-            try:
-                commit = resource.get_commit(index)
-            except PulseDatabaseError:
+            commit = resource.get_commit(index)
+            if not commit:
                 commit = resource.get_work()
-                if commit.version != index:
-                    raise PulseError("Unknown product : " + uri_string)
+            if commit.version != index:
+                raise PulseError("Unknown product : " + uri_string)
 
             return commit.get_product(uri_dict["product_type"])
 
@@ -561,48 +579,26 @@ class Project:
         except PulseDatabaseError:
             return None
 
-    def create_resource(self, entity, resource_type, source_resource=None, source_version="last", repository="default"):
+    def duplicate_resource(
+            self, entity, resource_type, source_resource=None, source_version="last", repository="default"):
+        pass
+
+    def _create_resource_item(self, entity, resource_type, repository):
         if self.get_resource(entity, resource_type):
             raise PulseError("Resource already exists " + entity + ", " + resource_type)
 
-        if entity == TEMPLATE_NAME:
-            raise PulseError("entity name reserved for template : " + entity)
-
-        if not source_resource:
-            source_resource = self.get_resource(TEMPLATE_NAME, resource_type)
-            if not source_resource:
-                raise PulseError("No template found for :" + resource_type)
-
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
-        commit = Commit(resource, 0)
-        source_commit = source_resource.get_commit(source_version)
-
-        # copy work to a new version in repository
-        self.repositories[repository].duplicate_commit(source_commit, commit)
-        commit.files = source_commit.files
-        commit.products_inputs = source_commit.products_inputs
-        commit.write_data()
-        resource.last_version = 0
         resource.write_data()
         return resource
 
-    def create_template(self, resource_type, repository="default"):
-        template_resource = self.get_resource(TEMPLATE_NAME, resource_type)
-        if template_resource:
-            raise PulseError("there's already a template for this resource type : " + resource_type)
+    def create_resource(self, entity, resource_type, repository="default"):
+        if entity == TEMPLATE_NAME:
+            raise PulseError("entity name reserved for template : " + entity)
+        return self._create_resource_item(entity, resource_type, repository)
 
-        template_resource = Resource(self, TEMPLATE_NAME, resource_type)
-        template_resource.repository = repository
-        # create the initial commit from an empty directory
-        commit = Commit(template_resource, 0)
-        self.repositories[repository].create_resource_empty_commit(commit)
-        commit.products_inputs = []
-        commit.files = []
-        commit.write_data()
-        template_resource.last_version = 0
-        template_resource.write_data()
-        return template_resource
+    def create_template(self, resource_type, repository="default"):
+        return self._create_resource_item(TEMPLATE_NAME, resource_type, repository)
 
 
 class Connection:
