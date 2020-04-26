@@ -59,7 +59,7 @@ class TestBasic(unittest.TestCase):
     # def tearDown(self):
     #     reset_files()
 
-    def test_error_on_commit_product(self):
+    def test_unused_time_on_purged_product(self):
         cnx, prj = create_test_project()
         anna_mdl = prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
