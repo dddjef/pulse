@@ -10,6 +10,7 @@ import time
 from ConfigParser import ConfigParser
 import imp
 from pulse.database_adapters.interface_class import PulseDatabaseError
+import tempfile
 
 TEMPLATE_NAME = "_template"
 # TODO : define all hooks
@@ -18,6 +19,8 @@ TEMPLATE_NAME = "_template"
 # TODO : add a superclass for PulseNode, different from DBnode
 # TODO : add "force" option to trash or remove product to avoid dependency check
 # TODO : turn the pulse directory to read only on creation
+# TODO : move uritools to main module
+# TODO : clean the  + "\\" +
 
 
 def check_is_on_disk(f):
@@ -505,6 +508,15 @@ class Resource(PulseObject):
             self.lock_user = user
         self.write_data()
         msg.new('INFO', 'resource lock state is now ' + str(state))
+
+    def set_repository(self, new_repository):
+        temp_directory = tempfile.mkdtemp()
+        if new_repository not in self.project.repositories:
+            raise PulseError("unknown repository : " + new_repository)
+        self.project.repositories[self.repository].download_resource(self, temp_directory)
+        self.project.repositories[new_repository].upload_resource(self, temp_directory)
+        self.project.repositories[self.repository].remove_resource(self)
+        self.repository = new_repository
 
 
 class Repository(PulseObject):

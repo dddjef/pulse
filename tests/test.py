@@ -134,6 +134,11 @@ class TestBasic(unittest.TestCase):
         open(template_work.directory + "\\template_work.txt", 'a').close()
         template_work.commit()
         self.assertTrue(os.path.exists(os.path.join(repos, "server_2\\test\\work\\rig\\_template")))
+        # test moving resource between repo
+        template_resource.set_repository("default")
+        self.assertTrue(os.path.exists(os.path.join(repos, "default\\test\\work\\rig\\_template")))
+        self.assertFalse(os.path.exists(os.path.join(repos, "server_2\\test\\work\\rig\\_template")))
+        # test moving resource between repo when the work is out
 
     def test_recursive_dependencies_download(self):
         cnx, prj = create_test_project()

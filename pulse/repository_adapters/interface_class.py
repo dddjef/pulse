@@ -22,3 +22,12 @@ class PulseRepository:
 
     def download_product(self, product):
         pass
+
+    def download_resource(self, resource, destination):
+        pass
+
+    def upload_resource(self, resource, source):
+        pass
+
+    def remove_resource(self, resource):
+        pass
