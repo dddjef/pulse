@@ -109,10 +109,10 @@ class TestBasic(unittest.TestCase):
     def test_checkout_with_missing_template(self):
         cnx, prj = create_test_project()
         resource = prj.create_resource("clay", "shader")
-        with self.assertRaises(PulseError):
+        with self.assertRaises(PulseDatabaseMissingObject):
             resource.checkout()
         prj.create_template("shader")
-        with self.assertRaises(PulseError):
+        with self.assertRaises(PulseDatabaseMissingObject):
             resource.checkout()
 
     def test_trashing_work_errors(self):

@@ -10,7 +10,7 @@ class Database(PulseDatabase):
             raise PulseDatabaseError("can't find the database :" + connexion_data["DB_root"])
         self._root = connexion_data["DB_root"]
         self.data_filename = "data.json"
-        PulseDatabase.__init__(self, connexion_data)
+        PulseDatabase.__init__(self)
 
     def create_project(self, project_name):
         project_directory = os.path.join(self._root, project_name)
@@ -38,7 +38,7 @@ class Database(PulseDatabase):
     def read(self, project_name, entity_type, uri):
         json_filepath = self._get_json_filepath(project_name, entity_type, uri)
         if not os.path.exists(json_filepath):
-            raise PulseDatabaseError("no data for : " + project_name + ", " + entity_type + ", " + uri)
+            raise PulseDatabaseMissingObject("no data for : " + project_name + ", " + entity_type + ", " + uri)
         with open(json_filepath, "r") as read_file:
             data = json.load(read_file)
         return data

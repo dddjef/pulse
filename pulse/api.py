@@ -9,18 +9,21 @@ import shutil
 import time
 from ConfigParser import ConfigParser
 import imp
-from pulse.database_adapters.interface_class import PulseDatabaseError
+from pulse.database_adapters.interface_class import *
 import tempfile
 
 TEMPLATE_NAME = "_template"
 # TODO : define all hooks
 # TODO : add a purge trash function
-# TODO : standardize the object.get_ return None or Error if there's nothing to get
 # TODO : add a superclass for PulseNode, different from DBnode
 # TODO : add "force" option to trash or remove product to avoid dependency check
 # TODO : turn the pulse directory to read only on creation
 # TODO : move uritools to main module
 # TODO : clean the  + "\\" +
+# TODO : lock resource during writing
+# TODO : support linux user path
+# TODO : add a project connexion file in the user project root to help the command line tool
+# TODO : write data should support to write only one attribute, and lock should use this
 
 
 def check_is_on_disk(f):
@@ -179,6 +182,7 @@ class WorkNode:
         self.products_inputs_file = os.path.join(directory, "product_inputs.pipe")
         self.project = project
 
+    # TODO : list comprehension could be better here
     def get_inputs(self):
         inputs = []
         for uri in fu.json_list_get(self.products_inputs_file):
@@ -401,7 +405,7 @@ class Work(WorkNode):
         try:
             last_commit.read_data()
             last_files = last_commit.files
-        except PulseDatabaseError:
+        except PulseDatabaseMissingObject:
             last_files = []
 
         diff = fu.compare_directory_content(current_work_files, last_files)
@@ -443,10 +447,7 @@ class Resource(PulseObject):
         return int(version_name)
 
     def get_commit(self, version):
-        try:
-            return Commit(self, self.get_index(version)).read_data()
-        except PulseDatabaseError:
-            return None
+        return Commit(self, self.get_index(version)).read_data()
 
     def get_work(self):
         return Work(self).read()
@@ -463,9 +464,11 @@ class Resource(PulseObject):
             msg.new('INFO', "the resource was already in your sandbox")
             return Work(self).read()
 
-        commit = self.get_commit(index)
+        try:
+            commit = self.get_commit(index)
+            self.project.repositories[self.repository].download_work(commit, destination_folder)
 
-        if not commit:
+        except PulseDatabaseMissingObject:
             if self.entity == TEMPLATE_NAME:
                 os.makedirs(destination_folder)
             else:
@@ -478,8 +481,6 @@ class Resource(PulseObject):
 
                 self.project.repositories[template_resource.repository].download_work(
                     template_commit, destination_folder)
-        else:
-            self.project.repositories[self.repository].download_work(commit, destination_folder)
 
         # create the work object
         work = Work(self)
@@ -580,12 +581,15 @@ class Project:
         resource.read_data()
         if not uri_dict['version']:
             return resource
+
         index = resource.get_index(uri_dict['version'])
         if uri_dict['product_type'] == "":
             return resource.get_commit(index)
+
         else:
-            product_parent = resource.get_commit(index)
-            if not product_parent:
+            try:
+                product_parent = resource.get_commit(index)
+            except PulseDatabaseMissingObject:
                 product_parent = resource.get_work()
             if product_parent.version != index:
                 raise PulseError("Unknown product : " + uri_string)
@@ -623,18 +627,18 @@ class Project:
             self.repositories[repo_name] = import_adapter("repository", repo['type']).Repository(repo['parameters'])
 
     def get_resource(self, entity, resource_type):
-        try:
-            return Resource(self, entity, resource_type).read_data()
-        except PulseDatabaseError:
-            return None
+        return Resource(self, entity, resource_type).read_data()
 
     def duplicate_resource(
             self, entity, resource_type, source_resource=None, source_version="last", repository="default"):
         pass
 
     def _create_resource_item(self, entity, resource_type, repository):
-        if self.get_resource(entity, resource_type):
-            raise PulseError("Resource already exists " + entity + ", " + resource_type)
+        try:
+            self.get_resource(entity, resource_type)
+            PulseError("Resource already exists " + entity + ", " + resource_type)
+        except PulseDatabaseMissingObject:
+            pass
 
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
