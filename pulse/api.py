@@ -23,7 +23,7 @@ TEMPLATE_NAME = "_template"
 # TODO : lock resource during writing
 # TODO : support linux user path
 # TODO : add a project connexion file in the user project root to help the command line tool
-# TODO : write data should support to write only one attribute, and lock should use this
+# TODO : write data should support to write only one attribute, and lock should use this ane set resource
 
 
 def check_is_on_disk(f):
@@ -292,7 +292,7 @@ class Work(WorkNode):
     def commit(self, comment=""):
         # check current the user permission
         if self.resource.user_needs_lock():
-            return
+            raise PulseError("resource is locked by another user" + self.resource.lock_user)
 
         # check the work is up to date
         expected_version = self.resource.last_version + 1

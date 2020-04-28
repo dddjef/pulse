@@ -106,6 +106,14 @@ class TestBasic(unittest.TestCase):
         # res.read_data()
         # self.assertTrue(res.metas["site"] == "Paris")
 
+    def test_lock_resource(self):
+        cnx, prj = create_test_project()
+        res_mdl = prj.create_resource("res", "mdl")
+        res_mdl.set_lock(True, "another_user")
+        res_work = res_mdl.checkout()
+        with self.assertRaises(PulseError):
+            res_work.commit()
+
     def test_checkout_with_missing_template(self):
         cnx, prj = create_test_project()
         resource = prj.create_resource("clay", "shader")
