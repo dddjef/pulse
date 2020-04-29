@@ -520,6 +520,9 @@ class Resource(PulseObject):
         msg.new('INFO', 'resource lock state is now ' + str(state))
 
     def set_repository(self, new_repository):
+        if self.repository == new_repository:
+            raise PulseError("the destination repository have to be different as current one :" + new_repository)
+
         if self.user_needs_lock():
             raise PulseError("you can't move a resource locked by another user :" + self.lock_user)
 
@@ -536,9 +539,9 @@ class Resource(PulseObject):
         self.project.repositories[new_repository].upload_resource(self, temp_directory)
         self.project.repositories[self.repository].remove_resource(self)
         self.repository = new_repository
-
         self.lock = lock_state
         self.lock_user = lock_user
+        self.write_data()
 
 
 class Repository(PulseObject):

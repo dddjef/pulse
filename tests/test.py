@@ -144,9 +144,13 @@ class TestBasic(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(repos, "server_2\\test\\work\\rig\\_template")))
         # test moving resource between repo
         template_resource.set_repository("default")
+
         self.assertTrue(os.path.exists(os.path.join(repos, "default\\test\\work\\rig\\_template")))
         self.assertFalse(os.path.exists(os.path.join(repos, "server_2\\test\\work\\rig\\_template")))
-        # test moving resource between repo when the work is out
+        # test moving resource between repo when the resource is locked
+        template_resource.set_lock(True, "another_user")
+        with self.assertRaises(PulseError):
+            template_resource.set_repository("serverB")
 
     def test_recursive_dependencies_download(self):
         cnx, prj = create_test_project()
