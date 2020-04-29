@@ -313,6 +313,12 @@ class Work(WorkNode):
 
         products_directory = self.get_products_directory()
 
+        # lock the resource to prevent concurent commit
+        lock_state = self.resource.lock
+        lock_user = self.resource.lock_user
+        self.resource.lock = True
+        self.resource.lock_user = self.project.cnx.user_name + "_commit"
+
         # copy work to a new version in repository
         commit = Commit(self.resource, self.version)
         commit.project.repositories[self.resource.repository].upload_resource_commit(
@@ -348,7 +354,10 @@ class Work(WorkNode):
         self.version += 1
         self.write()
 
-        msg.new('INFO', "New version published : " + str(self.resource.last_version))
+        # restore the resource lock state
+        self.resource.lock = lock_state
+        self.resource.lock_user = lock_user
+
         return commit
 
     @check_is_on_disk
@@ -504,7 +513,7 @@ class Resource(PulseObject):
 
         self.lock = state
         if not user:
-            self.lock_user = self.project.get_user_name()
+            self.lock_user = self.project.cnx.user_name
         else:
             self.lock_user = user
         self.write_data()
