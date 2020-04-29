@@ -20,10 +20,8 @@ TEMPLATE_NAME = "_template"
 # TODO : turn the pulse directory to read only on creation
 # TODO : move uritools to main module
 # TODO : clean the  + "\\" +
-# TODO : lock resource during writing
 # TODO : support linux user path
 # TODO : add a project connexion file in the user project root to help the command line tool
-# TODO : write data should support to write only one attribute, and lock should use this ane set resource
 
 
 def check_is_on_disk(f):
@@ -65,9 +63,11 @@ class PulseObject:
         self.metas = {}
         self._storage_vars = []
 
-    def write_data(self):
+    def write_data(self, attr_to_write=None):
         # write the data to db
-        data = dict((name, getattr(self, name)) for name in self._storage_vars)
+        if not attr_to_write:
+            attr_to_write = self._storage_vars
+        data = dict((name, getattr(self, name)) for name in attr_to_write)
         self.project.cnx.db.write(self.project.name, self.__class__.__name__, self.uri, data)
 
     def read_data(self):
@@ -292,7 +292,7 @@ class Work(WorkNode):
     def commit(self, comment=""):
         # check current the user permission
         if self.resource.user_needs_lock():
-            raise PulseError("resource is locked by another user" + self.resource.lock_user)
+            raise PulseError("resource is locked by another user : " + self.resource.lock_user)
 
         # check the work is up to date
         expected_version = self.resource.last_version + 1
@@ -316,8 +316,7 @@ class Work(WorkNode):
         # lock the resource to prevent concurrent commit
         lock_state = self.resource.lock
         lock_user = self.resource.lock_user
-        self.resource.lock = True
-        self.resource.lock_user = self.project.cnx.user_name + "_commit"
+        self.resource.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
 
         # copy work to a new version in repository
         commit = Commit(self.resource, self.version)
@@ -355,8 +354,7 @@ class Work(WorkNode):
         self.write()
 
         # restore the resource lock state
-        self.resource.lock = lock_state
-        self.resource.lock_user = lock_user
+        self.resource.set_lock(lock_state, lock_user, steal=True)
 
         return commit
 
@@ -484,8 +482,9 @@ class Resource(PulseObject):
                 template_resource = self.project.get_resource(TEMPLATE_NAME, self.resource_type)
                 if not template_resource:
                     raise PulseError("no template found for : " + self.resource_type)
-                template_commit = template_resource.get_commit("last")
-                if not template_commit:
+                try:
+                    template_commit = template_resource.get_commit("last")
+                except PulseDatabaseMissingObject:
                     raise PulseError("no commit found for template : " + template_resource.uri)
 
                 self.project.repositories[template_resource.repository].download_work(
@@ -516,7 +515,7 @@ class Resource(PulseObject):
             self.lock_user = self.project.cnx.user_name
         else:
             self.lock_user = user
-        self.write_data()
+        self.write_data(['lock_user', 'lock'])
         msg.new('INFO', 'resource lock state is now ' + str(state))
 
     def set_repository(self, new_repository):
@@ -529,8 +528,7 @@ class Resource(PulseObject):
         # lock the resource to prevent concurrent commit
         lock_state = self.lock
         lock_user = self.lock_user
-        self.lock = True
-        self.lock_user = self.project.cnx.user_name + "_set_repo"
+        self.set_lock(True, self.project.cnx.user_name + "_set_repo", steal=True)
 
         temp_directory = tempfile.mkdtemp()
         if new_repository not in self.project.repositories:
@@ -539,9 +537,8 @@ class Resource(PulseObject):
         self.project.repositories[new_repository].upload_resource(self, temp_directory)
         self.project.repositories[self.repository].remove_resource(self)
         self.repository = new_repository
-        self.lock = lock_state
-        self.lock_user = lock_user
-        self.write_data()
+        self.set_lock(lock_state, lock_user, steal=True)
+        self.write_data(['repository'])
 
 
 class Repository(PulseObject):

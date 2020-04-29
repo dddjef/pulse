@@ -120,7 +120,7 @@ class TestBasic(unittest.TestCase):
         with self.assertRaises(PulseDatabaseMissingObject):
             resource.checkout()
         prj.create_template("shader")
-        with self.assertRaises(PulseDatabaseMissingObject):
+        with self.assertRaises(PulseError):
             resource.checkout()
 
     def test_trashing_work_errors(self):
@@ -204,6 +204,7 @@ class TestBasic(unittest.TestCase):
         new_file = "\\test_complete.txt"
         open(anna_mdl_work.directory + new_file, 'a').close()
         self.assertEqual(anna_mdl_work.get_files_changes(), [(new_file, 'added')])
+
         anna_mdl_work.commit("add a file")
         self.assertEqual(anna_mdl_resource.last_version, 2)
 

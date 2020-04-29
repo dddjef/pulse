@@ -32,8 +32,14 @@ class Database(PulseDatabase):
         json_folder = os.path.dirname(json_filepath)
         if not os.path.exists(json_folder):
             os.makedirs(json_folder)
+            data = data_dict
+        else:
+            with open(json_filepath, "r") as read_file:
+                data = json.load(read_file)
+            for k in data_dict:
+                data[k] = data_dict[k]
         with open(json_filepath, "w") as write_file:
-            json.dump(data_dict, write_file, indent=4, sort_keys=True)
+            json.dump(data, write_file, indent=4, sort_keys=True)
 
     def read(self, project_name, entity_type, uri):
         json_filepath = self._get_json_filepath(project_name, entity_type, uri)
