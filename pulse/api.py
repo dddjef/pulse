@@ -313,7 +313,7 @@ class Work(WorkNode):
 
         products_directory = self.get_products_directory()
 
-        # lock the resource to prevent concurent commit
+        # lock the resource to prevent concurrent commit
         lock_state = self.resource.lock
         lock_user = self.resource.lock_user
         self.resource.lock = True
@@ -520,6 +520,15 @@ class Resource(PulseObject):
         msg.new('INFO', 'resource lock state is now ' + str(state))
 
     def set_repository(self, new_repository):
+        if self.user_needs_lock():
+            raise PulseError("you can't move a resource locked by another user :" + self.lock_user)
+
+        # lock the resource to prevent concurrent commit
+        lock_state = self.lock
+        lock_user = self.lock_user
+        self.lock = True
+        self.lock_user = self.project.cnx.user_name + "_set_repo"
+
         temp_directory = tempfile.mkdtemp()
         if new_repository not in self.project.repositories:
             raise PulseError("unknown repository : " + new_repository)
@@ -527,6 +536,9 @@ class Resource(PulseObject):
         self.project.repositories[new_repository].upload_resource(self, temp_directory)
         self.project.repositories[self.repository].remove_resource(self)
         self.repository = new_repository
+
+        self.lock = lock_state
+        self.lock_user = lock_user
 
 
 class Repository(PulseObject):
