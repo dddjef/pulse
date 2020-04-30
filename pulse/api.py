@@ -19,7 +19,6 @@ TEMPLATE_NAME = "_template"
 # TODO : move uritools to main module
 # TODO : clean the  + "\\" +
 # TODO : support linux user path
-# TODO : add a project connexion file in the user project root to help the command line tool
 # TODO : database object should have a predefined set of attribute to help db admin to prepare entities and field
 
 

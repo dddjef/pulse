@@ -9,7 +9,6 @@ class Database(PulseDatabase):
         if not os.path.exists(connexion_data["DB_root"]):
             raise PulseDatabaseError("can't find the database :" + connexion_data["DB_root"])
         self._root = connexion_data["DB_root"]
-        self.data_filename = "data.json"
         PulseDatabase.__init__(self)
 
     def create_project(self, project_name):
@@ -20,8 +19,8 @@ class Database(PulseDatabase):
 
     def find_uris(self, project_name, entity_type, uri_pattern):
         uris = []
-        for path in glob.glob(os.path.dirname(self._get_json_filepath(project_name, entity_type, uri_pattern))):
-            uris.append(path.split(os.pathsep)[-1])
+        for path in glob.glob(self._get_json_filepath(project_name, entity_type, uri_pattern)):
+            uris.append(os.path.splitext(os.path.basename(path))[0])
         return uris
 
     def get_user_name(self):
@@ -32,6 +31,7 @@ class Database(PulseDatabase):
         json_folder = os.path.dirname(json_filepath)
         if not os.path.exists(json_folder):
             os.makedirs(json_folder)
+        if not os.path.exists(json_filepath):
             data = data_dict
         else:
             with open(json_filepath, "r") as read_file:
@@ -50,4 +50,4 @@ class Database(PulseDatabase):
         return data
 
     def _get_json_filepath(self, project_name, entity_type, uri):
-        return os.path.join(self._root, project_name, entity_type,  uri, self.data_filename)
+        return os.path.join(self._root, project_name, entity_type,  uri + ".json")
