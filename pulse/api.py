@@ -1,7 +1,6 @@
 import pulse.uri_tools as uri_tools
 import pulse.path_resolver as pr
 import pulse.message as msg
-import pulse.hooks as hooks
 import json
 import os
 import file_utils as fu
@@ -13,7 +12,6 @@ from pulse.database_adapters.interface_class import *
 import tempfile
 
 TEMPLATE_NAME = "_template"
-# TODO : define all hooks
 # TODO : add a purge trash function
 # TODO : add a superclass for PulseNode, different from DBnode
 # TODO : add "force" option to trash or remove product to avoid dependency check
@@ -22,6 +20,7 @@ TEMPLATE_NAME = "_template"
 # TODO : clean the  + "\\" +
 # TODO : support linux user path
 # TODO : add a project connexion file in the user project root to help the command line tool
+# TODO : database object should have a predefined set of attribute to help db admin to prepare entities and field
 
 
 def check_is_on_disk(f):
@@ -307,9 +306,6 @@ class Work(WorkNode):
         for product in self.get_inputs():
             if isinstance(product, WorkProduct):
                 raise PulseError("Work can't be committed, it uses an unpublished product : " + product.uri)
-
-        # launch the pre commit hook
-        hooks.pre_commit(self)
 
         products_directory = self.get_products_directory()
 
