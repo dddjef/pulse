@@ -62,7 +62,7 @@ class PulseObject:
         self.metas = {}
         self._storage_vars = []
 
-    def write_data(self, attr_to_write=None):
+    def _write_data(self, attr_to_write=None):
         # write the data to db
         if not attr_to_write:
             attr_to_write = self._storage_vars
@@ -77,6 +77,9 @@ class PulseObject:
                 continue
             setattr(self, k, data[k])
         return self
+
+    def db_create(self):
+        self._write_data(self._storage_vars)
 
 
 class Product:
@@ -337,13 +340,12 @@ class Work(WorkNode):
 
                 product = CommitProduct(commit, product_type)
                 product.products_inputs = [x.uri for x in work_product.get_inputs()]
-                product.write_data()
+                product.db_create()
 
                 product.register_to_user_products()
 
-        commit.write_data()
-        self.resource.last_version = self.version
-        self.resource.write_data()
+        commit.db_create()
+        self.resource.set_last_version(self.version)
 
         # increment the work and the products files
         self.version += 1
@@ -439,6 +441,10 @@ class Resource(PulseObject):
         self.work_directory = pr.build_work_filepath(self)
         self._storage_vars = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
+    def set_last_version(self, version):
+        self.last_version = version
+        self._write_data(["last_version"])
+
     def user_needs_lock(self, user=None):
         if not user:
             user = self.project.cnx.user_name
@@ -511,7 +517,7 @@ class Resource(PulseObject):
             self.lock_user = self.project.cnx.user_name
         else:
             self.lock_user = user
-        self.write_data(['lock_user', 'lock'])
+        self._write_data(['lock_user', 'lock'])
         msg.new('INFO', 'resource lock state is now ' + str(state))
 
     def set_repository(self, new_repository):
@@ -534,7 +540,7 @@ class Resource(PulseObject):
         self.project.repositories[self.repository].remove_resource(self)
         self.repository = new_repository
         self.set_lock(lock_state, lock_user, steal=True)
-        self.write_data(['repository'])
+        self._write_data(['repository'])
 
 
 class Repository(PulseObject):
@@ -566,12 +572,12 @@ class Config(PulseObject):
             "type": repository_type,
             "parameters": repository_parameters
         }
-        self.write_data()
+        self._write_data()
         self.project.load_config()
 
     def remove_repository(self, repository_name):
         del self.repositories[repository_name]
-        self.write_data()
+        self._write_data()
         self.project.load_config()
 
     def edit_repository(self, repository_name, repository_type, repository_parameters):
@@ -581,8 +587,11 @@ class Config(PulseObject):
             "type": repository_type,
             "parameters": repository_parameters
         }
-        self.write_data()
+        self._write_data()
         self.project.load_config()
+
+    def save(self):
+        self._write_data()
 
 
 class Project:
@@ -635,7 +644,7 @@ class Project:
         self.cfg.product_user_root = product_user_root
         self.cfg.version_padding = version_padding
         self.cfg.version_prefix = version_prefix
-        self.cfg.write_data()
+        self.cfg.save()
 
     def load_config(self):
         self.cfg.read_data()
@@ -659,7 +668,7 @@ class Project:
 
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
-        resource.write_data()
+        resource.db_create()
         return resource
 
     def create_resource(self, entity, resource_type, repository="default"):
