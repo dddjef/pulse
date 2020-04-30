@@ -61,12 +61,10 @@ class PulseObject:
         self.metas = {}
         self._storage_vars = []
 
-    def _write_data(self, attr_to_write=None):
+    def _write_data(self, attr_to_write):
         # write the data to db
-        if not attr_to_write:
-            attr_to_write = self._storage_vars
         data = dict((name, getattr(self, name)) for name in attr_to_write)
-        self.project.cnx.db.write(self.project.name, self.__class__.__name__, self.uri, data)
+        self.project.cnx.db.update(self.project.name, self.__class__.__name__, self.uri, data)
 
     def read_data(self):
         data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
@@ -78,7 +76,8 @@ class PulseObject:
         return self
 
     def db_create(self):
-        self._write_data(self._storage_vars)
+        data = dict((name, getattr(self, name)) for name in self._storage_vars)
+        self.project.cnx.db.create(self.project.name, self.__class__.__name__, self.uri, data)
 
 
 class Product:
@@ -559,6 +558,7 @@ class Config(PulseObject):
         self.repositories = {}
         self._storage_vars = vars(self).keys()
         PulseObject.__init__(self, project, "config")
+        # TODO : List variables
         self._storage_vars = [k for k in vars(self).keys() if k != "project"]
 
     def get_user_products_list_filepath(self):
@@ -571,14 +571,15 @@ class Config(PulseObject):
             "type": repository_type,
             "parameters": repository_parameters
         }
-        self._write_data()
+        self._write_data(["repositories"])
         self.project.load_config()
 
     def remove_repository(self, repository_name):
         del self.repositories[repository_name]
-        self._write_data()
+        self._write_data(["repositories"])
         self.project.load_config()
 
+    # TODO : Should write a test for edit and remove
     def edit_repository(self, repository_name, repository_type, repository_parameters):
         if repository_name not in self.repositories:
             raise PulseError("Repository does not exists : " + repository_name)
@@ -586,11 +587,11 @@ class Config(PulseObject):
             "type": repository_type,
             "parameters": repository_parameters
         }
-        self._write_data()
+        self._write_data(["repositories"])
         self.project.load_config()
 
     def save(self):
-        self._write_data()
+        self._write_data(self._storage_vars)
 
 
 class Project:
@@ -631,19 +632,6 @@ class Project:
             product = self.get_pulse_node(uri)
             if product.get_unused_time() > (unused_days*86400):
                 product.remove_from_user_products(recursive_clean=True)
-
-    def save_config(
-            self,
-            work_user_root,
-            product_user_root,
-            version_padding,
-            version_prefix,
-            ):
-        self.cfg.work_user_root = work_user_root
-        self.cfg.product_user_root = product_user_root
-        self.cfg.version_padding = version_padding
-        self.cfg.version_prefix = version_prefix
-        self.cfg.save()
 
     def load_config(self):
         self.cfg.read_data()
@@ -711,7 +699,11 @@ class Connection:
         # TODO : get version padding and prefix from cfg
 
         self.db.create_project(project_name)
-        project.save_config(work_user_root, product_user_root, version_padding, version_prefix)
+        project.cfg.work_user_root = work_user_root
+        project.cfg.product_user_root = product_user_root
+        project.cfg.version_padding = version_padding
+        project.cfg.version_prefix = version_prefix
+        project.cfg.db_create()
         project.cfg.add_repository("default", default_repository_type, default_repository_parameters)
         project.load_config()
         return project

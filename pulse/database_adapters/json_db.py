@@ -26,18 +26,27 @@ class Database(PulseDatabase):
     def get_user_name(self):
         return os.environ.get('USERNAME')
 
-    def write(self, project_name, entity_type, uri, data_dict):
+    def create(self, project_name, entity_type, uri, data):
         json_filepath = self._get_json_filepath(project_name, entity_type, uri)
+        if os.path.exists(json_filepath):
+            raise PulseDatabaseError("node already exists:" + uri)
+
         json_folder = os.path.dirname(json_filepath)
         if not os.path.exists(json_folder):
             os.makedirs(json_folder)
+
+        with open(json_filepath, "w") as write_file:
+            json.dump(data, write_file, indent=4, sort_keys=True)
+
+    def update(self, project_name, entity_type, uri, data_dict):
+        json_filepath = self._get_json_filepath(project_name, entity_type, uri)
         if not os.path.exists(json_filepath):
-            data = data_dict
-        else:
-            with open(json_filepath, "r") as read_file:
-                data = json.load(read_file)
-            for k in data_dict:
-                data[k] = data_dict[k]
+            raise PulseDatabaseMissingObject(uri)
+
+        with open(json_filepath, "r") as read_file:
+            data = json.load(read_file)
+        for k in data_dict:
+            data[k] = data_dict[k]
         with open(json_filepath, "w") as write_file:
             json.dump(data, write_file, indent=4, sort_keys=True)
 
