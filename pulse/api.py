@@ -647,12 +647,6 @@ class Project:
         pass
 
     def _create_resource_item(self, entity, resource_type, repository):
-        try:
-            self.get_resource(entity, resource_type)
-            PulseError("Resource already exists " + entity + ", " + resource_type)
-        except PulseDatabaseMissingObject:
-            pass
-
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
         resource.db_create()
