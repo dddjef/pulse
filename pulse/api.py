@@ -271,11 +271,6 @@ class Work(WorkNode):
         with open(new_version_file, "w") as write_file:
             json.dump({"created_by": self.resource.project.cnx.user_name}, write_file, indent=4, sort_keys=True)
 
-        # remove the old version file
-        old_version_file = self.version_pipe_filepath(self.version-1)
-        if os.path.exists(old_version_file):
-            os.remove(old_version_file)
-
         # create a new products folder
         os.makedirs(self.get_products_directory())
 
