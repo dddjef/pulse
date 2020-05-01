@@ -13,6 +13,11 @@ repos = os.path.join(test_dir, "repos")
 
 def reset_files():
     for directory in [db, user_products, user_works, repos]:
+        for path, subdirs, files in os.walk(directory):
+            for name in files:
+                filepath = os.path.join(path, name)
+                if filepath.endswith(".pipe"):
+                    os.chmod(filepath, 0o777)
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
             try:

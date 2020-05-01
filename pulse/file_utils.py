@@ -1,5 +1,7 @@
 import os
 import json
+import ctypes
+
 
 def compare_directory_content(current_work_data, past_work_data):
     file_changes = []
@@ -43,8 +45,11 @@ def read_data(filepath):
 
 
 def write_data(filepath, data):
+    if os.path.exists(filepath):
+        os.remove(filepath)
     with open(filepath, "w") as write_file:
         json.dump(data, write_file, indent=4, sort_keys=True)
+    ctypes.windll.kernel32.SetFileAttributesW(filepath, 2)
 
 
 def json_list_remove(json_path, item):

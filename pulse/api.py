@@ -135,6 +135,11 @@ class CommitProduct(PulseDbObject, Product):
     def remove_from_user_products(self, recursive_clean=False):
         if len(self.get_product_users()) > 0:
             raise PulseError("Can't remove a product still in use")
+
+        # test the folder can be moved
+        if not fu.test_path_write_access(self.directory):
+            raise PulseError("folder is in used by a process : " + self.directory)
+
         # unregister from its inputs
         for uri in self.products_inputs:
             product_input = self.project.get_pulse_node(uri)
@@ -144,7 +149,11 @@ class CommitProduct(PulseDbObject, Product):
                     product_input.remove_from_user_products(recursive_clean=True)
                 except PulseError:
                     pass
-
+        for path, subdirs, files in os.walk(self.directory):
+            for name in files:
+                filepath = os.path.join(path, name)
+                if filepath.endswith(".pipe"):
+                    os.chmod(filepath, 0o777)
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
         fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.product_user_root])
