@@ -54,19 +54,18 @@ class PulseMissingNode(Exception):
         return self._reason
 
 
-class PulseObject:
+class PulseDbObject:
     def __init__(self, project, uri):
         self.uri = uri
         self.project = project
         self.metas = {}
         self._storage_vars = []
 
-    def _write_data(self, attr_to_write):
-        # write the data to db
-        data = dict((name, getattr(self, name)) for name in attr_to_write)
+    def _db_update(self, attribute_list):
+        data = dict((name, getattr(self, name)) for name in attribute_list)
         self.project.cnx.db.update(self.project.name, self.__class__.__name__, self.uri, data)
 
-    def read_data(self):
+    def db_read(self):
         data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
         for k in data:
             if k not in vars(self):
@@ -114,10 +113,10 @@ class Product:
             return time.time() - os.path.getctime(self.directory)
 
 
-class CommitProduct(PulseObject, Product):
+class CommitProduct(PulseDbObject, Product):
     def __init__(self, parent, product_type):
         Product.__init__(self, parent, product_type)
-        PulseObject.__init__(self, parent.project, self.uri)
+        PulseDbObject.__init__(self, parent.project, self.uri)
         self.products_inputs = []
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
 
@@ -157,10 +156,10 @@ class CommitProduct(PulseObject, Product):
         self.unregister_to_user_products()
 
 
-class Commit(PulseObject):
+class Commit(PulseDbObject):
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
-        PulseObject.__init__(self, resource.project, self.uri)
+        PulseDbObject.__init__(self, resource.project, self.uri)
         self.resource = resource
         self.comment = ""
         self.files = []
@@ -170,7 +169,7 @@ class Commit(PulseObject):
         self._storage_vars = ['version', 'uri', 'products', 'files', 'comment']
 
     def get_product(self, product_type):
-        return CommitProduct(self, product_type).read_data()
+        return CommitProduct(self, product_type).db_read()
 
     def get_products_directory(self):
         return pr.build_products_filepath(self.resource, self.version)
@@ -406,7 +405,7 @@ class Work(WorkNode):
 
         last_commit = Commit(self.resource, self.resource.last_version)
         try:
-            last_commit.read_data()
+            last_commit.db_read()
             last_files = last_commit.files
         except PulseDatabaseMissingObject:
             last_files = []
@@ -423,7 +422,7 @@ class Work(WorkNode):
         return pr.build_products_filepath(self.resource, self.version)
 
 
-class Resource(PulseObject):
+class Resource(PulseDbObject):
     def __init__(self, project, entity, resource_type):
         self.lock = False
         self.lock_user = ''
@@ -431,7 +430,7 @@ class Resource(PulseObject):
         self.resource_type = resource_type
         self.entity = entity
         self.repository = None
-        PulseObject.__init__(
+        PulseDbObject.__init__(
             self,
             project,
             uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type})
@@ -441,7 +440,7 @@ class Resource(PulseObject):
 
     def set_last_version(self, version):
         self.last_version = version
-        self._write_data(["last_version"])
+        self._db_update(["last_version"])
 
     def user_needs_lock(self, user=None):
         if not user:
@@ -454,7 +453,7 @@ class Resource(PulseObject):
         return int(version_name)
 
     def get_commit(self, version):
-        return Commit(self, self.get_index(version)).read_data()
+        return Commit(self, self.get_index(version)).db_read()
 
     def get_work(self):
         return Work(self).read()
@@ -506,7 +505,7 @@ class Resource(PulseObject):
     def set_lock(self, state, user=None, steal=False):
         # abort if the resource is locked by someone else and the user doesn't want to steal the lock
         if not steal:
-            self.read_data()
+            self.db_read()
             if self.user_needs_lock(user):
                 return
 
@@ -515,7 +514,7 @@ class Resource(PulseObject):
             self.lock_user = self.project.cnx.user_name
         else:
             self.lock_user = user
-        self._write_data(['lock_user', 'lock'])
+        self._db_update(['lock_user', 'lock'])
         msg.new('INFO', 'resource lock state is now ' + str(state))
 
     def set_repository(self, new_repository):
@@ -538,18 +537,18 @@ class Resource(PulseObject):
         self.project.repositories[self.repository].remove_resource(self)
         self.repository = new_repository
         self.set_lock(lock_state, lock_user, steal=True)
-        self._write_data(['repository'])
+        self._db_update(['repository'])
 
 
-class Repository(PulseObject):
+class Repository(PulseDbObject):
     def __init__(self, project, name, repo_type, parameters):
         self.name = name
         self.type = repo_type
         self.parameters = parameters
-        PulseObject.__init__(self, project, name)
+        PulseDbObject.__init__(self, project, name)
 
 
-class Config(PulseObject):
+class Config(PulseDbObject):
     def __init__(self, project):
         self.work_user_root = None
         self.product_user_root = None
@@ -557,7 +556,7 @@ class Config(PulseObject):
         self.version_prefix = "V"
         self.repositories = {}
         self._storage_vars = vars(self).keys()
-        PulseObject.__init__(self, project, "config")
+        PulseDbObject.__init__(self, project, "config")
         # TODO : List variables
         self._storage_vars = [k for k in vars(self).keys() if k != "project"]
 
@@ -571,12 +570,12 @@ class Config(PulseObject):
             "type": repository_type,
             "parameters": repository_parameters
         }
-        self._write_data(["repositories"])
+        self._db_update(["repositories"])
         self.project.load_config()
 
     def remove_repository(self, repository_name):
         del self.repositories[repository_name]
-        self._write_data(["repositories"])
+        self._db_update(["repositories"])
         self.project.load_config()
 
     # TODO : Should write a test for edit and remove
@@ -587,11 +586,11 @@ class Config(PulseObject):
             "type": repository_type,
             "parameters": repository_parameters
         }
-        self._write_data(["repositories"])
+        self._db_update(["repositories"])
         self.project.load_config()
 
     def save(self):
-        self._write_data(self._storage_vars)
+        self._db_update(self._storage_vars)
 
 
 class Project:
@@ -604,7 +603,7 @@ class Project:
     def get_pulse_node(self, uri_string):
         uri_dict = uri_tools.string_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
-        resource.read_data()
+        resource.db_read()
         if not uri_dict['version']:
             return resource
 
@@ -634,13 +633,13 @@ class Project:
                 product.remove_from_user_products(recursive_clean=True)
 
     def load_config(self):
-        self.cfg.read_data()
+        self.cfg.db_read()
         for repo_name in self.cfg.repositories:
             repo = self.cfg.repositories[repo_name]
             self.repositories[repo_name] = import_adapter("repository", repo['type']).Repository(repo['parameters'])
 
     def get_resource(self, entity, resource_type):
-        return Resource(self, entity, resource_type).read_data()
+        return Resource(self, entity, resource_type).db_read()
 
     def duplicate_resource(
             self, entity, resource_type, source_resource=None, source_version="last", repository="default"):
