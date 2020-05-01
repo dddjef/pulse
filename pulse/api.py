@@ -13,10 +13,9 @@ import tempfile
 TEMPLATE_NAME = "_template"
 # TODO : add a purge trash function
 # TODO : add "force" option to trash or remove product to avoid dependency check
-# TODO : turn the pulse directory to read only on creation
-# TODO : clean the  + "\\" +
+# TODO : turn the pipe data file to read only on creation
 # TODO : support linux user path
-# TODO : database object should have a predefined set of attribute to help db admin to prepare entities and field
+# TODO : write down object type and attribute list to help db admin to prepare the database
 
 
 def check_is_on_disk(f):
@@ -87,7 +86,7 @@ class Product:
         self.parent = parent
         self.product_type = product_type
         self.directory = os.path.join(parent.get_products_directory(), product_type)
-        self.product_users_file = self.directory + "\\" + "product_users.pipe"
+        self.product_users_file = os.path.join(self.directory, "product_users.pipe")
 
     def add_product_user(self, user_directory):
         fu.json_list_append(self.product_users_file, user_directory)
@@ -209,7 +208,7 @@ class Work(WorkNode):
         WorkNode.__init__(self, resource.project, resource.work_directory)
         self.resource = resource
         self.version = None
-        self.data_file = self.directory + "\\work.pipe"
+        self.data_file = os.path.join(self.directory, "work.pipe")
 
     @check_is_on_disk
     def get_product(self, product_type):
@@ -374,8 +373,8 @@ class Work(WorkNode):
         os.makedirs(trash_directory)
 
         # move folders
-        shutil.move(self.directory, trash_directory + "\\WORK")
-        shutil.move(products_directory, trash_directory + "\\PRODUCTS")
+        shutil.move(self.directory,  os.path.join(trash_directory, "WORK"))
+        shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
 
         # recursively remove works directories if they are empty
         fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.work_user_root])
