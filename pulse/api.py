@@ -1,4 +1,3 @@
-import pulse.uri_tools as uri_tools
 import pulse.path_resolver as pr
 import pulse.message as msg
 import json
@@ -13,10 +12,8 @@ import tempfile
 
 TEMPLATE_NAME = "_template"
 # TODO : add a purge trash function
-# TODO : add a superclass for PulseNode, different from DBnode
 # TODO : add "force" option to trash or remove product to avoid dependency check
 # TODO : turn the pulse directory to read only on creation
-# TODO : move uritools to main module
 # TODO : clean the  + "\\" +
 # TODO : support linux user path
 # TODO : database object should have a predefined set of attribute to help db admin to prepare entities and field
@@ -81,7 +78,7 @@ class PulseDbObject:
 
 class Product:
     def __init__(self, parent, product_type):
-        self.uri = uri_tools.dict_to_string({
+        self.uri = dict_to_uri({
             "entity": parent.resource.entity,
             "resource_type": parent.resource.resource_type,
             "product_type": product_type,
@@ -433,7 +430,7 @@ class Resource(PulseDbObject):
         PulseDbObject.__init__(
             self,
             project,
-            uri_tools.dict_to_string({"entity": entity, "resource_type": resource_type})
+            dict_to_uri({"entity": entity, "resource_type": resource_type})
         )
         self.work_directory = pr.build_work_filepath(self)
         self._storage_vars = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
@@ -601,7 +598,7 @@ class Project:
         self.repositories = {}
 
     def get_pulse_node(self, uri_string):
-        uri_dict = uri_tools.string_to_dict(uri_string)
+        uri_dict = uri_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         resource.db_read()
         if not uri_dict['version']:
@@ -710,3 +707,34 @@ class Connection:
 def import_adapter(adapter_type, adapter_name):
     pulse_filepath = os.path.dirname(os.path.realpath(__file__))
     return imp.load_source(adapter_type, os.path.join(pulse_filepath, adapter_type + "_adapters", adapter_name + ".py"))
+
+
+def uri_to_dict(uri_string):
+    """
+    transform a string uri in a dict uri
+    :param uri_string:
+    :return uri dict:
+    """
+    uri_split_main = uri_string.split("@")
+    uri_split = uri_split_main[0].split("-")
+    entity = uri_split[0]
+    resource_type = uri_split[1]
+    product_type = ""
+    version = None
+
+    if len(uri_split) > 2:
+        product_type = uri_split[2]
+
+    if len(uri_split_main) > 1:
+        version = uri_split_main[1]
+
+    return {"entity": entity, "resource_type": resource_type, "version": version, "product_type": product_type}
+
+
+def dict_to_uri(uri_dict):
+    uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
+    if 'product_type' in uri_dict:
+        uri += "-" + uri_dict['product_type']
+    if 'version' in uri_dict:
+        uri += "@" + (str(int(uri_dict['version'])))
+    return uri
