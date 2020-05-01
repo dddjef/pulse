@@ -280,15 +280,13 @@ class Work(WorkNode):
         os.makedirs(self.get_products_directory())
 
         # write data to json
-        with open(self.data_file, "w") as write_file:
-            json.dump({"version": self.version}, write_file, indent=4, sort_keys=True)
+        fu.write_data(self.data_file, {"version": self.version})
 
     @check_is_on_disk
     def read(self):
         if not os.path.exists(self.directory):
             raise PulseError("work does not exists : " + self.directory)
-        with open(self.data_file, "r") as read_file:
-            work_data = json.load(read_file)
+        work_data = fu.read_data(self.data_file)
         self.version = work_data["version"]
         return self
 
@@ -328,7 +326,7 @@ class Work(WorkNode):
         commit.comment = comment
         commit.files = fu.get_directory_content(
             self.directory,
-            ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
+            ignore_list=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
         )
         commit.products_inputs = self.get_inputs()
         commit.products = self.list_products()
@@ -405,7 +403,7 @@ class Work(WorkNode):
     def get_files_changes(self):
         current_work_files = fu.get_directory_content(
             self.directory,
-            ignoreList=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
+            ignore_list=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
         )
 
         last_commit = Commit(self.resource, self.resource.last_version)
