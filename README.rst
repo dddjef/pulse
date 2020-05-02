@@ -16,14 +16,14 @@ Further from this, Pulse will also :
 - a lock system will prevent concurrent editing
 - store files the way you like : ftp, vpn, and you can define multiple repositories for the same project.
 
-.. image:: https://drive.google.com/uc?export=view&id=1a0SHoWQiuSYeNoD0ENwROSx8flp6xdFA
+.. image:: multirepo.png
     :align: center
 
 
 
 
 Version Control
-==============
+===============
 
 You can see Pulse as version control system. But unlike SVN or Git, users doesn't deal with arbitrary files, it deals with resources.
 A resource is a group of files an artist will modify, share and reference together to accomplish a project (typically, a movie).
