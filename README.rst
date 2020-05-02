@@ -1,17 +1,29 @@
 Pulse
 =====
 
-Pulse is designed to help artists to work on the same project even if they aren't on the same location and with a law bandwidth.
+Pulse is designed to help artists and studios to work together even if they aren't on the same location and with a law bandwidth.
 
-As a resource file system, a studio using Pulse in his pipeline can collaborate transparently with another one.
+Pulse manage complexity for you this main areas :
 
-To achieve this miracle, Pulse will :
+- project structure : every one working on a project use the same filepath
+- versionning system : every one sharing a resource will use the same tools
+- optimize bandwidth : only the needed dependencies are sent to artist
 
-- ensure every one working on a project access files the same way, with the same paths.
-- take the minimal bandwidth : only the needed versions and dependencies are sent to work
+
+Further from this, Pulse will also :
+
 - manage the resource versionning : every time a resource is published, a new immutable version will be created
 - a lock system will prevent concurrent editing
+- store files the way you like : ftp, vpn, and you can define multiple repositories for the same project.
 
+.. image:: https://drive.google.com/uc?export=view&id=1a0SHoWQiuSYeNoD0ENwROSx8flp6xdFA
+    :align: center
+
+
+
+
+Version Control
+==============
 
 You can see Pulse as version control system. But unlike SVN or Git, users doesn't deal with arbitrary files, it deals with resources.
 A resource is a group of files an artist will modify, share and reference together to accomplish a project (typically, a movie).
