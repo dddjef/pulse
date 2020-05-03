@@ -540,7 +540,6 @@ class Config(PulseDbObject):
     def __init__(self, project):
         self.work_user_root = None
         self.product_user_root = None
-        # TODO : version padding and version prefix should not be configurable
         self.version_padding = 3
         self.version_prefix = "V"
         self.repositories = {}
