@@ -13,7 +13,6 @@ import tempfile
 TEMPLATE_NAME = "_template"
 # TODO : add a purge trash function
 # TODO : add "force" option to trash or remove product to avoid dependency check
-# TODO : turn the pipe data file to read only on creation
 # TODO : support linux user path
 # TODO : write down object type and attribute list to help db admin to prepare the database
 
@@ -550,13 +549,19 @@ class Config(PulseDbObject):
     def __init__(self, project):
         self.work_user_root = None
         self.product_user_root = None
+        # TODO : version padding and version prefix should not be configurable
         self.version_padding = 3
         self.version_prefix = "V"
         self.repositories = {}
         self._storage_vars = vars(self).keys()
         PulseDbObject.__init__(self, project, "config")
-        # TODO : List variables
-        self._storage_vars = [k for k in vars(self).keys() if k != "project"]
+        self._storage_vars = [
+            "work_user_root",
+            "product_user_root",
+            "repositories",
+            "version_padding",
+            "version_prefix"
+        ]
 
     def get_user_products_list_filepath(self):
         return os.path.join(self.product_user_root, "products_list.pipe")
