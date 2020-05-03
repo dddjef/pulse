@@ -692,7 +692,10 @@ class Connection:
             default_repository_type = config.get('repository', 'default_adapter')
         if not default_repository_parameters:
             default_repository_parameters = config.get('repository', 'default_parameters')
-        # TODO : get version padding and prefix from cfg
+        if not version_prefix:
+            version_prefix = config.get('version', 'prefix')
+        if not version_padding:
+            version_padding = config.get('version', 'padding')
 
         self.db.create_project(project_name)
         project.cfg.work_user_root = work_user_root
