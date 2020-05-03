@@ -537,13 +537,6 @@ class Resource(PulseDbObject):
         self._db_update(['repository'])
 
 
-class Repository(PulseDbObject):
-    def __init__(self, project, name, repo_type, parameters):
-        self.name = name
-        self.type = repo_type
-        self.parameters = parameters
-        PulseDbObject.__init__(self, project, name)
-
 
 class Config(PulseDbObject):
     def __init__(self, project):

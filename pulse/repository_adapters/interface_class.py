@@ -1,3 +1,6 @@
+# you repository adapter plugin should have a "Repository" class inherited from PulseRepository
+
+
 class PulseRepositoryError(Exception):
     def __init__( self, reason):
         Exception.__init__(self)
