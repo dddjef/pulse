@@ -677,8 +677,8 @@ class Connection:
                        project_name,
                        work_user_root,
                        product_user_root,
-                       version_padding=3,
-                       version_prefix="V",
+                       version_padding=None,
+                       version_prefix=None,
                        default_repository_type=None,
                        default_repository_parameters=None
                        ):
@@ -695,7 +695,7 @@ class Connection:
         if not version_prefix:
             version_prefix = config.get('version', 'prefix')
         if not version_padding:
-            version_padding = config.get('version', 'padding')
+            version_padding = int(config.get('version', 'padding'))
 
         self.db.create_project(project_name)
         project.cfg.work_user_root = work_user_root
