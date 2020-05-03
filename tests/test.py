@@ -249,7 +249,7 @@ class TestBasic(unittest.TestCase):
         hat_mdl_work = hat_mdl_resource.checkout()
         hat_mdl_work.remove_input(anna_mdl_v2_abc)
         anna_mdl_work.trash()
-        for nd in prj.list_nodes("Resource", "*anna*"):
+        for nd in prj.list_products("*anna*"):
             print nd.uri
 
 

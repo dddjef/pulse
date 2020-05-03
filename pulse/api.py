@@ -119,7 +119,7 @@ class CommitProduct(PulseDbObject, Product):
         fu.write_data(self.product_users_file, [])
         self.register_to_user_products()
         for uri in self.products_inputs:
-            product = self.project.get_pulse_node(uri)
+            product = self.project.get_product(uri)
             product.download()
             product.add_product_user(self.directory)
         return self.directory
@@ -140,7 +140,7 @@ class CommitProduct(PulseDbObject, Product):
 
         # unregister from its inputs
         for uri in self.products_inputs:
-            product_input = self.project.get_pulse_node(uri)
+            product_input = self.project.get_product(uri)
             product_input.remove_product_user(self.directory)
             if recursive_clean:
                 try:
@@ -188,13 +188,13 @@ class WorkNode:
     def get_inputs(self):
         inputs = []
         for uri in fu.json_list_get(self.products_inputs_file):
-            inputs.append(self.project.get_pulse_node(uri))
+            inputs.append(self.project.get_product(uri))
         return inputs
 
     def add_input(self, product):
         if not os.path.exists(product.directory):
             # if the product is a WorkProduct try to convert it first
-            product = self.project.get_pulse_node(product.uri)
+            product = self.project.get_product(product.uri)
             product.download()
         fu.json_list_append(self.products_inputs_file, product.uri)
         product.add_product_user(self.directory)
@@ -593,7 +593,22 @@ class Project:
         self.cfg = Config(self)
         self.repositories = {}
 
-    def get_pulse_node(self, uri_string):
+    def get_product(self, uri_string):
+        uri_dict = uri_to_dict(uri_string)
+        resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
+        resource.db_read()
+        if not uri_dict['version']:
+            return None
+        index = resource.get_index(uri_dict['version'])
+        try:
+            product_parent = resource.get_commit(index)
+        except PulseDatabaseMissingObject:
+            product_parent = resource.get_work()
+        if product_parent.version != index:
+            raise PulseError("Unknown product : " + uri_string)
+        return product_parent.get_product(uri_dict["product_type"])
+
+    def get_pulse_node_old(self, uri_string):
         uri_dict = uri_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         resource.db_read()
@@ -614,14 +629,14 @@ class Project:
 
             return product_parent.get_product(uri_dict["product_type"])
 
-    def list_nodes(self, entity_type, uri_pattern):
-        return [self.get_pulse_node(uri) for uri in self.cnx.db.find_uris(self.name, entity_type, uri_pattern)]
+    def list_products(self, uri_pattern):
+        return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "Product", uri_pattern)]
 
     def purge_unused_user_products(self, unused_days=0):
         if not os.path.exists(self.cfg.get_user_products_list_filepath()):
             return
         for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
-            product = self.get_pulse_node(uri)
+            product = self.get_product(uri)
             if product.get_unused_time() > (unused_days*86400):
                 product.remove_from_user_products(recursive_clean=True)
 
