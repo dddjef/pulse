@@ -1,3 +1,10 @@
+# If you need to prepare your database, this is the different entity types and their stored attributes:
+# Config = ["work_user_root", "product_user_root", "repositories", "version_padding", "version_prefix"]
+# Commit = ['version', 'uri', 'products', 'files', 'comment']
+# Resource = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
+# CommitProduct = ['product_type', 'products_inputs', 'uri']
+
+
 class PulseDatabaseError(Exception):
     def __init__(self, reason):
         Exception.__init__(self)

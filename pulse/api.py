@@ -14,7 +14,6 @@ TEMPLATE_NAME = "_template"
 # TODO : add a purge trash function
 # TODO : add "force" option to trash or remove product to avoid dependency check
 # TODO : support linux user path
-# TODO : write down object type and attribute list to help db admin to prepare the database
 
 
 def check_is_on_disk(f):
@@ -535,7 +534,6 @@ class Resource(PulseDbObject):
         self.repository = new_repository
         self.set_lock(lock_state, lock_user, steal=True)
         self._db_update(['repository'])
-
 
 
 class Config(PulseDbObject):
