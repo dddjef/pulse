@@ -184,12 +184,8 @@ class WorkNode:
         self.products_inputs_file = os.path.join(directory, "product_inputs.pipe")
         self.project = project
 
-    # TODO : list comprehension could be better here
     def get_inputs(self):
-        inputs = []
-        for uri in fu.json_list_get(self.products_inputs_file):
-            inputs.append(self.project.get_product(uri))
-        return inputs
+        return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
 
     def add_input(self, product):
         if not os.path.exists(product.directory):
