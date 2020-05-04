@@ -39,9 +39,10 @@ Dependencies tracking also helps to purged unused resources. Pulse have utilitie
 
 Storage Freedom
 ===============
-Each Pulse project can have many repositories. You can customize each resource repository.
-By default a repository is just a network location, but Pulse comes with a plug-in adapter architecture which allow you
-to write your very own repository type. Pulse natively supports ftp and Google drive.
+Each Pulse Resource is linked to a repository, and your project can contain many repository, even from different type :
+network share, ftp, google drive...
+Pulse even comes with a plug-in adapter architecture which allow you
+to write your very own repository type.
 
 
 .. image:: multirepo.png
