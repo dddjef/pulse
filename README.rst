@@ -1,48 +1,53 @@
 Pulse
 =====
 
-Pulse is designed to help artists and studios to work together even if they aren't on the same location and with a law bandwidth.
+Pulse is a file manager and version control system for animation film project aimed at remote co-working.
 
-Pulse manage complexity for you this main areas :
+Why would you need Pulse?
 
-- project structure : every one working on a project use the same filepath
-- versionning system : every one sharing a resource will use the same tools
-- optimize bandwidth : only the needed dependencies are sent to artist
+- you need to split a project between multiple locations, even with low bandwidth remote artists.
+- you need to have the exact same path to access files for everyone involved
+- you need to optimize your local network charge and load your files faster
+- you need to guarantee your data integrity, by freezing and versionning every published file
+- you need to choose where and how each resource will be stored, transparently for the artist
+
+Version Control System
+======================
+You can think of Pulse as a version control system. Like SVN, the user checkout the resource to get a working copy,
+and commit to publish a new version. Pulse shares a few concepts with other VCS:
+
+- Pulse manages the versionning, the user doesn't think about it, he just commits
+- a committed resource won't be modified anymore, never. You can rely on your data.
+- there's a diff system, showing you the change you made since last version.
+- there's a lock system, preventing concurrent work
+
+But they are also a few differences which make Pulse so spicy...
+
+Resource path consistency
+=========================
+Pulse don't deal with files, it deals with resources.
+A resource is one or many files created, work and linked together. A character modeling is a resource, a shot layout is a resource, etc...
+The resource is the project's unit : a resource can't be split between repositories, a resource is versioned as a whole.
+Unlike other VCS, the user doesn't chose the resource path, it is built by Pulse based on the project configuration. The user just check out the resource by its name, and the files will be downloaded at the very same path for everyone else working on the project.
 
 
-Further from this, Pulse will also :
+Tracking Dependencies
+=====================
+Another difference from a classical version system, is the dependencies tracking. If a user needs to add an input to his working copy, he has to declare it. All resources inputs and outputs are tracked by Pulse. So when a user checkout a resource, all the needed inputs will be downloaded in the user cache, only if they're not already there. He can even check out all the resources during the night, to optimize his bandwidth.
+Dependencies tracking also helps to purged unused resources. Pulse have utilities for this based on the unused time.
 
-- manage the resource versionning : every time a resource is published, a new immutable version will be created
-- a lock system will prevent concurrent editing
-- store files the way you like : ftp, vpn, and you can define multiple repositories for the same project.
+
+Storage Freedom
+===============
+Each Pulse project can have many repositories. You can customize each resource repository.
+By default a repository is just a network location, but Pulse comes with a plug-in adapter architecture which allow you
+to write your very own repository type. Pulse natively supports ftp and Google drive.
+
 
 .. image:: multirepo.png
     :align: center
 
 
-
-
-Version Control
-===============
-
-You can see Pulse as version control system. But unlike SVN or Git, users doesn't deal with arbitrary files, it deals with resources.
-A resource is a group of files an artist will modify, share and reference together to accomplish a project (typically, a movie).
-The resource path are relevant to project configuration, thus the user doesn't care about this, he just have to checkout and commit.
-
-Some command line examples:
-
-
-Customizing
-===========
-
-Pulse managed only the way artists access to files, the way you store published files and pulse data are up to you.
-By default Pulse comes with a repository adapter to write files on FTP, and another one on a network share.
-But you can easily write your own repository adapter to write files on cloud. With the same versatility in mind
-by default Pulse data are stored on a json database, you can write your own adapter to save them in your database system,
-or your production tracker.
-
-Pulse have a hook system to give you the opportunity to insert your own logic between the main user action : pre commit,
-post commit, pre checkout, post checkout, etc...
 
 Q/A
 ===
