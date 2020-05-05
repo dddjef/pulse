@@ -1,7 +1,8 @@
 Pulse
 =====
 
-Pulse is a file manager and version control system for animation film project produced in multiple location.
+Pulse is a file manager and version control system for animation film, it is designed to support projects produced at
+multiple locations.
 
 Why would you need Pulse?
 

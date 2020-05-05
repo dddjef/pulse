@@ -49,17 +49,36 @@ class PulseMissingNode(Exception):
 
 
 class PulseDbObject:
+    """
+        base class for all objects which need to save persistent data
+    """
     def __init__(self, project, uri):
         self.uri = uri
+        """universal resource identifier - string"""
         self.project = project
+        """the project this object rely to - Project"""
         self.metas = {}
+        """Store custom attributes, passed to repository - dict"""
         self._storage_vars = []
+        """list of attributes name saved in db - list"""
 
     def _db_update(self, attribute_list):
+        """
+            save selected attributes value to database
+            :param: attribute_list: attributes name which will be saved to database
+            :type: attribute_list: list
+        """
         data = dict((name, getattr(self, name)) for name in attribute_list)
         self.project.cnx.db.update(self.project.name, self.__class__.__name__, self.uri, data)
 
     def db_read(self):
+        """
+            read all object attributes from database.
+
+            Will pass if the database have an attribute missing on the object
+            :return: the PulseDbObject
+            :rtype: PulseDbObject
+        """
         data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
         for k in data:
             if k not in vars(self):
@@ -69,6 +88,13 @@ class PulseDbObject:
         return self
 
     def db_create(self):
+        """
+            initialize the object in database
+
+            use all the attributes lists is ._storage.vars and save them to the DB
+            the key is the uri
+            raise DbError if the object already exists
+        """
         data = dict((name, getattr(self, name)) for name in self._storage_vars)
         self.project.cnx.db.create(self.project.name, self.__class__.__name__, self.uri, data)
 
