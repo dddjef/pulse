@@ -1,15 +1,15 @@
 Pulse
 =====
 
-Pulse is a file manager and version control system for animation film project aimed at remote co-working.
+Pulse is a file manager and version control system for animation film project produced in multiple location.
 
 Why would you need Pulse?
 
-- you need to split a project between multiple locations, even with low bandwidth remote artists.
-- you need to have the exact same path to access files for everyone involved
-- you need to optimize your local network charge and load your files faster
-- you need to guarantee your data integrity, by freezing and versionning every published file
-- you need to choose where and how each resource will be stored, transparently for the artist
+- to split a project between multiple locations, even with low bandwidth remote artists.
+- to have the exact same path to access files for everyone involved
+- to optimize your local network charge and load your files faster
+- to guarantee your data integrity, by freezing and versionning every published file
+- to choose where and how each resource will be stored, transparently for the artist
 
 Version Control System
 ======================
@@ -23,7 +23,7 @@ and commit to publish a new version. Pulse shares a few concepts with other VCS:
 
 But they are also a few differences which make Pulse so spicy...
 
-Resource path consistency
+Path consistency
 =========================
 Pulse don't deal with files, it deals with resources.
 A resource is one or many files created, work and linked together. A character modeling is a resource, a shot layout is a resource, etc...
@@ -37,9 +37,9 @@ Another difference from a classical version system, is the dependencies tracking
 Dependencies tracking also helps to purged unused resources. Pulse have utilities for this based on the unused time.
 
 
-Storage Freedom
-===============
-Each Pulse Resource is linked to a repository, and your project can contain many repository, even from different type :
+Repositories
+============
+Each Pulse Resource is linked to a repository, and your project can contain many repositories, even from different type :
 network share, ftp, google drive...
 Pulse even comes with a plug-in adapter architecture which allow you
 to write your very own repository type.
