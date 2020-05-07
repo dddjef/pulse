@@ -50,7 +50,7 @@ class PulseMissingNode(Exception):
 
 class PulseDbObject:
     """
-        base class for all objects which need to save persistent data
+        abstract class for all objects which need to save persistent data
     """
     def __init__(self, project, uri):
         self.uri = uri
@@ -100,6 +100,9 @@ class PulseDbObject:
 
 
 class Product:
+    """
+        abstract class for all products (local or comited)
+    """
     def __init__(self, parent, product_type):
         self.uri = dict_to_uri({
             "entity": parent.resource.entity,
@@ -134,6 +137,9 @@ class Product:
 
 
 class CommitProduct(PulseDbObject, Product):
+    """
+        class for products which has been registered to database
+    """
     def __init__(self, parent, product_type):
         Product.__init__(self, parent, product_type)
         PulseDbObject.__init__(self, parent.project, self.uri)
@@ -186,6 +192,9 @@ class CommitProduct(PulseDbObject, Product):
 
 
 class Commit(PulseDbObject):
+    """
+        class for a resource version
+    """
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
         PulseDbObject.__init__(self, resource.project, self.uri)
@@ -205,6 +214,9 @@ class Commit(PulseDbObject):
 
 
 class WorkNode:
+    """
+        abstract class for unpublished data (work or product)
+    """
     def __init__(self, project, directory):
         self.directory = directory
         self.products_inputs_file = os.path.join(directory, "product_inputs.pipe")
@@ -227,12 +239,18 @@ class WorkNode:
 
 
 class WorkProduct(Product, WorkNode):
+    """
+        class for products which has not been registered to database yet
+    """
     def __init__(self, work, product_type):
         Product.__init__(self, work, product_type)
         WorkNode.__init__(self, work.project, self.directory)
 
 
 class Work(WorkNode):
+    """
+        class for resource work in progress
+    """
     def __init__(self, resource):
         WorkNode.__init__(self, resource.project, resource.work_directory)
         self.resource = resource
@@ -441,6 +459,9 @@ class Work(WorkNode):
 
 
 class Resource(PulseDbObject):
+    """
+        class for project's resource
+    """
     def __init__(self, project, entity, resource_type):
         self.lock = False
         self.lock_user = ''
@@ -559,6 +580,9 @@ class Resource(PulseDbObject):
 
 
 class Config(PulseDbObject):
+    """
+        class for project's configuration
+    """
     def __init__(self, project):
         self.work_user_root = None
         self.product_user_root = None
@@ -609,6 +633,9 @@ class Config(PulseDbObject):
 
 
 class Project:
+    """
+        class for a Pulse project
+    """
     def __init__(self, connection, project_name):
         self.cnx = connection
         self.name = project_name
@@ -691,6 +718,9 @@ class Project:
 
 
 class Connection:
+    """
+        class for a connection to a Pulse database
+    """
     def __init__(self, connexion_data, database_type=None):
         pulse_filepath = os.path.dirname(os.path.realpath(__file__))
         if not database_type:
