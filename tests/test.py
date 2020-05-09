@@ -141,17 +141,30 @@ class TestBasic(unittest.TestCase):
 
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
-        prj.cfg.add_repository("serverB", "shell_repo", {"root": os.path.join(repos, "server_2")})
+        prj.cfg.add_repository("serverB", "ftp_repo", {
+            'host': "files.000webhost.com",
+            'port': 21,
+            'login': "PulseTestDev",
+            'password': "YBOE6dCAB7yPIqo8EanS",
+            'root': "/"
+        })
+
         template_resource = prj.create_template("rig", repository="serverB")
         template_work = template_resource.checkout()
         open(template_work.directory + "\\template_work.txt", 'a').close()
         template_work.commit()
-        self.assertTrue(os.path.exists(os.path.join(repos, "server_2\\test\\work\\rig\\_template")))
+        # self.assertTrue(os.path.exists(os.path.join(user_works, "test\\rig\\_template")))
+        template_work.trash()
+        prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(os.path.join(user_works, "test\\rig\\_template")))
+        # TODO : check out an uncomitted resource should not raise an error
+        template_work = template_resource.checkout()
+        self.assertTrue(os.path.exists(os.path.join(user_works, "test\\rig\\_template")))
+
         # test moving resource between repo
         template_resource.set_repository("default")
 
         self.assertTrue(os.path.exists(os.path.join(repos, "default\\test\\work\\rig\\_template")))
-        self.assertFalse(os.path.exists(os.path.join(repos, "server_2\\test\\work\\rig\\_template")))
         # test moving resource between repo when the resource is locked
         template_resource.set_lock(True, "another_user")
         with self.assertRaises(PulseError):
