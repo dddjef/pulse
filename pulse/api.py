@@ -204,7 +204,8 @@ class Commit(PulseDbObject):
         self.products_inputs = []
         self.version = int(version)
         self.products = []
-        self._storage_vars = ['version', 'uri', 'products', 'files', 'comment']
+        """ list of product names"""
+        self._storage_vars = ['version', 'products', 'files', 'comment']
 
     def get_product(self, product_type):
         return CommitProduct(self, product_type).db_read()
@@ -346,7 +347,7 @@ class Work(WorkNode):
         products_directory = self.get_products_directory()
 
         # lock the resource to prevent concurrent commit
-        lock_state = self.resource.lock
+        lock_state = self.resource.lock_state
         lock_user = self.resource.lock_user
         self.resource.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
 
@@ -463,7 +464,7 @@ class Resource(PulseDbObject):
         class for project's resource
     """
     def __init__(self, project, entity, resource_type):
-        self.lock = False
+        self.lock_state = False
         self.lock_user = ''
         self.last_version = 0
         self.resource_type = resource_type
@@ -475,7 +476,7 @@ class Resource(PulseDbObject):
             dict_to_uri({"entity": entity, "resource_type": resource_type})
         )
         self.work_directory = pr.build_work_filepath(self)
-        self._storage_vars = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
+        self._storage_vars = ['lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
     def set_last_version(self, version):
         self.last_version = version
@@ -484,7 +485,7 @@ class Resource(PulseDbObject):
     def user_needs_lock(self, user=None):
         if not user:
             user = self.project.cnx.user_name
-        return self.lock and self.lock_user != user
+        return self.lock_state and self.lock_user != user
 
     def get_index(self, version_name):
         if version_name == "last":
@@ -548,12 +549,12 @@ class Resource(PulseDbObject):
             if self.user_needs_lock(user):
                 return
 
-        self.lock = state
+        self.lock_state = state
         if not user:
             self.lock_user = self.project.cnx.user_name
         else:
             self.lock_user = user
-        self._db_update(['lock_user', 'lock'])
+        self._db_update(['lock_user', 'lock_state'])
         msg.new('INFO', 'resource lock state is now ' + str(state))
 
     def set_repository(self, new_repository):
@@ -564,7 +565,7 @@ class Resource(PulseDbObject):
             raise PulseError("you can't move a resource locked by another user :" + self.lock_user)
 
         # lock the resource to prevent concurrent commit
-        lock_state = self.lock
+        lock_state = self.lock_state
         lock_user = self.lock_user
         self.set_lock(True, self.project.cnx.user_name + "_set_repo", steal=True)
 
