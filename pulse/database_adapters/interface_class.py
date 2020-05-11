@@ -1,8 +1,10 @@
-# If you need to prepare your database, this is the different entity types and their stored attributes:
-# Config = ["work_user_root", "product_user_root", "repositories", "version_padding", "version_prefix"]
-# Commit = ['version', 'uri', 'products', 'files', 'comment']
-# Resource = ['lock', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
-# CommitProduct = ['product_type', 'products_inputs', 'uri']
+# If you need to structure your database
+# All entities has a string field "uri" usable as key
+# this is the different entity types and their stored attributes (all string, except mentioned):
+# Config = ["work_user_root", "product_user_root", "repositories", "version_padding":int, "version_prefix"]
+# Commit = ['version':int, 'products':name list, 'files':path list, 'comment']
+# Resource = ['lock':boolean, 'lock_user', 'last_version':int, 'resource_type', 'entity', 'repository', 'metas':dict]
+# CommitProduct = ['product_type', 'products_inputs':uri list]
 
 
 class PulseDatabaseError(Exception):
@@ -32,6 +34,36 @@ class PulseDatabaseMissingObject(Exception):
 class PulseDatabase:
     def __init__(self):
         pass
+
+    tables_definition = {
+        'Config': [
+            "work_user_root VARCHAR(255)",
+            "product_user_root VARCHAR(255)",
+            "repositories LONGTEXT",
+            "version_padding SMALLINT",
+            "version_prefix VARCHAR(255)"
+        ],
+        'Commit': [
+            "version INT",
+            "products LONGTEXT",
+            "files LONGTEXT",
+            "comment VARCHAR(255)"
+        ],
+        'Resource': [
+            "lock_state BOOLEAN",
+            "lock_user VARCHAR(255)",
+            "last_version INT",
+            "resource_type VARCHAR(255)",
+            "entity VARCHAR(255)",
+            "repository VARCHAR(255)",
+            "metas LONGTEXT"
+        ],
+        'CommitProduct': [
+            "product_type VARCHAR(255)",
+            "products_inputs LONGTEXT"
+        ]
+    }
+    adapter_version = '0.0.1'
 
     def create_project(self, project_name):
         pass
