@@ -84,12 +84,12 @@ Q/A
 ===
 
 My artists work all in the same location, what's the point to use Pulse?
-    Yes! Pulse act like a local cache, it leverages greatly server access even in the same network. The fastest file trqnsfer
-is the one which doesn't need to occur.
+    Yes! Pulse act like a local cache, it leverages greatly server access even in the same network. The fastest file transfer
+    is the one which doesn't need to occur.
 
 
 What's the difference between Pulse and Shotgun?
-    Pulse is not a production tracker, it does not care about what's approved or done. (even if you could use
-    metadata to carry extra information)
+    Pulse is not a production tracker, it does not care about what's approved or done.
+    But it can be easily linked to shotgun with a specific database adapter, or with meta datas
 
 
