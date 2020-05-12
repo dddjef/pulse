@@ -12,6 +12,22 @@ Why would you need Pulse?
 - to guarantee your data integrity, by freezing and versionning every published file
 - to choose where and how each resource will be stored, transparently for the artist
 
+How do this look likes?
+
+```python
+# create a new resource, a shot animation
+shot_anim = prj.create_resource("shot", "animation")
+# check out the resource in the user sandbox
+shot_anim_work = shot_anim.checkout()
+# add the last Joe's proxy rig to this shot (download it to user cache if needed)
+shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last).get_product("proxy_rig")
+# create a product folder to receive an alembic export
+shot_anim_work.create_product("alembic")
+# commit the new resource version
+shot_anim_work.commit()
+```
+
+
 Version Control System
 ======================
 You can think of Pulse as a version control system. Like SVN, the user checkout the resource to get a working copy,
