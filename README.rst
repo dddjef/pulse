@@ -12,20 +12,23 @@ Why would you need Pulse?
 - to guarantee your data integrity, by freezing and versionning every published file
 - to choose where and how each resource will be stored, transparently for the artist
 
-How do this look likes?
+How does this api look likes?
 
-```python
+>>> shot_anim = prj.create_resource("shot", "animation")
 # create a new resource, a shot animation
-shot_anim = prj.create_resource("shot", "animation")
+
+>>> shot_anim_work = shot_anim.checkout()
 # check out the resource in the user sandbox
-shot_anim_work = shot_anim.checkout()
+
+>>> shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last).get_product("proxy_rig")
 # add the last Joe's proxy rig to this shot (download it to user cache if needed)
-shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last).get_product("proxy_rig")
+
+>>> shot_anim_work.create_product("alembic")
 # create a product folder to receive an alembic export
-shot_anim_work.create_product("alembic")
-# commit the new resource version
-shot_anim_work.commit()
-```
+
+>>> shot_anim_work.commit()
+# commit the new resource version and its related products
+
 
 
 Version Control System
