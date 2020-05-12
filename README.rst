@@ -6,11 +6,10 @@ multiple locations.
 
 Why would you need Pulse?
 
-- to split a project between multiple locations, even with low bandwidth remote artists.
-- to have the exact same path to access files for everyone involved
-- to optimize your local network charge and load your files faster
+- to work a project at multiple locations, with the exact same path to access files for everyone
+- to optimize the network charge, even remote artists with low bandwidth can be involved
 - to guarantee your data integrity, by freezing and versionning every published file
-- to choose where and how each resource will be stored, transparently for the artist
+- to split the data between storage according to your needs and transparently for the artist
 
 How does this api look likes?
 
