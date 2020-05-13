@@ -31,9 +31,13 @@ class Database(PulseDatabase):
         except mariadb.errors.DatabaseError:
             raise PulseDatabaseError("project already exists")
 
-        # TODO : save the adapter version
         self.cursor.execute("USE " + project_name)
 
+        # save the adapter version
+        cmd = "CREATE TABLE version (number VARCHAR(255) NOT NULL)"
+        self.cursor.execute(cmd)
+        self.cursor.execute("INSERT into version (number) VALUE ('" + self.adapter_version + "')")
+        self.db.commit()
         for table in self.tables_definition:
             # id int(11) NOT NULL AUTO_INCREMENT,
             cmd = "CREATE TABLE " + table + " (uri VARCHAR(255) PRIMARY KEY"
