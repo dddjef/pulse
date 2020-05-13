@@ -253,7 +253,7 @@ class Work(WorkNode):
         class for resource work in progress
     """
     def __init__(self, resource):
-        WorkNode.__init__(self, resource.project, resource.work_directory)
+        WorkNode.__init__(self, resource.project, resource.sandbox_path)
         self.resource = resource
         self.version = None
         self.data_file = os.path.join(self.directory, "work.pipe")
@@ -475,7 +475,7 @@ class Resource(PulseDbObject):
             project,
             dict_to_uri({"entity": entity, "resource_type": resource_type})
         )
-        self.work_directory = pr.build_work_filepath(self)
+        self.sandbox_path = os.path.join(project.cfg.work_user_root, project.name, resource_type, entity.replace(":", "\\"))
         self._storage_vars = ['lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
     def set_last_version(self, version):
@@ -503,7 +503,7 @@ class Resource(PulseDbObject):
         Download related dependencies if they are not available in products path
         """
         if not destination_folder:
-            destination_folder = self.work_directory
+            destination_folder = self.sandbox_path
 
         # abort if the resource is already in user sandbox
         if os.path.exists(destination_folder):
@@ -537,7 +537,7 @@ class Resource(PulseDbObject):
         # download requested input products if needed
         for product in work.get_inputs():
             product.download()
-            product.add_product_user(self.work_directory)
+            product.add_product_user(self.sandbox_path)
 
         msg.new('INFO', "resource check out in : " + destination_folder)
         return work

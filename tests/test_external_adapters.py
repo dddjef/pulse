@@ -48,7 +48,7 @@ def reset_files():
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-    print "FILES RESETED"
+    print "FILES RESET"
 
 
 def create_test_project(prj_name="test"):

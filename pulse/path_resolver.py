@@ -6,14 +6,6 @@ def get_date_time():
     return now.strftime("%d-%m-%Y_%H-%M-%S")
 
 
-def build_work_filepath(resource):
-    """custom function to build a sandbox resource path.
-    """
-    path = resource.project.cfg.work_user_root + "\\" + resource.project.name
-    path += "\\" + resource.resource_type + "\\" + resource.entity.replace(":", "\\")
-    return path
-
-
 def build_project_trash_filepath(work):
     """custom function to build a sandbox trash path.
     """
