@@ -30,7 +30,6 @@ def ftp_makedirs(directory, ftp_connection):
                     ftp_connection.cwd(item)
                 except:
                     ftp_connection.mkd(item)
-                    print (item + " folder created")
                     ftp_connection.cwd(item)
         except Exception, e:
             print e
@@ -51,8 +50,6 @@ def ftp_remove(source, ftp_connection):
             ftp_remove(ftp_path, ftp_connection)
         except ftplib.error_perm:
             ftp_connection.delete(f)
-            print f + " deleted"
-    print source + " rmd"
     ftp_connection.rmd(source)
 
 
@@ -73,9 +70,8 @@ def ftp_download(source, destination, ftp_connection):
                 os.makedirs(disk_path)
             ftp_download(ftp_path, destination, ftp_connection)
         except ftplib.error_perm:
-            print ftp_path
             ftp_connection.retrbinary("RETR "+f, open(disk_path, "wb").write)
-            print f + " downloaded"
+
 
 
 class Repository(PulseRepository):
