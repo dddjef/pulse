@@ -1,6 +1,7 @@
 import json
 from pulse.database_adapters.interface_class import *
 import mysql.connector as mariadb
+# This adapter has been checked with mariadb 5
 
 
 class Database(PulseDatabase):
@@ -35,7 +36,7 @@ class Database(PulseDatabase):
 
         for table in self.tables_definition:
             # id int(11) NOT NULL AUTO_INCREMENT,
-            cmd = "CREATE TABLE " + table + " (uri VARCHAR(255)"
+            cmd = "CREATE TABLE " + table + " (uri VARCHAR(255) PRIMARY KEY"
             for field in self.tables_definition[table]:
                 cmd += ", " + field
             cmd += ")"
@@ -64,10 +65,11 @@ class Database(PulseDatabase):
         columns = ', '.join(data.keys())
         cmd = "INSERT INTO %s ( %s ) VALUES ( %s )" % (entity_type, columns, placeholders)
         # valid in Python 2
-        self.cursor.execute(cmd, data.values())
+        try:
+            self.cursor.execute(cmd, data.values())
+        except mariadb.IntegrityError:
+            raise PulseDatabaseError("node already exists:" + uri)
         self.db.commit()
-
-        # TODO : raise PulseDatabaseError("node already exists:" + uri)
 
     def update(self, project_name, entity_type, uri, data):
         self.cursor.execute("USE " + project_name)
