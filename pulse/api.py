@@ -680,7 +680,7 @@ class Project:
             return product_parent.get_product(uri_dict["product_type"])
 
     def list_products(self, uri_pattern):
-        return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "Product", uri_pattern)]
+        return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
 
     def purge_unused_user_products(self, unused_days=0):
         if not os.path.exists(self.cfg.get_user_products_list_filepath()):

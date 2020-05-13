@@ -42,13 +42,12 @@ class Database(PulseDatabase):
             cmd += ")"
             self.cursor.execute(cmd)
 
-    # TODO : adapt this
     def find_uris(self, project_name, entity_type, uri_pattern):
-        pass
-        # uris = []
-        # for path in glob.glob(self._get_json_filepath(project_name, entity_type, uri_pattern)):
-        #     uris.append(os.path.splitext(os.path.basename(path))[0])
-        # return uris
+        self.cursor.execute("USE " + project_name)
+        param = '{}%'.format(uri_pattern.replace("*", "%").replace("_", "\\_").replace("?", "_"))
+        cmd = "SELECT uri FROM " + entity_type + " WHERE uri LIKE %s"
+        self.cursor.execute(cmd, (param,))
+        return [x[0] for x in self.cursor.fetchall()]
 
     def get_user_name(self):
         return self.user
