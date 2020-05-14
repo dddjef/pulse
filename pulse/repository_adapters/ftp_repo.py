@@ -73,7 +73,6 @@ def ftp_download(source, destination, ftp_connection):
             ftp_connection.retrbinary("RETR "+f, open(disk_path, "wb").write)
 
 
-
 class Repository(PulseRepository):
     def __init__(self, parameters):
         self.host = parameters["host"]

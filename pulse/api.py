@@ -475,7 +475,9 @@ class Resource(PulseDbObject):
             project,
             dict_to_uri({"entity": entity, "resource_type": resource_type})
         )
-        self.sandbox_path = os.path.join(project.cfg.work_user_root, project.name, resource_type, entity.replace(":", "\\"))
+        self.sandbox_path = os.path.join(
+            project.cfg.work_user_root, project.name, resource_type, entity.replace(":", "\\")
+        )
         self._storage_vars = ['lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
     def set_last_version(self, version):
