@@ -211,7 +211,7 @@ class Commit(PulseDbObject):
         return CommitProduct(self, product_type).db_read()
 
     def get_products_directory(self):
-        return pr.build_products_filepath(self.resource, self.version)
+        return self.resource.get_products_directory(self.version)
 
 
 class WorkNode:
@@ -456,7 +456,7 @@ class Work(WorkNode):
         return diff
 
     def get_products_directory(self):
-        return pr.build_products_filepath(self.resource, self.version)
+        return self.resource.get_products_directory(self.version)
 
 
 class Resource(PulseDbObject):
@@ -479,6 +479,12 @@ class Resource(PulseDbObject):
             project.cfg.work_user_root, project.name, resource_type, entity.replace(":", "\\")
         )
         self._storage_vars = ['lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
+
+    def get_products_directory(self, version_index):
+        version = str(version_index).zfill(self.project.cfg.version_padding)
+        path = self.project.cfg.product_user_root + "\\" + self.resource_type
+        path += "\\" + self.entity.replace(":", "\\") + "\\" + self.project.cfg.version_prefix + version
+        return path
 
     def set_last_version(self, version):
         self.last_version = version
