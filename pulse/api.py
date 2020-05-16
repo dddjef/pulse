@@ -1,4 +1,3 @@
-import pulse.path_resolver as pr
 import pulse.message as msg
 import json
 import os
@@ -9,6 +8,7 @@ from ConfigParser import ConfigParser
 import imp
 from pulse.database_adapters.interface_class import *
 import tempfile
+from datetime import datetime
 
 TEMPLATE_NAME = "_template"
 # TODO : add a purge trash function
@@ -258,6 +258,14 @@ class Work(WorkNode):
         self.version = None
         self.data_file = os.path.join(self.directory, "work.pipe")
 
+    def _get_trash_directory(self):
+        """custom function to build a sandbox trash path.
+        """
+        date_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+        path = self.project.cfg.work_user_root + "\\" + self.project.name + "\\" + "TRASH" + "\\"
+        path += self.resource.resource_type + "-" + self.resource.entity.replace(":", "_") + "-" + date_time
+        return path
+
     @check_is_on_disk
     def get_product(self, product_type):
         return WorkProduct(self, product_type)
@@ -292,7 +300,7 @@ class Work(WorkNode):
                 input_product.remove_product_user(self.directory)
 
         # create the trash work directory
-        trash_directory = pr.build_project_trash_filepath(self)
+        trash_directory = self._get_trash_directory()
         os.makedirs(trash_directory)
 
         # move folder
@@ -410,7 +418,7 @@ class Work(WorkNode):
                 input_product.remove_product_user(self.directory)
 
         # create the trash work directory
-        trash_directory = pr.build_project_trash_filepath(self)
+        trash_directory = self._get_trash_directory()
         os.makedirs(trash_directory)
 
         # move folders
@@ -478,7 +486,8 @@ class Resource(PulseDbObject):
         self.sandbox_path = os.path.join(
             project.cfg.work_user_root, project.name, resource_type, entity.replace(":", "\\")
         )
-        self._storage_vars = ['lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
+        self._storage_vars = [
+            'lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
     def get_products_directory(self, version_index):
         version = str(version_index).zfill(self.project.cfg.version_padding)
