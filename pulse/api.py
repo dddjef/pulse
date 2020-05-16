@@ -1,4 +1,3 @@
-import pulse.message as msg
 import json
 import os
 import file_utils as fu
@@ -82,7 +81,6 @@ class PulseDbObject:
         data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
         for k in data:
             if k not in vars(self):
-                msg.new('DEBUG', "missing attribute in object : " + k)
                 continue
             setattr(self, k, data[k])
         return self
@@ -187,7 +185,6 @@ class CommitProduct(PulseDbObject, Product):
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
         fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.product_user_root])
-        msg.new('INFO', "product remove for user path " + self.uri)
         self.unregister_to_user_products()
 
 
@@ -431,7 +428,6 @@ class Work(WorkNode):
         # recursively remove products directories if they are empty
         fu.remove_empty_parents_directory(os.path.dirname(products_directory), [self.project.cfg.product_user_root])
 
-        msg.new('INFO', "work move to trash " + trash_directory)
         return True
 
     @check_is_on_disk
@@ -524,7 +520,6 @@ class Resource(PulseDbObject):
 
         # abort if the resource is already in user sandbox
         if os.path.exists(destination_folder):
-            msg.new('INFO', "the resource was already in your sandbox")
             return Work(self).read()
 
         try:
@@ -556,7 +551,6 @@ class Resource(PulseDbObject):
             product.download()
             product.add_product_user(self.sandbox_path)
 
-        msg.new('INFO', "resource check out in : " + destination_folder)
         return work
 
     def set_lock(self, state, user=None, steal=False):
@@ -572,7 +566,6 @@ class Resource(PulseDbObject):
         else:
             self.lock_user = user
         self._db_update(['lock_user', 'lock_state'])
-        msg.new('INFO', 'resource lock state is now ' + str(state))
 
     def set_repository(self, new_repository):
         if self.repository == new_repository:

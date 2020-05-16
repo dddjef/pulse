@@ -1,6 +1,5 @@
 import os
 import shutil
-import pulse.message as msg
 from pulse.repository_adapters.interface_class import *
 
 
@@ -14,7 +13,6 @@ def copy_folder_tree(source_folder, destination_folder):
     parent_folder = os.path.dirname(destination_folder.rstrip("\\"))
     if not os.path.exists(parent_folder):
         os.makedirs(parent_folder)
-    msg.new('DEBUG', "repo copy " + source_folder + " to " + destination_folder)
     shutil.copytree(source_folder, destination_folder) 
 
 
@@ -57,7 +55,6 @@ class Repository(PulseRepository):
         ######################
         # This part manage the case where a user writes directly to the product repository
         if os.path.exists(products_destination):
-            msg.new("INFO", "product already exists in repo : " + products_destination)
             return True
         ######################
     
