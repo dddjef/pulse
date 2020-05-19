@@ -3,13 +3,15 @@ import os
 import file_utils as fu
 import shutil
 import time
-from ConfigParser import ConfigParser
 import imp
 from pulse.database_adapters.interface_class import *
 import tempfile
 from datetime import datetime
 
 TEMPLATE_NAME = "_template"
+DEFAULT_VERSION_PADDING = 3
+DEFAULT_VERSION_PREFIX = "V"
+
 # TODO : add a purge trash function
 # TODO : add "force" option to trash or remove product to avoid dependency check
 # TODO : support linux user path
@@ -597,8 +599,8 @@ class Config(PulseDbObject):
     def __init__(self, project):
         self.work_user_root = None
         self.product_user_root = None
-        self.version_padding = 3
-        self.version_prefix = "V"
+        self.version_padding = None
+        self.version_prefix = None
         self.repositories = {}
         self._storage_vars = vars(self).keys()
         PulseDbObject.__init__(self, project, "config")
@@ -733,11 +735,8 @@ class Connection:
         class for a connection to a Pulse database
     """
     def __init__(self, connexion_data, database_type=None):
-        pulse_filepath = os.path.dirname(os.path.realpath(__file__))
         if not database_type:
-            config = ConfigParser()
-            config.read(os.path.join(pulse_filepath, "config.ini"))
-            database_type = config.get('database', 'default_adapter')
+            database_type = "json_db"
         self.db = import_adapter("database", database_type).Database(connexion_data)
         self.user_name = self.db.get_user_name()
 
@@ -745,25 +744,12 @@ class Connection:
                        project_name,
                        work_user_root,
                        product_user_root,
-                       version_padding=None,
-                       version_prefix=None,
-                       default_repository_type=None,
+                       version_padding=DEFAULT_VERSION_PADDING,
+                       version_prefix=DEFAULT_VERSION_PREFIX,
+                       default_repository_type="shell_repo",
                        default_repository_parameters=None
                        ):
         project = Project(self, project_name)
-
-        pulse_filepath = os.path.dirname(os.path.realpath(__file__))
-
-        config = ConfigParser()
-        config.read(os.path.join(pulse_filepath, "config.ini"))
-        if not default_repository_type:
-            default_repository_type = config.get('repository', 'default_adapter')
-        if not default_repository_parameters:
-            default_repository_parameters = config.get('repository', 'default_parameters')
-        if not version_prefix:
-            version_prefix = config.get('version', 'prefix')
-        if not version_padding:
-            version_padding = int(config.get('version', 'padding'))
 
         self.db.create_project(project_name)
         project.cfg.work_user_root = work_user_root
