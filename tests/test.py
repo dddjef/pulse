@@ -74,6 +74,24 @@ class TestBasic(unittest.TestCase):
         product = anna_mdl_v1.get_product("abc")
         self.assertTrue(product.get_unused_time(), -1)
 
+    def test_same_work_and_product_user_path(self):
+        cnx = Connection({"DB_root": db})
+        prj = cnx.create_project(
+            "project_simple_sandbox",
+            user_works,
+            default_repository_parameters={"root": os.path.join(repos, "default")}
+        )
+        create_template(prj, "mdl")
+        create_template(prj, "surf")
+        mdl_res = prj.create_resource("anna", "mdl")
+        mdl_work = mdl_res.checkout()
+        mdl_work.create_product("abc")
+        mdl_v1 = mdl_work.commit()
+        abc = mdl_v1.get_product("abc")
+        surf_work = prj.create_resource("anna", "surf").checkout()
+        surf_work.add_input(abc)
+        mdl_work.trash()
+
     def test_manipulating_trashed_work(self):
         cnx, prj = create_test_project()
         anna_mdl = prj.create_resource("anna", "mdl")

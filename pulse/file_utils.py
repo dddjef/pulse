@@ -76,6 +76,8 @@ def json_list_get(json_path):
 
 
 def remove_empty_parents_directory(directory, root_dirs):
+    if not os.path.exists(directory):
+        return
     while not os.listdir(directory):
         os.rmdir(directory)
         directory = os.path.dirname(directory)

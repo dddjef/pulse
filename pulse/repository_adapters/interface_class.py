@@ -17,7 +17,7 @@ class PulseRepository:
     def __init__(self):
         pass
 
-    def upload_resource_commit(self, commit, work_folder, products_folder=None):
+    def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
         pass
 
     def download_work(self, commit, work_folder):

@@ -7,6 +7,7 @@ import imp
 from pulse.database_adapters.interface_class import *
 import tempfile
 from datetime import datetime
+import re
 
 TEMPLATE_NAME = "_template"
 DEFAULT_VERSION_PADDING = 3
@@ -15,6 +16,9 @@ DEFAULT_VERSION_PREFIX = "V"
 # TODO : add a purge trash function
 # TODO : add "force" option to trash or remove product to avoid dependency check
 # TODO : support linux user path
+# TODO : unify the repo parameters as a single string to path, login and password optionals
+# TODO : work.commit should have an option to remove the commit products
+# TODO : don't support adding wip product to work (remove unneeded check in the trash function)
 
 
 def check_is_on_disk(f):
@@ -265,6 +269,16 @@ class Work(WorkNode):
         path += self.resource.resource_type + "-" + self.resource.entity.replace(":", "_") + "-" + date_time
         return path
 
+    def _get_work_files(self):
+        work_files = []
+        version_directory_regex = re.compile(DEFAULT_VERSION_PREFIX + "\\d{" + str(DEFAULT_VERSION_PADDING) + "}$")
+        for root, subdirectories, files in os.walk(self.directory):
+            if version_directory_regex.match(os.path.basename(root)):
+                continue
+            for f in files:
+                work_files.append(os.path.join(root, f))
+        return work_files
+
     @check_is_on_disk
     def get_product(self, product_type):
         return WorkProduct(self, product_type)
@@ -358,10 +372,10 @@ class Work(WorkNode):
         lock_user = self.resource.lock_user
         self.resource.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
 
-        # copy work to a new version in repository
+        # copy work files to a new version in repository
         commit = Commit(self.resource, self.version)
         commit.project.repositories[self.resource.repository].upload_resource_commit(
-            commit, self.directory, products_directory)
+            commit, self.directory, self._get_work_files(), products_directory)
 
         # register changes to database
         commit.comment = comment
@@ -421,8 +435,16 @@ class Work(WorkNode):
         os.makedirs(trash_directory)
 
         # move folders
-        shutil.move(self.directory,  os.path.join(trash_directory, "WORK"))
         shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
+        trashed_work = os.path.join(trash_directory, "WORK")
+        for f in self._get_work_files():
+            destination = f.replace(self.directory, trashed_work)
+            parent_folder = os.path.dirname(destination)
+            if not os.path.exists(parent_folder):
+                os.makedirs(parent_folder)
+            shutil.move(f, destination)
+
+
 
         # recursively remove works directories if they are empty
         fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.work_user_root])
@@ -489,8 +511,13 @@ class Resource(PulseDbObject):
 
     def get_products_directory(self, version_index):
         version = str(version_index).zfill(self.project.cfg.version_padding)
-        path = self.project.cfg.product_user_root + "\\" + self.resource_type
-        path += "\\" + self.entity.replace(":", "\\") + "\\" + self.project.cfg.version_prefix + version
+        path = os.path.join(
+            self.project.cfg.product_user_root,
+            self.project.name,
+            self.resource_type,
+            self.entity.replace(":", "\\"),
+            self.project.cfg.version_prefix + version
+        )
         return path
 
     def set_last_version(self, version):
@@ -514,7 +541,8 @@ class Resource(PulseDbObject):
         return Work(self).read()
 
     def checkout(self, index="last", destination_folder=None):
-        """Download the resource work files in the user sandbox.
+        """
+        Download the resource work files in the user sandbox.
         Download related dependencies if they are not available in products path
         """
         if not destination_folder:
@@ -524,13 +552,17 @@ class Resource(PulseDbObject):
         if os.path.exists(destination_folder):
             return Work(self).read()
 
+        # if there's already a version commited, download it
         try:
             commit = self.get_commit(index)
             self.project.repositories[self.repository].download_work(commit, destination_folder)
 
+
         except PulseDatabaseMissingObject:
+            # if it's a template, just create empty folders
             if self.entity == TEMPLATE_NAME:
                 os.makedirs(destination_folder)
+            # else download the template as first work
             else:
                 template_resource = self.project.get_resource(TEMPLATE_NAME, self.resource_type)
                 if not template_resource:
@@ -743,14 +775,15 @@ class Connection:
     def create_project(self,
                        project_name,
                        work_user_root,
-                       product_user_root,
+                       product_user_root = None,
                        version_padding=DEFAULT_VERSION_PADDING,
                        version_prefix=DEFAULT_VERSION_PREFIX,
                        default_repository_type="shell_repo",
                        default_repository_parameters=None
                        ):
         project = Project(self, project_name)
-
+        if not product_user_root:
+            product_user_root = work_user_root
         self.db.create_project(project_name)
         project.cfg.work_user_root = work_user_root
         project.cfg.product_user_root = product_user_root

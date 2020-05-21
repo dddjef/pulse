@@ -40,12 +40,17 @@ class Repository(PulseRepository):
             resource.entity.replace(":", "\\")
         )
         
-    def upload_resource_commit(self, commit, work_folder, products_folder=None):
+    def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
         """create a new resource default folders and file from a resource template
         """
-    
-        # Copy work folder to repo
-        copy_folder_tree(work_folder, self._build_commit_path("work", commit))
+        version_directory = self._build_commit_path("work", commit)
+        # Copy work files to repo
+        for f in work_files:
+            destination = f.replace(work_folder, version_directory)
+            parent_folder = os.path.dirname(destination)
+            if not os.path.exists(parent_folder):
+                os.makedirs(parent_folder)
+            shutil.copy(f, destination)
     
         # Copy products folder to repo
         if not products_folder or not os.path.exists(products_folder):
