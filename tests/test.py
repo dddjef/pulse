@@ -252,6 +252,28 @@ class TestBasic(unittest.TestCase):
         for nd in prj.list_products("*anna*"):
             print nd.uri
 
+    def test_work_subdirectories_are_commit(self):
+        subdirectory_name = "subdirtest"
+        # create a connection
+        cnx, prj = create_test_project()
+        # create a new template resource
+        create_template(prj, "modeling")
+        # create a resource based on this template
+        anna_mdl_resource = prj.create_resource("ch_anna", "modeling")
+        self.assertEqual(anna_mdl_resource.last_version, 0)
+
+        # checkout, and check directories are created
+        anna_mdl_work = anna_mdl_resource.checkout()
+        work_subdir_path = os.path.join(anna_mdl_work.directory, subdirectory_name)
+        os.makedirs(work_subdir_path)
+        open(work_subdir_path + "\\subdir_file.txt", 'a').close()
+        anna_mdl_work.commit()
+        anna_mdl_work.trash()
+        self.assertFalse(os.path.exists(anna_mdl_work.directory))
+        anna_mdl_resource.checkout()
+        self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
+
+
 
 if __name__ == '__main__':
     unittest.main()

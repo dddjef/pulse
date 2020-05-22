@@ -272,11 +272,9 @@ class Work(WorkNode):
     def _get_work_files(self):
         work_files = []
         version_directory_regex = re.compile(DEFAULT_VERSION_PREFIX + "\\d{" + str(DEFAULT_VERSION_PADDING) + "}$")
-        for root, subdirectories, files in os.walk(self.directory):
-            if version_directory_regex.match(os.path.basename(root)):
-                continue
-            for f in files:
-                work_files.append(os.path.join(root, f))
+        for f in os.listdir(self.directory):
+            if not version_directory_regex.match(f):
+                work_files.append(os.path.join(self.directory, f))
         return work_files
 
     @check_is_on_disk
@@ -437,17 +435,13 @@ class Work(WorkNode):
         # move folders
         shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
         trashed_work = os.path.join(trash_directory, "WORK")
+        os.makedirs(trashed_work)
         for f in self._get_work_files():
             destination = f.replace(self.directory, trashed_work)
-            parent_folder = os.path.dirname(destination)
-            if not os.path.exists(parent_folder):
-                os.makedirs(parent_folder)
             shutil.move(f, destination)
 
-
-
         # recursively remove works directories if they are empty
-        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.work_user_root])
+        fu.remove_empty_parents_directory(self.directory, [self.project.cfg.work_user_root])
 
         # recursively remove products directories if they are empty
         fu.remove_empty_parents_directory(os.path.dirname(products_directory), [self.project.cfg.product_user_root])

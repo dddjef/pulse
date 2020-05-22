@@ -44,13 +44,15 @@ class Repository(PulseRepository):
         """create a new resource default folders and file from a resource template
         """
         version_directory = self._build_commit_path("work", commit)
+        os.makedirs(version_directory)
         # Copy work files to repo
         for f in work_files:
             destination = f.replace(work_folder, version_directory)
-            parent_folder = os.path.dirname(destination)
-            if not os.path.exists(parent_folder):
-                os.makedirs(parent_folder)
-            shutil.copy(f, destination)
+            if os.path.isfile(f):
+                shutil.copy(f, destination)
+            else:
+                copy_folder_tree(f, destination)
+
     
         # Copy products folder to repo
         if not products_folder or not os.path.exists(products_folder):
