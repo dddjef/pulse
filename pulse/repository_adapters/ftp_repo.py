@@ -35,42 +35,49 @@ def ftp_makedirs(directory, ftp_connection):
             print e
 
 
-def ftp_remove(source, ftp_connection):
+def ftp_rmtree(path, ftp):
     """path & destination are str of the form "/dir/folder/something/"
     #path should be the abs path to the root FOLDER of the file tree to download
     """
-    ftp_connection.cwd(source)
+    wd = ftp.pwd()
 
-    for f in ftp_connection.nlst():
-        if f == "." or f == "..":
+    try:
+        names = ftp.nlst(path)
+    except ftplib.all_errors as e:
+        return
+
+    for name in names:
+        if os.path.split(name)[1] in ('.', '..'):
             continue
-        ftp_path = source + "/" + f
         try:
-            ftp_connection.cwd(ftp_path)
-            ftp_remove(ftp_path, ftp_connection)
-        except ftplib.error_perm:
-            ftp_connection.delete(f)
-    ftp_connection.rmd(source)
+            ftp.cwd(name)  # if we can cwd to it, it's a folder
+            ftp.cwd(wd)  # don't try a nuke a folder we're in
+            ftp_rmtree(ftp, name)
+        except ftplib.all_errors:
+            ftp.delete(name)
+    try:
+        ftp.rmd(path)
+    except ftplib.all_errors as e:
+        print('FtpRmTree: Could not remove {0}: {1}'.format(path, e))
 
 
 def ftp_download(source, destination, ftp_connection):
     """path & destination are str of the form "/dir/folder/something/"
     #path should be the abs path to the root FOLDER of the file tree to download
     """
-    ftp_connection.cwd(source)
-
-    for f in ftp_connection.nlst():
-        if f == "." or f == "..":
+    for filename in ftp_connection.nlst():
+        if filename == "." or filename == "..":
             continue
-        ftp_path = source + "/" + f
-        disk_path = (os.path.join(destination, f))
+        ftp_path = source + "/" + filename
+        disk_path = (os.path.join(destination, filename))
         try:
             ftp_connection.cwd(ftp_path)
             if not os.path.exists(disk_path):
                 os.makedirs(disk_path)
-            ftp_download(ftp_path, destination, ftp_connection)
+            ftp_download(ftp_path, disk_path, ftp_connection)
+            ftp_connection.cwd(source)
         except ftplib.error_perm:
-            ftp_connection.retrbinary("RETR "+f, open(disk_path, "wb").write)
+            ftp_connection.retrbinary("RETR " + filename, open(disk_path, "wb").write)
 
 
 class Repository(PulseRepository):
@@ -107,6 +114,7 @@ class Repository(PulseRepository):
         if not os.path.exists(destination):
             os.makedirs(destination)
         self._refresh_connection()
+        self.connection.cwd(self.root + source)
         ftp_download(self.root + source, destination, self.connection)
 
     # TODO : conform the build path functions to shell repo
@@ -140,13 +148,17 @@ class Repository(PulseRepository):
 
 
         # Copy work files to repo
-        for f in work_files:
-            if os.path.isdir(f):
-                self._upload_folder(f, self._build_commit_path("work", commit))
+        for fp in work_files:
+            filename = os.path.basename(fp)
+            if os.path.isdir(fp):
+                self.connection.mkd(filename)
+                self.connection.cwd(filename)
+                ftp_copytree(fp, self.connection)
                 self.connection.cwd(version_folder)
             else:
-                fh = open(f, 'rb')
-                self.connection.storbinary('STOR %s' % f, fh)
+                # os.chmod(f, 0o777)
+                fh = open(fp, 'rb')
+                self.connection.storbinary('STOR %s' % filename, fh)
                 fh.close()
 
     
@@ -185,6 +197,6 @@ class Repository(PulseRepository):
 
     def remove_resource(self, resource):
         self._refresh_connection()
-        ftp_remove(self.root + self._build_resource_path("products", resource), self.connection)
-        ftp_remove(self.root + self._build_resource_path("work", resource), self.connection)
+        ftp_rmtree(self.root + self._build_resource_path("products", resource), self.connection)
+        ftp_rmtree(self.root + self._build_resource_path("work", resource), self.connection)
 
