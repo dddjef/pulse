@@ -551,7 +551,6 @@ class Resource(PulseDbObject):
             commit = self.get_commit(index)
             self.project.repositories[self.repository].download_work(commit, destination_folder)
 
-
         except PulseDatabaseMissingObject:
             # if it's a template, just create empty folders
             if self.entity == TEMPLATE_NAME:
@@ -769,7 +768,7 @@ class Connection:
     def create_project(self,
                        project_name,
                        work_user_root,
-                       product_user_root = None,
+                       product_user_root=None,
                        version_padding=DEFAULT_VERSION_PADDING,
                        version_prefix=DEFAULT_VERSION_PREFIX,
                        default_repository_type="shell_repo",

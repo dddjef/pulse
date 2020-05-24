@@ -9,6 +9,8 @@ db = os.path.join(test_dir, "DB")
 user_work = os.path.join(test_dir, "works")
 user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
+test_project_name = "cli_project"
+cli_project_path = os.path.join(test_dir, "works", test_project_name)
 
 cli_path = r"C:\Users\dddje\PycharmProjects\pulse\cli\cli.py"
 python_exe = "c:\\python27\\python.exe"
@@ -47,18 +49,23 @@ class TestBasic(unittest.TestCase):
     #     reset_files()
 
     def test_create_project(self):
-        project_name = 'the_project'
+        os.makedirs(cli_project_path)
+        os.chdir(cli_project_path)
         repository_parameters = "{'root': '" + os.path.join(repos, 'default') + "'}"
         cli_cmd_list([
             'create_project',
-            project_name,
             db,
-            user_work,
-            user_products,
-            '--repository_parameters "' + repository_parameters + '"'
+            '--repository_parameters "' + repository_parameters + '"',
+            '--silent_mode'
         ])
         # check the project exists in db directory
-        self.assertTrue(os.path.exists(os.path.join(db, project_name)))
+        self.assertTrue(os.path.exists(os.path.join(db, test_project_name)))
+
+        # create a resource
+        cli_cmd_list([
+            'create_template',
+            'mdl'
+        ])
 
 
 if __name__ == '__main__':
