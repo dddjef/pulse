@@ -63,8 +63,8 @@ class TestBasic(unittest.TestCase):
 
         # create a resource
         cli_cmd_list([
-            'create_template',
-            'mdl'
+            'create_resource',
+            'ch_anna-mdl'
         ])
 
 

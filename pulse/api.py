@@ -410,7 +410,7 @@ class Work(WorkNode):
         return commit
 
     @check_is_on_disk
-    def trash(self):
+    def trash(self, no_backup=False):
         # test the work and products folder are movable
         products_directory = self.get_products_directory()
         for path in [self.directory, products_directory]:
@@ -428,17 +428,21 @@ class Work(WorkNode):
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(self.directory)
 
-        # create the trash work directory
-        trash_directory = self._get_trash_directory()
-        os.makedirs(trash_directory)
+        if no_backup:
+            shutil.rmtree(products_directory)
+            shutil.rmtree(self.directory)
+        else:
+            # create the trash work directory
+            trash_directory = self._get_trash_directory()
+            os.makedirs(trash_directory)
 
-        # move folders
-        shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
-        trashed_work = os.path.join(trash_directory, "WORK")
-        os.makedirs(trashed_work)
-        for f in self._get_work_files():
-            destination = f.replace(self.directory, trashed_work)
-            shutil.move(f, destination)
+            # move folders
+            shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
+            trashed_work = os.path.join(trash_directory, "WORK")
+            os.makedirs(trashed_work)
+            for f in self._get_work_files():
+                destination = f.replace(self.directory, trashed_work)
+                shutil.move(f, destination)
 
         # recursively remove works directories if they are empty
         fu.remove_empty_parents_directory(self.directory, [self.project.cfg.work_user_root])
@@ -534,7 +538,7 @@ class Resource(PulseDbObject):
     def get_work(self):
         return Work(self).read()
 
-    def checkout(self, index="last", destination_folder=None):
+    def checkout(self, index="last", destination_folder=None, template_resource=None):
         """
         Download the resource work files in the user sandbox.
         Download related dependencies if they are not available in products path
@@ -546,27 +550,20 @@ class Resource(PulseDbObject):
         if os.path.exists(destination_folder):
             return Work(self).read()
 
-        # if there's already a version commited, download it
-        try:
-            commit = self.get_commit(index)
-            self.project.repositories[self.repository].download_work(commit, destination_folder)
-
-        except PulseDatabaseMissingObject:
-            # if it's a template, just create empty folders
-            if self.entity == TEMPLATE_NAME:
+        if not template_resource:
+            # if there's no template, and there's not version yet, just create a sandbox empty folder
+            if self.last_version == 0:
                 os.makedirs(destination_folder)
-            # else download the template as first work
-            else:
-                template_resource = self.project.get_resource(TEMPLATE_NAME, self.resource_type)
-                if not template_resource:
-                    raise PulseError("no template found for : " + self.resource_type)
-                try:
-                    template_commit = template_resource.get_commit("last")
-                except PulseDatabaseMissingObject:
-                    raise PulseError("no commit found for template : " + template_resource.uri)
 
-                self.project.repositories[template_resource.repository].download_work(
-                    template_commit, destination_folder)
+            # else get the resource version
+            else:
+                commit = self.get_commit(index)
+                self.project.repositories[self.repository].download_work(commit, destination_folder)
+
+        # if there's a template resource, get the commit from it
+        else:
+            commit = template_resource.get_commit(index)
+            self.project.repositories[self.repository].download_work(commit, destination_folder)
 
         # create the work object
         work = Work(self)
@@ -736,23 +733,31 @@ class Project:
     def get_resource(self, entity, resource_type):
         return Resource(self, entity, resource_type).db_read()
 
-    def duplicate_resource(
-            self, entity, resource_type, source_resource=None, source_version="last", repository="default"):
-        pass
-
-    def _create_resource_item(self, entity, resource_type, repository):
+    def create_resource(self, entity, resource_type, repository='default', template_resource=None):
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
         resource.db_create()
+        if template_resource:
+            try:
+                template_commit = template_resource.get_commit("last")
+            except PulseDatabaseMissingObject:
+                raise PulseError("no commit found for template : " + template_resource.uri)
+
+            # checkout from last template commit
+            work = resource.checkout(template_resource=template_resource)
+
+            # download template products in work products
+            for product_name in template_commit.products:
+                product_directory = os.path.join(work.directory, product_name)
+                product = template_commit.get_product(product_name)
+                self.repositories[template_resource.repository].download_product(product, product_directory)
+
+            # commit a first version
+            work.commit()
+
+            # clean the sandbox
+            work.trash(no_backup=True)
         return resource
-
-    def create_resource(self, entity, resource_type, repository="default"):
-        if entity == TEMPLATE_NAME:
-            raise PulseError("entity name reserved for template : " + entity)
-        return self._create_resource_item(entity, resource_type, repository)
-
-    def create_template(self, resource_type, repository="default"):
-        return self._create_resource_item(TEMPLATE_NAME, resource_type, repository)
 
 
 class Connection:
@@ -774,6 +779,7 @@ class Connection:
                        default_repository_type="shell_repo",
                        default_repository_parameters=None
                        ):
+        # TODO : test admin rights in db and repo before registering anything else
         project = Project(self, project_name)
         if not product_user_root:
             product_user_root = work_user_root

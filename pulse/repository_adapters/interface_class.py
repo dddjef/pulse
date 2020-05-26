@@ -23,7 +23,7 @@ class PulseRepository:
     def download_work(self, commit, work_folder):
         pass
 
-    def download_product(self, product):
+    def download_product(self, product, product_folder):
         pass
 
     def download_resource(self, resource, destination):
