@@ -75,7 +75,7 @@ class Repository(PulseRepository):
         # copy repo work to sandbox
         copy_folder_tree(repo_work_path, work_folder)
 
-    def download_product(self, product, product_folder):
+    def download_product(self, product, product_folder=None):
         """build_products_user_filepath
         """
         # build_products_repository_path

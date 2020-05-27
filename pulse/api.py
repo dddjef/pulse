@@ -9,7 +9,6 @@ import tempfile
 from datetime import datetime
 import re
 
-TEMPLATE_NAME = "_template"
 DEFAULT_VERSION_PADDING = 3
 DEFAULT_VERSION_PREFIX = "V"
 
@@ -428,21 +427,21 @@ class Work(WorkNode):
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(self.directory)
 
-        if no_backup:
-            shutil.rmtree(products_directory)
-            shutil.rmtree(self.directory)
-        else:
-            # create the trash work directory
-            trash_directory = self._get_trash_directory()
-            os.makedirs(trash_directory)
 
-            # move folders
-            shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
-            trashed_work = os.path.join(trash_directory, "WORK")
-            os.makedirs(trashed_work)
-            for f in self._get_work_files():
-                destination = f.replace(self.directory, trashed_work)
-                shutil.move(f, destination)
+        # create the trash work directory
+        trash_directory = self._get_trash_directory()
+        os.makedirs(trash_directory)
+
+        # move folders
+        shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
+        trashed_work = os.path.join(trash_directory, "WORK")
+        os.makedirs(trashed_work)
+        for f in self._get_work_files():
+            destination = f.replace(self.directory, trashed_work)
+            shutil.move(f, destination)
+
+        if no_backup:
+            shutil.rmtree(trash_directory)
 
         # recursively remove works directories if they are empty
         fu.remove_empty_parents_directory(self.directory, [self.project.cfg.work_user_root])
@@ -748,15 +747,21 @@ class Project:
 
             # download template products in work products
             for product_name in template_commit.products:
-                product_directory = os.path.join(work.directory, product_name)
+                product_directory = os.path.join(work.get_products_directory(), product_name)
                 product = template_commit.get_product(product_name)
                 self.repositories[template_resource.repository].download_product(product, product_directory)
 
             # commit a first version
-            work.commit()
+            commit = work.commit()
 
             # clean the sandbox
             work.trash(no_backup=True)
+
+            # trash the V01 product
+            products_v1 = [commit.get_product(product_name) for product_name in commit.products]
+            for product in products_v1:
+                product.remove_from_user_products()
+
         return resource
 
 

@@ -39,21 +39,11 @@ def create_test_project(prj_name="test"):
         user_products,
         default_repository_parameters={"root": os.path.join(repos, "default")}
     )
-    create_template(prj, "mdl")
-    create_template(prj, "surfacing")
-    create_template(prj, "rigging")
-    create_template(prj, "anim")
     return cnx, prj
 
-
-def create_template(prj, template_type):
-    template = prj.create_template(template_type)
-    # checkout the template to edit it and save it
-    work = template.checkout()
-    open(work.directory + "\\template_work.txt", 'a').close()
-    work.commit()
-    work.trash()
-    return template
+def add_file_to_directory(directory, filename, source_filepath=None):
+    if not source_filepath:
+        open(os.path.join(directory, filename), 'a').close()
 
 
 class TestBasic(unittest.TestCase):
@@ -81,8 +71,6 @@ class TestBasic(unittest.TestCase):
             user_works,
             default_repository_parameters={"root": os.path.join(repos, "default")}
         )
-        create_template(prj, "mdl")
-        create_template(prj, "surf")
         mdl_res = prj.create_resource("anna", "mdl")
         mdl_work = mdl_res.checkout()
         mdl_work.create_product("abc")
@@ -137,14 +125,27 @@ class TestBasic(unittest.TestCase):
         with self.assertRaises(PulseError):
             res_work.commit()
 
-    def test_checkout_with_missing_template(self):
+    def test_check_out_from_another_resource(self):
+        shader_work_file = "shader_work_file.ma"
+        shader_product_file = "shader_product_file.ma"
         cnx, prj = create_test_project()
-        resource = prj.create_resource("clay", "shader")
-        with self.assertRaises(PulseDatabaseMissingObject):
-            resource.checkout()
-        prj.create_template("shader")
-        with self.assertRaises(PulseError):
-            resource.checkout()
+        template_resource = prj.create_resource("template", "surface")
+        template_work = template_resource.checkout()
+        add_file_to_directory(template_work.directory, shader_work_file)
+        shader_product = template_work.create_product("shader")
+        add_file_to_directory(shader_product.directory, shader_product_file)
+        template_work.commit()
+
+        anna_shd_resource = prj.create_resource("ch_anna", "surface", template_resource=template_resource)
+        anna_shd_work = anna_shd_resource.checkout()
+        self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
+
+        anna_shader_v1 = anna_shd_resource.get_commit(1).get_product("shader")
+        anna_shader_v1.download()
+        self.assertTrue(os.path.exists(os.path.join(anna_shader_v1.directory, shader_product_file)))
+
+
+
 
     def test_trashing_work_errors(self):
         cnx, prj = create_test_project()
@@ -194,8 +195,6 @@ class TestBasic(unittest.TestCase):
     def test_complete_scenario(self):
         # create a connection
         cnx, prj = create_test_project()
-        # create a new template resource
-        create_template(prj, "modeling")
         # create a resource based on this template
         anna_mdl_resource = prj.create_resource("ch_anna", "modeling")
         self.assertEqual(anna_mdl_resource.last_version, 0)
@@ -204,21 +203,25 @@ class TestBasic(unittest.TestCase):
         anna_mdl_work = anna_mdl_resource.checkout()
         self.assertTrue(os.path.exists(anna_mdl_work.directory))
         self.assertTrue(os.path.exists(anna_mdl_work.get_products_directory()))
+
+        # commit should file if nothing is change in work
+        with self.assertRaises(PulseError):
+            anna_mdl_work.commit("very first time")
+
         # create a new file in work directory and try to commit again
-        anna_mdl_work.commit("very first time")
         new_file = "\\test_complete.txt"
         open(anna_mdl_work.directory + new_file, 'a').close()
         self.assertEqual(anna_mdl_work.get_files_changes(), [(new_file, 'added')])
 
         anna_mdl_work.commit("add a file")
-        self.assertEqual(anna_mdl_resource.last_version, 2)
+        self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a product
         anna_mdl_v2_abc = anna_mdl_work.create_product("ABC")
         open(anna_mdl_v2_abc.directory + "\\test.abc", 'a').close()
         # create a new commit
         anna_mdl_work.commit("some abc produced")
-        self.assertEqual(anna_mdl_resource.last_version, 3)
+        self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
         hat_mdl_resource = prj.create_resource("hat", "modeling")
         self.assertEqual(hat_mdl_resource.last_version, 0)
@@ -227,7 +230,7 @@ class TestBasic(unittest.TestCase):
         hat_mdl_work.add_input(anna_mdl_v2_abc)
         # test the product registration
         hat_mdl_work.read()
-        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna-modeling-ABC@3")
+        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna-modeling-ABC@2")
         # check the work registration to product
 
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
@@ -256,8 +259,6 @@ class TestBasic(unittest.TestCase):
         subdirectory_name = "subdirtest"
         # create a connection
         cnx, prj = create_test_project()
-        # create a new template resource
-        create_template(prj, "modeling")
         # create a resource based on this template
         anna_mdl_resource = prj.create_resource("ch_anna", "modeling")
         self.assertEqual(anna_mdl_resource.last_version, 0)
