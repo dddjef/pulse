@@ -10,26 +10,26 @@ class Database(PulseDatabase):
         self.port = connexion_data['port']
         self.user = connexion_data['user']
         self.password = connexion_data['password']
-        self.db = None
+        self.connection = None
         self.cursor = None
         self.update_connection()
         PulseDatabase.__init__(self)
 
     def update_connection(self):
-        self.db = mariadb.connect(
+        self.connection = mariadb.connect(
             host=self.host,
             port=self.port,
             user=self.user,
             password=self.password,
         )
-        self.cursor = self.db.cursor()
+        self.cursor = self.connection.cursor()
 
     def create_project(self, project_name):
         # test if the projects table exists
         try:
             self.cursor.execute("CREATE DATABASE " + project_name)
         except mariadb.errors.DatabaseError:
-            raise PulseDatabaseError("project already exists")
+            raise PulseDatabaseError("project already exists : " + project_name)
 
         self.cursor.execute("USE " + project_name)
 
@@ -37,7 +37,7 @@ class Database(PulseDatabase):
         cmd = "CREATE TABLE version (number VARCHAR(255) NOT NULL)"
         self.cursor.execute(cmd)
         self.cursor.execute("INSERT into version (number) VALUE ('" + self.adapter_version + "')")
-        self.db.commit()
+        self.connection.commit()
         for table in self.tables_definition:
             # id int(11) NOT NULL AUTO_INCREMENT,
             cmd = "CREATE TABLE " + table + " (uri VARCHAR(255) PRIMARY KEY"
@@ -72,7 +72,7 @@ class Database(PulseDatabase):
             self.cursor.execute(cmd, data.values())
         except mariadb.IntegrityError:
             raise PulseDatabaseError("node already exists:" + uri)
-        self.db.commit()
+        self.connection.commit()
 
     def update(self, project_name, entity_type, uri, data):
         self.cursor.execute("USE " + project_name)
@@ -83,10 +83,10 @@ class Database(PulseDatabase):
         cmd = 'UPDATE ' + entity_type + ' SET {}'.format(', '.join('{}=%s'.format(k) for k in data))
         cmd += " WHERE uri = '" + uri + "'"
         self.cursor.execute(cmd, data.values())
-        self.db.commit()
+        self.connection.commit()
 
     def read(self, project_name, entity_type, uri):
-        cursor = self.db.cursor(dictionary=True)
+        cursor = self.connection.cursor(dictionary=True)
         cursor.execute("USE " + project_name)
         cursor.execute("SELECT * FROM " + entity_type + " WHERE uri = '" + uri + "'")
         data = cursor.fetchone()

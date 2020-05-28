@@ -52,10 +52,10 @@ def ftp_rmtree(ftp, path):
 
 
 def reset_files():
+
     cnx = mariadb.connect(host=db_host, port=db_port, user=db_user, password=db_password)
-    if cnx.cursor().execute("SHOW DATABASES LIKE '" + test_project_name + "'"):
-        cnx.cursor().execute("DROP DATABASE " + test_project_name)
-        cnx.cmd_quit()
+    cnx.cursor().execute("DROP DATABASE IF EXISTS " + test_project_name)
+    cnx.close()
 
     for directory in [db, user_products, user_works, repos]:
         for path, subdirs, files in os.walk(directory):
@@ -102,21 +102,8 @@ def create_test_project(prj_name=test_project_name):
             'root': ftp_root
         }
     )
-    create_template(prj, "mdl")
-    create_template(prj, "surfacing")
-    create_template(prj, "rigging")
-    create_template(prj, "anim")
     return cnx, prj
 
-
-def create_template(prj, template_type):
-    template = prj.create_template(template_type)
-    # checkout the template to edit it and save it
-    work = template.checkout()
-    open(work.directory + "\\template_work.txt", 'a').close()
-    work.commit()
-    work.trash()
-    return template
 
 
 class TestBasic(unittest.TestCase):
@@ -129,7 +116,7 @@ class TestBasic(unittest.TestCase):
             'root': os.path.join(repos, "default")
         })
 
-        template_resource = prj.create_template("rig", repository="serverB")
+        template_resource = prj.create_resource("_template", "rig", repository="serverB")
         template_work = template_resource.checkout()
         open(template_work.directory + "\\template_work.txt", 'a').close()
         template_work.commit()
@@ -164,12 +151,6 @@ class TestBasic(unittest.TestCase):
             default_repository_parameters={"root": os.path.join(repos, "default")}
         )
 
-        create_template(prj, "surfacing")
-        create_template(prj, "rigging")
-        create_template(prj, "anim")
-        with self.assertRaises(PulseDatabaseError):
-            create_template(prj, "anim")
-
         anna_surf_resource = prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         anna_surf_textures = anna_surf_work.create_product("textures")
@@ -191,6 +172,7 @@ class TestBasic(unittest.TestCase):
 
         self.assertTrue(len(prj.list_products("ch_anna*")) == 2)
         self.assertTrue(len(prj.list_products("ch_an?a*")) == 2)
+        cnx.db.connection.close()
 
         cnx2 = Connection({
             'host': db_host,
@@ -201,13 +183,13 @@ class TestBasic(unittest.TestCase):
         prj = cnx2.get_project(test_project_name)
         rig2 = prj.get_resource("ch_anna", "rigging")
         self.assertTrue(rig2.get_commit("last").products[0] == 'actor_anim')
+        cnx2.db.connection.close()
+
 
     def test_work_subdirectories_are_commit(self):
         subdirectory_name = "subdirtest"
         # create a connection
         cnx, prj = create_test_project()
-        # create a new template resource
-        create_template(prj, "modeling")
         # create a resource based on this template
         anna_mdl_resource = prj.create_resource("ch_anna", "modeling")
         self.assertEqual(anna_mdl_resource.last_version, 0)
