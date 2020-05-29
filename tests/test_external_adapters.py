@@ -172,6 +172,8 @@ class TestBasic(unittest.TestCase):
 
         self.assertTrue(len(prj.list_products("ch_anna*")) == 2)
         self.assertTrue(len(prj.list_products("ch_an?a*")) == 2)
+
+        # you have to close the connection to allow the database reset by the test
         cnx.db.connection.close()
 
         cnx2 = Connection({
@@ -183,6 +185,8 @@ class TestBasic(unittest.TestCase):
         prj = cnx2.get_project(test_project_name)
         rig2 = prj.get_resource("ch_anna", "rigging")
         self.assertTrue(rig2.get_commit("last").products[0] == 'actor_anim')
+
+        # you have to close the connection to allow the database reset by the test
         cnx2.db.connection.close()
 
 
