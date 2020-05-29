@@ -66,7 +66,7 @@ class TestBasic(unittest.TestCase):
             'create_resource',
             'ch_anna-mdl'
         ])
-
+        self.assertTrue(os.path.exists(os.path.join(user_work, test_project_name, 'mdl', 'ch_anna')))
 
 if __name__ == '__main__':
     unittest.main()

@@ -32,8 +32,9 @@ def create_project(args):
     config = ConfigParser()
     config.read(os.path.join(cli_filepath, "config.ini"))
 
-    sandbox_path = os.getcwd()
-    project_name = os.path.basename(sandbox_path)
+    project_path = os.getcwd()
+    project_name = os.path.basename(project_path)
+    sandbox_path = os.path.dirname(project_path)
     if not args.user_products:
         args.user_products = sandbox_path
 
@@ -50,7 +51,7 @@ def create_project(args):
     version_padding = int(config.get('version', 'padding'))
 
     cnx = pulse.Connection({"DB_root": args.host}, database_type)
-    prj = cnx.create_project(
+    cnx.create_project(
         project_name,
         sandbox_path,
         args.user_products,
@@ -70,6 +71,7 @@ def create_project(args):
         json.dump(connexion_data, write_file, indent=4, sort_keys=True)
 
     print 'project "' + project_name + '" created on "' + args.host + '"'
+
 
 def create_template(args):
     project = get_pulse_project()
@@ -91,7 +93,7 @@ def create_resource(args):
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers()
 
-# create project subcommand
+# create project subparser
 parser_create_project = subparsers.add_parser('create_project')
 parser_create_project.add_argument('host', type=str)
 parser_create_project.add_argument('--user_products', type=str)
@@ -102,13 +104,13 @@ parser_create_project.add_argument('--silent_mode', '-s', action='store_true')
 
 parser_create_project.set_defaults(func=create_project)
 
-# create a test subparser
+# create_resource subparser
 parser_create_resource = subparsers.add_parser('create_resource')
 parser_create_resource.add_argument('name', type=str)
 parser_create_resource.add_argument('--silent_mode', '-s', action='store_true')
 parser_create_resource.set_defaults(func=create_resource)
 
-# create a test subparser
+# create_template subparser
 parser_create_template = subparsers.add_parser('create_template')
 parser_create_template.add_argument('type', type=str)
 parser_create_template.set_defaults(func=create_template)
