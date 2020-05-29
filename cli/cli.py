@@ -115,6 +115,6 @@ parser_create_template = subparsers.add_parser('create_template')
 parser_create_template.add_argument('type', type=str)
 parser_create_template.set_defaults(func=create_template)
 
-args = parser.parse_args()
-if args.func:
-    args.func(args)
+cmd_args = parser.parse_args()
+if cmd_args.func:
+    cmd_args.func(cmd_args)
