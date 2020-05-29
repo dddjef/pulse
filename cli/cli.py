@@ -7,24 +7,33 @@ import json
 
 project_data_filename = "project.pipe"
 
+def get_resource(path, project):
+    relative_path = path[len(project.cfg.work_user_root+project.name) + 2:]
+    split_path = relative_path.split(os.sep)
+    entity_name = ""
+    for part in split_path[1:]:
+        entity_name += ":" + part
+    entity_name = entity_name[1:]
+    resource_type = split_path[0]
+    return project.get_resource(entity_name, resource_type)
 
-def get_pulse_project():
-    curdir = os.getcwd()
+
+def get_pulse_project(path):
     connection_data = None
 
-    while not curdir.endswith(":\\"):
-        project_data_filepath = os.path.join(curdir, project_data_filename)
+    while not path.endswith(":\\"):
+        project_data_filepath = os.path.join(path, project_data_filename)
         if os.path.exists(project_data_filepath):
             with open(project_data_filepath, "r") as read_file:
                 connection_data = json.load(read_file)
                 break
-        curdir = os.path.dirname(curdir)
+        path = os.path.dirname(path)
 
     if not connection_data:
         return
 
     cnx = pulse.Connection({"DB_root": connection_data["host"]}, connection_data["db_type"])
-    return cnx.get_project(os.path.basename(curdir))
+    return cnx.get_project(os.path.basename(path))
 
 
 def create_project(args):
@@ -74,14 +83,23 @@ def create_project(args):
 
 
 def create_template(args):
-    project = get_pulse_project()
+    project = get_pulse_project(os.getcwd())
     resource = project.create_template(args.type)
     work = resource.checkout()
     print 'template check out in "' + work.directory + '"'
 
 
+def create_output(args):
+    current_path = os.getcwd()
+    project = get_pulse_project(current_path)
+    resource = get_resource(current_path, project)
+    product = resource.get_work().create_product(args.type)
+    print 'product created in "' + product.directory + '"'
+    # print resource.sandbox_path
+
+
 def create_resource(args):
-    project = get_pulse_project()
+    project = get_pulse_project(os.getcwd())
     resource_name = args.name.split("-")[0]
     resource_type = args.name.split("-")[1]
     resource = project.create_resource(resource_name, resource_type)
@@ -114,6 +132,11 @@ parser_create_resource.set_defaults(func=create_resource)
 parser_create_template = subparsers.add_parser('create_template')
 parser_create_template.add_argument('type', type=str)
 parser_create_template.set_defaults(func=create_template)
+
+# create_output subparser
+parser_create_output = subparsers.add_parser('create_output')
+parser_create_output.add_argument('type', type=str)
+parser_create_output.set_defaults(func=create_output)
 
 cmd_args = parser.parse_args()
 if cmd_args.func:

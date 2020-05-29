@@ -38,7 +38,7 @@ def cli_cmd_list(cmd_list):
     cmd = python_exe + " " + cli_path
     for arg in cmd_list:
         cmd += " " + arg
-    subprocess.call(cmd)
+    return subprocess.call(cmd)
 
 
 class TestBasic(unittest.TestCase):
@@ -66,7 +66,17 @@ class TestBasic(unittest.TestCase):
             'create_resource',
             'ch_anna-mdl'
         ])
-        self.assertTrue(os.path.exists(os.path.join(user_work, test_project_name, 'mdl', 'ch_anna')))
+
+        anna_mdl_path = os.path.join(user_work, test_project_name, 'mdl', 'ch_anna')
+        self.assertTrue(os.path.exists(anna_mdl_path))
+        os.chdir(anna_mdl_path)
+
+        cli_cmd_list([
+            'create_output',
+            'abc'
+        ])
+        anna_abc_path = os.path.join(user_work, test_project_name, 'mdl', 'ch_anna', 'v001', 'abc')
+        self.assertTrue(os.path.exists(anna_abc_path))
 
 if __name__ == '__main__':
     unittest.main()
