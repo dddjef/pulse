@@ -5,7 +5,7 @@ import subprocess
 # TODO : test trashing an open file
 
 test_dir = os.path.dirname(__file__)
-db = os.path.join(test_dir, "DB")
+db_path = os.path.join(test_dir, "DB")
 user_work = os.path.join(test_dir, "works")
 user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
@@ -17,7 +17,7 @@ python_exe = "c:\\python27\\python.exe"
 
 
 def reset_files():
-    for directory in [db, user_products, user_work, repos]:
+    for directory in [db_path, user_products, user_work, repos]:
         for path, subdirs, files in os.walk(directory):
             for name in files:
                 filepath = os.path.join(path, name)
@@ -53,9 +53,9 @@ class TestBasic(unittest.TestCase):
         os.makedirs(cli_project_path)
         os.chdir(cli_project_path)
         repository_url = os.path.join(repos, 'default')
-        cli_cmd_list(['create_project', db, '--repository_url "' + repository_url + '"', '--silent_mode'])
+        cli_cmd_list(['create_project', db_path, '--repository_url "' + repository_url + '"', '--silent_mode'])
         # check the project exists in db directory
-        self.assertTrue(os.path.exists(os.path.join(db, test_project_name)))
+        self.assertTrue(os.path.exists(os.path.join(db_path, test_project_name)))
 
         # create a modeling resource
         cli_cmd_list(['create_resource', 'ch_anna-mdl'])
