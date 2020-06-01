@@ -228,6 +228,7 @@ class WorkNode:
     def get_inputs(self):
         return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
 
+    # TODO : add input should support a product list
     def add_input(self, product):
         if not os.path.exists(product.directory):
             # if the product is a WorkProduct try to convert it first
@@ -677,6 +678,8 @@ class Project:
         self.cfg = Config(self)
         self.repositories = {}
 
+    # TODO : get product should return last product of no version specified
+    # TODO : get product should return all resource products if no product specified
     def get_product(self, uri_string):
         uri_dict = uri_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])

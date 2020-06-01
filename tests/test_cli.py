@@ -76,19 +76,21 @@ class TestBasic(unittest.TestCase):
         anna_surfacing_path = os.path.join(user_work, test_project_name, 'surfacing', 'ch_anna')
         os.chdir(anna_surfacing_path)
 
-        # add mdl as input
+        # add mdl as input and commit
         cli_cmd_list(['add_input', 'ch_anna-mdl-abc@1'])
+        cli_cmd_list(['commit'])
 
-
-
-
-
-        # trash work
+        # trash works
         # but first move out from the work directory, unless the directory won't move
         os.chdir(cli_project_path)
+        cli_cmd_list(['trash', 'ch_anna-surfacing'])
+        self.assertFalse(os.path.exists(anna_surfacing_path))
         cli_cmd_list(['trash', 'ch_anna-mdl'])
-        # self.assertFalse(os.path.exists(anna_mdl_path))
+        self.assertFalse(os.path.exists(anna_mdl_path))
 
+        # now try to check out the surface and check the mdl is restored too
+        cli_cmd_list(['checkout', 'ch_anna-surfacing'])
+        self.assertTrue(os.path.exists(anna_mdl_path))
 
 if __name__ == '__main__':
     unittest.main()

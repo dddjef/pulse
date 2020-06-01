@@ -116,7 +116,7 @@ def create_resource(args):
 def checkout(args):
     project = get_pulse_project(os.getcwd())
     dict_uri = pulse.uri_to_dict(args.uri)
-    resource = project.get_resource(dict_uri['entity'], dict_uri['type'])
+    resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.checkout()
     print 'resource check out in "' + work.directory + '"'
 
