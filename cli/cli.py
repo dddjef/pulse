@@ -94,7 +94,14 @@ def create_output(args):
     work = get_work(os.getcwd())
     product = work.create_product(args.type)
     print 'product created in "' + product.directory + '"'
-    # print resource.sandbox_path
+
+
+def add_input(args):
+    project = get_pulse_project(os.getcwd())
+    product = project.get_product(args.uri)
+    work = get_work(os.getcwd(), project)
+    product = work.add_input(product)
+    print 'product registered "' + args.uri + '"'
 
 
 def create_resource(args):
@@ -173,6 +180,10 @@ parser_trash_resource.set_defaults(func=trash_resource)
 parser_commit = subparsers.add_parser('commit')
 parser_commit.set_defaults(func=commit)
 
+# add_input subparser
+parser_add_input = subparsers.add_parser('add_input')
+parser_add_input.add_argument('uri', type=str)
+parser_add_input.set_defaults(func=add_input)
 
 cmd_args = parser.parse_args()
 if cmd_args.func:

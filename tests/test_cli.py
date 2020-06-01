@@ -53,45 +53,41 @@ class TestBasic(unittest.TestCase):
         os.makedirs(cli_project_path)
         os.chdir(cli_project_path)
         repository_url = os.path.join(repos, 'default')
-        cli_cmd_list([
-            'create_project',
-            db,
-            '--repository_url "' + repository_url + '"',
-            '--silent_mode'
-        ])
+        cli_cmd_list(['create_project', db, '--repository_url "' + repository_url + '"', '--silent_mode'])
         # check the project exists in db directory
         self.assertTrue(os.path.exists(os.path.join(db, test_project_name)))
 
-        # create a resource
-        cli_cmd_list([
-            'create_resource',
-            'ch_anna-mdl'
-        ])
+        # create a modeling resource
+        cli_cmd_list(['create_resource', 'ch_anna-mdl'])
 
         anna_mdl_path = os.path.join(user_work, test_project_name, 'mdl', 'ch_anna')
         self.assertTrue(os.path.exists(anna_mdl_path))
         os.chdir(anna_mdl_path)
 
-        cli_cmd_list([
-            'create_output',
-            'abc'
-        ])
+        cli_cmd_list(['create_output', 'abc'])
         anna_abc_path = os.path.join(user_work, test_project_name, 'mdl', 'ch_anna', 'v001', 'abc')
         self.assertTrue(os.path.exists(anna_abc_path))
 
         # commit work
-        cli_cmd_list([
-            'commit'
-        ])
+        cli_cmd_list(['commit'])
+
+        # create a surface resource
+        cli_cmd_list(['create_resource', 'ch_anna-surfacing'])
+        anna_surfacing_path = os.path.join(user_work, test_project_name, 'surfacing', 'ch_anna')
+        os.chdir(anna_surfacing_path)
+
+        # add mdl as input
+        cli_cmd_list(['add_input', 'ch_anna-mdl-abc@1'])
+
+
+
+
 
         # trash work
-        # first move out from the work directory, unless the directory won't move
+        # but first move out from the work directory, unless the directory won't move
         os.chdir(cli_project_path)
-        cli_cmd_list([
-            'trash',
-            'ch_anna-mdl'
-        ])
-        self.assertFalse(os.path.exists(anna_mdl_path))
+        cli_cmd_list(['trash', 'ch_anna-mdl'])
+        # self.assertFalse(os.path.exists(anna_mdl_path))
 
 
 if __name__ == '__main__':
