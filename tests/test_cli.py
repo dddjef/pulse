@@ -92,6 +92,7 @@ class TestBasic(unittest.TestCase):
         cli_cmd_list(['checkout', 'ch_anna-surfacing'])
         self.assertTrue(os.path.exists(anna_mdl_path))
 
+
 if __name__ == '__main__':
     unittest.main()
     reset_files()
