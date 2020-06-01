@@ -78,6 +78,20 @@ class TestBasic(unittest.TestCase):
         anna_abc_path = os.path.join(user_work, test_project_name, 'mdl', 'ch_anna', 'v001', 'abc')
         self.assertTrue(os.path.exists(anna_abc_path))
 
+        # commit work
+        cli_cmd_list([
+            'commit'
+        ])
+
+        # trash work
+        # first move out from the work directory, unless the directory won't move
+        os.chdir(cli_project_path)
+        cli_cmd_list([
+            'trash',
+            'ch_anna-mdl'
+        ])
+        self.assertFalse(os.path.exists(anna_mdl_path))
+
 if __name__ == '__main__':
     unittest.main()
     reset_files()

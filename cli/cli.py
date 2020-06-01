@@ -7,7 +7,10 @@ import json
 
 project_data_filename = "project.pipe"
 
-def get_resource(path, project):
+
+def get_work(path, project=None):
+    if not project:
+        project = get_pulse_project(path)
     relative_path = path[len(project.cfg.work_user_root+project.name) + 2:]
     split_path = relative_path.split(os.sep)
     entity_name = ""
@@ -15,7 +18,7 @@ def get_resource(path, project):
         entity_name += ":" + part
     entity_name = entity_name[1:]
     resource_type = split_path[0]
-    return project.get_resource(entity_name, resource_type)
+    return project.get_resource(entity_name, resource_type).get_work()
 
 
 def get_pulse_project(path):
@@ -90,21 +93,42 @@ def create_template(args):
 
 
 def create_output(args):
-    current_path = os.getcwd()
-    project = get_pulse_project(current_path)
-    resource = get_resource(current_path, project)
-    product = resource.get_work().create_product(args.type)
+    work = get_work(os.getcwd())
+    product = work.create_product(args.type)
     print 'product created in "' + product.directory + '"'
     # print resource.sandbox_path
 
 
 def create_resource(args):
     project = get_pulse_project(os.getcwd())
-    resource_name = args.name.split("-")[0]
-    resource_type = args.name.split("-")[1]
+    resource_name = args.uri.split("-")[0]
+    resource_type = args.uri.split("-")[1]
     resource = project.create_resource(resource_name, resource_type)
     work = resource.checkout()
     print 'resource check out in "' + work.directory + '"'
+
+
+def checkout(args):
+    project = get_pulse_project(os.getcwd())
+    dict_uri = pulse.uri_to_dict(args.uri)
+    resource = project.get_resource(dict_uri['entity'], dict_uri['type'])
+    work = resource.checkout()
+    print 'resource check out in "' + work.directory + '"'
+
+
+def trash_work(args):
+    project = get_pulse_project(os.getcwd())
+    dict_uri = pulse.uri_to_dict(args.uri)
+    work = project.get_resource(dict_uri['entity'], dict_uri['resource_type']).get_work()
+    work.trash()
+    print 'resource trashed "' + work.directory + '"'
+
+
+def commit(args):
+    work = get_work(os.getcwd())
+    commit_obj = work.commit()
+    print 'work commit in version "' + str(commit_obj.version) + '"'
+    # print resource.sandbox_path
 
 
 # create the top-level parser
@@ -124,7 +148,7 @@ parser_create_project.set_defaults(func=create_project)
 
 # create_resource subparser
 parser_create_resource = subparsers.add_parser('create_resource')
-parser_create_resource.add_argument('name', type=str)
+parser_create_resource.add_argument('uri', type=str)
 parser_create_resource.add_argument('--silent_mode', '-s', action='store_true')
 parser_create_resource.set_defaults(func=create_resource)
 
@@ -137,6 +161,21 @@ parser_create_template.set_defaults(func=create_template)
 parser_create_output = subparsers.add_parser('create_output')
 parser_create_output.add_argument('type', type=str)
 parser_create_output.set_defaults(func=create_output)
+
+# checkout subparser
+parser_checkout = subparsers.add_parser('checkout')
+parser_checkout.add_argument('uri', type=str)
+parser_checkout.set_defaults(func=checkout)
+
+# trash work subparser
+parser_trash_work = subparsers.add_parser('trash')
+parser_trash_work.add_argument('uri', type=str)
+parser_trash_work.set_defaults(func=trash_work)
+
+# commit subparser
+parser_commit = subparsers.add_parser('commit')
+parser_commit.set_defaults(func=commit)
+
 
 cmd_args = parser.parse_args()
 if cmd_args.func:

@@ -37,13 +37,14 @@ class Repository(PulseRepository):
             resource.project.name,
             path_type,
             resource.resource_type,
-            resource.entity.replace(":", "\\")
+            resource.entity.replace(":", os.sep)
         )
         
     def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
         """create a new resource default folders and file from a resource template
         """
         version_directory = self._build_commit_path("work", commit)
+        print version_directory
         os.makedirs(version_directory)
         # Copy work files to repo
         for f in work_files:
