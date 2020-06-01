@@ -33,9 +33,9 @@ def get_pulse_project(path):
         path = os.path.dirname(path)
 
     if not connection_data:
-        return
+        raise Exception("can't connect to project : " + path)
 
-    cnx = pulse.Connection({"DB_root": connection_data["host"]}, connection_data["db_type"])
+    cnx = pulse.Connection(url=connection_data["url"], database_adapter=connection_data["db_adapter"])
     return cnx.get_project(os.path.basename(path))
 
 
@@ -56,33 +56,31 @@ def create_project(args):
             return
 
     database_type = config.get('database', 'default_adapter')
-    default_repository_type = config.get('repository', 'default_adapter')
-    if not args.repository_parameters:
-        args.repository_parameters = config.get('repository', 'default_parameters')
+    default_repository_adapter = config.get('repository', 'default_adapter')
+    if not args.repository_url:
+        args.repository_url = config.get('repository', 'default_parameters')
     version_prefix = config.get('version', 'prefix')
     version_padding = int(config.get('version', 'padding'))
 
-    cnx = pulse.Connection({"DB_root": args.host}, database_type)
+    cnx = pulse.Connection(url=args.url, database_adapter=database_type)
     cnx.create_project(
         project_name,
         sandbox_path,
-        args.user_products,
+        repository_url=args.repository_url,
+        product_user_root=args.user_products,
         version_padding=version_padding,
         version_prefix=version_prefix,
-        default_repository_type=default_repository_type,
-        default_repository_parameters=eval(args.repository_parameters)
+        repository_adapter=default_repository_adapter,
     )
 
     connexion_data = {
-        'host': args.host,
-        'login': args.login,
-        'password': args.password,
-        'db_type': database_type
+        'url': args.url,
+        'db_adapter': database_type
     }
     with open(os.path.join(os.getcwd(), project_data_filename), "w") as write_file:
         json.dump(connexion_data, write_file, indent=4, sort_keys=True)
 
-    print 'project "' + project_name + '" created on "' + args.host + '"'
+    print 'project "' + project_name + '" created on "' + args.url + '"'
 
 
 def create_template(args):
@@ -116,12 +114,13 @@ def checkout(args):
     print 'resource check out in "' + work.directory + '"'
 
 
-def trash_work(args):
+def trash_resource(args):
     project = get_pulse_project(os.getcwd())
     dict_uri = pulse.uri_to_dict(args.uri)
-    work = project.get_resource(dict_uri['entity'], dict_uri['resource_type']).get_work()
-    work.trash()
-    print 'resource trashed "' + work.directory + '"'
+    resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
+    resource.get_work().trash()
+    project.purge_unused_user_products(resource_filter=resource)
+    print 'resource trashed "' + resource.uri + '"'
 
 
 def commit(args):
@@ -137,11 +136,9 @@ subparsers = parser.add_subparsers()
 
 # create project subparser
 parser_create_project = subparsers.add_parser('create_project')
-parser_create_project.add_argument('host', type=str)
+parser_create_project.add_argument('url', type=str)
 parser_create_project.add_argument('--user_products', type=str)
-parser_create_project.add_argument('--login', type=str)
-parser_create_project.add_argument('--password', type=str)
-parser_create_project.add_argument('--repository_parameters', type=str)
+parser_create_project.add_argument('--repository_url', type=str)
 parser_create_project.add_argument('--silent_mode', '-s', action='store_true')
 
 parser_create_project.set_defaults(func=create_project)
@@ -167,10 +164,10 @@ parser_checkout = subparsers.add_parser('checkout')
 parser_checkout.add_argument('uri', type=str)
 parser_checkout.set_defaults(func=checkout)
 
-# trash work subparser
-parser_trash_work = subparsers.add_parser('trash')
-parser_trash_work.add_argument('uri', type=str)
-parser_trash_work.set_defaults(func=trash_work)
+# trash resource subparser
+parser_trash_resource = subparsers.add_parser('trash')
+parser_trash_resource.add_argument('uri', type=str)
+parser_trash_resource.set_defaults(func=trash_resource)
 
 # commit subparser
 parser_commit = subparsers.add_parser('commit')

@@ -42,6 +42,7 @@ def create_test_project(prj_name="test"):
     )
     return cnx, prj
 
+
 def add_file_to_directory(directory, filename, source_filepath=None):
     if not source_filepath:
         open(os.path.join(directory, filename), 'a').close()
@@ -144,9 +145,6 @@ class TestBasic(unittest.TestCase):
         anna_shader_v1 = anna_shd_resource.get_commit(1).get_product("shader")
         anna_shader_v1.download()
         self.assertTrue(os.path.exists(os.path.join(anna_shader_v1.directory, shader_product_file)))
-
-
-
 
     def test_trashing_work_errors(self):
         cnx, prj = create_test_project()
@@ -274,7 +272,6 @@ class TestBasic(unittest.TestCase):
         self.assertFalse(os.path.exists(anna_mdl_work.directory))
         anna_mdl_resource.checkout()
         self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
-
 
 
 if __name__ == '__main__':

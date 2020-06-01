@@ -343,7 +343,7 @@ class Work(WorkNode):
         return self
 
     @check_is_on_disk
-    def commit(self, comment=""):
+    def commit(self, comment="", trash_unused_products=False):
         # check current the user permission
         if self.resource.user_needs_lock():
             raise PulseError("resource is locked by another user : " + self.resource.lock_user)
@@ -393,8 +393,10 @@ class Work(WorkNode):
                 product = CommitProduct(commit, product_type)
                 product.products_inputs = [x.uri for x in work_product.get_inputs()]
                 product.db_create()
-
                 product.register_to_user_products()
+
+                if trash_unused_products and product.get_unused_time() > 0:
+                    product.remove_from_user_products()
 
         commit.db_create()
         self.resource.set_last_version(self.version)
@@ -426,7 +428,6 @@ class Work(WorkNode):
         for input_product in self.get_inputs():
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(self.directory)
-
 
         # create the trash work directory
         trash_directory = self._get_trash_directory()
@@ -715,10 +716,15 @@ class Project:
     def list_products(self, uri_pattern):
         return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
 
-    def purge_unused_user_products(self, unused_days=0):
+    def purge_unused_user_products(self, unused_days=0, resource_filter=None):
         if not os.path.exists(self.cfg.get_user_products_list_filepath()):
             return
         for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
+
+            if resource_filter:
+                if not uri.startswith(resource_filter.uri):
+                    continue
+
             product = self.get_product(uri)
             if product.get_unused_time() > (unused_days*86400):
                 product.remove_from_user_products(recursive_clean=True)

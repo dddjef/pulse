@@ -34,7 +34,7 @@ def ftp_rmtree(ftp, path):
 
     try:
         names = ftp.nlst(path)
-    except ftplib.all_errors as e:
+    except ftplib.all_errors:
         return
 
     for name in names:
@@ -171,7 +171,6 @@ class TestBasic(unittest.TestCase):
         # you have to close the connection to allow the database reset by the test
         cnx2.db.connection.close()
 
-
     def test_work_subdirectories_are_commit(self):
         subdirectory_name = "subdirtest"
         # create a connection
@@ -190,6 +189,7 @@ class TestBasic(unittest.TestCase):
         self.assertFalse(os.path.exists(anna_mdl_work.directory))
         anna_mdl_resource.checkout()
         self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
+
 
 if __name__ == '__main__':
     unittest.main()

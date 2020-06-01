@@ -34,6 +34,7 @@ def reset_files():
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
     print "FILES RESET"
 
+
 def cli_cmd_list(cmd_list):
     cmd = python_exe + " " + cli_path
     for arg in cmd_list:
@@ -51,11 +52,11 @@ class TestBasic(unittest.TestCase):
     def test_create_project(self):
         os.makedirs(cli_project_path)
         os.chdir(cli_project_path)
-        repository_parameters = "{'root': '" + os.path.join(repos, 'default') + "'}"
+        repository_url = os.path.join(repos, 'default')
         cli_cmd_list([
             'create_project',
             db,
-            '--repository_parameters "' + repository_parameters + '"',
+            '--repository_url "' + repository_url + '"',
             '--silent_mode'
         ])
         # check the project exists in db directory
@@ -91,6 +92,7 @@ class TestBasic(unittest.TestCase):
             'ch_anna-mdl'
         ])
         self.assertFalse(os.path.exists(anna_mdl_path))
+
 
 if __name__ == '__main__':
     unittest.main()
