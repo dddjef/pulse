@@ -81,17 +81,13 @@ def ftp_download(source, destination, ftp_connection):
 
 
 class Repository(PulseRepository):
-    def __init__(self, parameters):
-        self.host = parameters["host"]
-        self.port = parameters["port"]
-        self.login = parameters["login"]
-        self.password = parameters["password"]
-        self.root = parameters["root"]
+    def __init__(self, url):
+        PulseRepository.__init__(self, url)
+        self.root = self.url.path
         if not self.root.endswith('/'):
             self.root += '/'
         self.version_prefix = "V"
         self.version_padding = 3
-        PulseRepository.__init__(self)
         self.connection = None
         self._refresh_connection()
 
@@ -100,8 +96,8 @@ class Repository(PulseRepository):
             self.connection.voidcmd("NOOP")
         except:
             self.connection = ftplib.FTP()
-            self.connection.connect(self.host, self.port)
-            self.connection.login(self.login, self.password)
+            self.connection.connect(self.url.hostname, self.url.port)
+            self.connection.login(self.url.username, self.url.password)
         self.connection.cwd(self.root)
 
     def _upload_folder(self, source, destination):

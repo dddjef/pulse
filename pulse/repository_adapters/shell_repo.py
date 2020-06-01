@@ -17,11 +17,12 @@ def copy_folder_tree(source_folder, destination_folder):
 
 
 class Repository(PulseRepository):
-    def __init__(self, parameters):
-        self.root = parameters["root"]
+    def __init__(self, url):
+        PulseRepository.__init__(self, url)
+        self.root = self.url.path
         self.version_prefix = "V"
         self.version_padding = 3
-        PulseRepository.__init__(self)
+
 
     def _build_commit_path(self, path_type, commit):
         """custom function to build a repository path
@@ -37,7 +38,7 @@ class Repository(PulseRepository):
             resource.project.name,
             path_type,
             resource.resource_type,
-            resource.entity.replace(":", os.sep)
+            resource.entity.replace(":", "\\")
         )
         
     def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):

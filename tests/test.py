@@ -36,8 +36,9 @@ def create_test_project(prj_name="test"):
     prj = cnx.create_project(
         prj_name,
         user_works,
-        user_products,
-        default_repository_parameters={"root": os.path.join(repos, "default")}
+        repository_url=os.path.join(repos, "default"),
+        product_user_root=user_products,
+
     )
     return cnx, prj
 
@@ -69,7 +70,7 @@ class TestBasic(unittest.TestCase):
         prj = cnx.create_project(
             "project_simple_sandbox",
             user_works,
-            default_repository_parameters={"root": os.path.join(repos, "default")}
+            repository_url=os.path.join(repos, "default")
         )
         mdl_res = prj.create_resource("anna", "mdl")
         mdl_work = mdl_res.checkout()

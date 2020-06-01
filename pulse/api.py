@@ -636,12 +636,12 @@ class Config(PulseDbObject):
     def get_user_products_list_filepath(self):
         return os.path.join(self.product_user_root, "products_list.pipe")
 
-    def add_repository(self, repository_name, repository_type, repository_parameters):
-        if repository_name in self.repositories:
-            raise PulseError("Repository already exists : " + repository_name)
-        self.repositories[repository_name] = {
-            "type": repository_type,
-            "parameters": repository_parameters
+    def add_repository(self, name, adapter, url):
+        if name in self.repositories:
+            raise PulseError("Repository already exists : " + name)
+        self.repositories[name] = {
+            "adapter": adapter,
+            "url": url
         }
         self._db_update(["repositories"])
         self.project.load_config()
@@ -727,7 +727,7 @@ class Project:
         self.cfg.db_read()
         for repo_name in self.cfg.repositories:
             repo = self.cfg.repositories[repo_name]
-            self.repositories[repo_name] = import_adapter("repository", repo['type']).Repository(repo['parameters'])
+            self.repositories[repo_name] = import_adapter("repository", repo['adapter']).Repository(repo['url'])
 
     def get_resource(self, entity, resource_type):
         return Resource(self, entity, resource_type).db_read()
@@ -778,11 +778,11 @@ class Connection:
     def create_project(self,
                        project_name,
                        work_user_root,
+                       repository_url,
                        product_user_root=None,
                        version_padding=DEFAULT_VERSION_PADDING,
                        version_prefix=DEFAULT_VERSION_PREFIX,
-                       default_repository_type="shell_repo",
-                       default_repository_parameters=None
+                       repository_adapter="shell_repo",
                        ):
         # TODO : test admin rights in db and repo before registering anything else
         project = Project(self, project_name)
@@ -794,7 +794,7 @@ class Connection:
         project.cfg.version_padding = version_padding
         project.cfg.version_prefix = version_prefix
         project.cfg.db_create()
-        project.cfg.add_repository("default", default_repository_type, default_repository_parameters)
+        project.cfg.add_repository("default", repository_adapter, repository_url)
         project.load_config()
         return project
 

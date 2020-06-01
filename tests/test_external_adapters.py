@@ -13,6 +13,7 @@ test_project_name = "testProj"
 
 
 # you have to set this a mysql database first, pulse user needs rights to create and drop database
+# mysql://<username>:<password>@<host>:<port>/<db_name>
 db_host = "192.168.1.2"
 db_port = "3306"
 db_user = "pulse"
@@ -20,7 +21,7 @@ db_password = "ijifd_-ygy"
 
 # you have to set this to a ftp server. pulseTest should be able to write to the ftp_root
 ftp_host = "192.168.1.2"
-ftp_port = 21
+ftp_port = "21"
 ftp_login = "pulseTest"
 ftp_password = "okds-ki_se*84877sEE"
 ftp_root = "/pulseTest/"
@@ -92,18 +93,11 @@ def create_test_project(prj_name=test_project_name):
     prj = cnx.create_project(
         prj_name,
         user_works,
-        user_products,
-        default_repository_type="ftp_repo",
-        default_repository_parameters={
-            'host': ftp_host,
-            'port': ftp_port,
-            'login': ftp_login,
-            'password': ftp_password,
-            'root': ftp_root
-        }
+        repository_adapter="ftp_repo",
+        repository_url='ftp://' + ftp_login + ':' + ftp_password + '@' + ftp_host + ':' + ftp_port + '/' + ftp_root,
+        product_user_root=user_products
     )
     return cnx, prj
-
 
 
 class TestBasic(unittest.TestCase):
@@ -112,9 +106,7 @@ class TestBasic(unittest.TestCase):
 
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
-        prj.cfg.add_repository("serverB", "shell_repo", {
-            'root': os.path.join(repos, "default")
-        })
+        prj.cfg.add_repository("serverB", "shell_repo", os.path.join(repos, "default"))
 
         template_resource = prj.create_resource("_template", "rig", repository="serverB")
         template_work = template_resource.checkout()
@@ -147,8 +139,8 @@ class TestBasic(unittest.TestCase):
         prj = cnx.create_project(
             test_project_name,
             user_works,
-            user_products,
-            default_repository_parameters={"root": os.path.join(repos, "default")}
+            repository_url=os.path.join(repos, "default"),
+            product_user_root=user_products
         )
 
         anna_surf_resource = prj.create_resource("ch_anna", "surfacing")

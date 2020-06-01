@@ -1,5 +1,5 @@
 # you repository adapter plugin should have a "Repository" class inherited from PulseRepository
-
+from urlparse import urlparse
 
 class PulseRepositoryError(Exception):
     def __init__( self, reason):
@@ -14,8 +14,8 @@ class PulseRepositoryError(Exception):
 
 
 class PulseRepository:
-    def __init__(self):
-        pass
+    def __init__(self, url):
+        self.url = urlparse(url)
 
     def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
         pass
