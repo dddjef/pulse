@@ -1,10 +1,4 @@
-# If you need to structure your database
-# All entities has a string field "uri" usable as key
-# this is the different entity types and their stored attributes (all string, except mentioned):
-# Config = ["work_user_root", "product_user_root", "repositories", "version_padding":int, "version_prefix"]
-# Commit = ['version':int, 'products':name list, 'files':path list, 'comment']
-# Resource = ['lock':boolean, 'lock_user', 'last_version':int, 'resource_type', 'entity', 'repository', 'metas':dict]
-# CommitProduct = ['product_type', 'products_inputs':uri list]
+from urlparse import urlparse
 
 
 class PulseDatabaseError(Exception):
@@ -32,8 +26,8 @@ class PulseDatabaseMissingObject(Exception):
 
 
 class PulseDatabase:
-    def __init__(self):
-        pass
+    def __init__(self, url):
+        self.url = urlparse(url)
 
     tables_definition = {
         'Config': [

@@ -769,10 +769,10 @@ class Connection:
     """
         class for a connection to a Pulse database
     """
-    def __init__(self, connexion_data, database_type=None):
-        if not database_type:
-            database_type = "json_db"
-        self.db = import_adapter("database", database_type).Database(connexion_data)
+    def __init__(self, url, database_adapter=None):
+        if not database_adapter:
+            database_adapter = "json_db"
+        self.db = import_adapter("database", database_adapter).Database(url)
         self.user_name = self.db.get_user_name()
 
     def create_project(self,

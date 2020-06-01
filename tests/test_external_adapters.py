@@ -5,7 +5,7 @@ import mysql.connector as mariadb
 import ftplib
 
 test_dir = os.path.dirname(__file__)
-db = os.path.join(test_dir, "DB")
+db_root = os.path.join(test_dir, "DB")
 user_works = os.path.join(test_dir, "works")
 user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
@@ -58,7 +58,7 @@ def reset_files():
     cnx.cursor().execute("DROP DATABASE IF EXISTS " + test_project_name)
     cnx.close()
 
-    for directory in [db, user_products, user_works, repos]:
+    for directory in [db_root, user_products, user_works, repos]:
         for path, subdirs, files in os.walk(directory):
             for name in files:
                 filepath = os.path.join(path, name)
@@ -89,7 +89,7 @@ def reset_files():
 
 
 def create_test_project(prj_name=test_project_name):
-    cnx = Connection({"DB_root": db})
+    cnx = Connection(db_root)
     prj = cnx.create_project(
         prj_name,
         user_works,
@@ -130,12 +130,7 @@ class TestBasic(unittest.TestCase):
             template_resource.set_repository("serverB")
 
     def test_sql_db(self):
-        cnx = Connection({
-            'host': db_host,
-            'port': db_port,
-            'user': db_user,
-            'password': db_password
-        }, database_type="mysql_db")
+        cnx = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql_db")
         prj = cnx.create_project(
             test_project_name,
             user_works,
@@ -168,12 +163,7 @@ class TestBasic(unittest.TestCase):
         # you have to close the connection to allow the database reset by the test
         cnx.db.connection.close()
 
-        cnx2 = Connection({
-            'host': db_host,
-            'port': db_port,
-            'user': db_user,
-            'password': db_password
-        }, database_type="mysql_db")
+        cnx2 = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql_db")
         prj = cnx2.get_project(test_project_name)
         rig2 = prj.get_resource("ch_anna", "rigging")
         self.assertTrue(rig2.get_commit("last").products[0] == 'actor_anim')

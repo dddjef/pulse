@@ -5,22 +5,18 @@ import mysql.connector as mariadb
 
 
 class Database(PulseDatabase):
-    def __init__(self, connexion_data):
-        self.host = connexion_data['host']
-        self.port = connexion_data['port']
-        self.user = connexion_data['user']
-        self.password = connexion_data['password']
+    def __init__(self, url):
+        PulseDatabase.__init__(self, url)
         self.connection = None
         self.cursor = None
         self.update_connection()
-        PulseDatabase.__init__(self)
 
     def update_connection(self):
         self.connection = mariadb.connect(
-            host=self.host,
-            port=self.port,
-            user=self.user,
-            password=self.password,
+            host=self.url.hostname,
+            port=self.url.port,
+            user=self.url.username,
+            password=self.url.password,
         )
         self.cursor = self.connection.cursor()
 
@@ -54,7 +50,7 @@ class Database(PulseDatabase):
         return [x[0] for x in self.cursor.fetchall()]
 
     def get_user_name(self):
-        return self.user
+        return self.url.username
 
     def create(self, project_name, entity_type, uri, data):
         self.cursor.execute("USE " + project_name)

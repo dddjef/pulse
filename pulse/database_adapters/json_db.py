@@ -5,11 +5,12 @@ from pulse.database_adapters.interface_class import *
 
 
 class Database(PulseDatabase):
-    def __init__(self, connexion_data=None):
-        if not os.path.exists(connexion_data["DB_root"]):
-            raise PulseDatabaseError("can't find the database :" + connexion_data["DB_root"])
-        self._root = connexion_data["DB_root"]
-        PulseDatabase.__init__(self)
+    def __init__(self, url):
+        PulseDatabase.__init__(self, url)
+        if not os.path.exists(self.url.path):
+            raise PulseDatabaseError("can't find json database :" + self.url.path)
+        self._root = self.url.path
+
 
     def create_project(self, project_name):
         project_directory = os.path.join(self._root, project_name)

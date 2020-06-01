@@ -5,14 +5,14 @@ import os
 # TODO : test trashing an open file
 
 test_dir = os.path.dirname(__file__)
-db = os.path.join(test_dir, "DB")
+db_root = os.path.join(test_dir, "DB")
 user_works = os.path.join(test_dir, "works")
 user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
 
 
 def reset_files():
-    for directory in [db, user_products, user_works, repos]:
+    for directory in [db_root, user_products, user_works, repos]:
         for path, subdirs, files in os.walk(directory):
             for name in files:
                 filepath = os.path.join(path, name)
@@ -32,7 +32,7 @@ def reset_files():
 
 
 def create_test_project(prj_name="test"):
-    cnx = Connection({"DB_root": db})
+    cnx = Connection(db_root)
     prj = cnx.create_project(
         prj_name,
         user_works,
@@ -66,7 +66,7 @@ class TestBasic(unittest.TestCase):
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_same_work_and_product_user_path(self):
-        cnx = Connection({"DB_root": db})
+        cnx = Connection(db_root)
         prj = cnx.create_project(
             "project_simple_sandbox",
             user_works,
