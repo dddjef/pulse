@@ -695,27 +695,6 @@ class Project:
             raise PulseError("Unknown product : " + uri_string)
         return product_parent.get_product(uri_dict["product_type"])
 
-    def get_pulse_node_old(self, uri_string):
-        uri_dict = uri_to_dict(uri_string)
-        resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
-        resource.db_read()
-        if not uri_dict['version']:
-            return resource
-
-        index = resource.get_index(uri_dict['version'])
-        if uri_dict['product_type'] == "":
-            return resource.get_commit(index)
-
-        else:
-            try:
-                product_parent = resource.get_commit(index)
-            except PulseDatabaseMissingObject:
-                product_parent = resource.get_work()
-            if product_parent.version != index:
-                raise PulseError("Unknown product : " + uri_string)
-
-            return product_parent.get_product(uri_dict["product_type"])
-
     def list_products(self, uri_pattern):
         return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
 
