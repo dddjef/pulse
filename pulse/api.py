@@ -432,7 +432,8 @@ class Work(WorkNode):
 
         # create the trash work directory
         trash_directory = self._get_trash_directory()
-        os.makedirs(trash_directory)
+        if not os.path.exists(trash_directory):
+            os.makedirs(trash_directory)
 
         # move folders
         shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
