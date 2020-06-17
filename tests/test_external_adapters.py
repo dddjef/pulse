@@ -11,6 +11,8 @@ user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
 test_project_name = "testProj"
 
+# you have to install mysql connector
+# pip install mysql-connector-python
 
 # you have to set this a mysql database first, pulse user needs rights to create and drop database
 # mysql://<username>:<password>@<host>:<port>/<db_name>
