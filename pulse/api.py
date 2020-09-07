@@ -1,3 +1,8 @@
+"""
+Created on 07 September 2020
+@author: Jean Francois Sarazin
+"""
+
 import json
 import os
 import file_utils as fu
