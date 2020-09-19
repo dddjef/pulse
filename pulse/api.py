@@ -10,6 +10,7 @@ import shutil
 import time
 import imp
 from pulse.database_adapters.interface_class import *
+from pulse.exception import *
 import tempfile
 from datetime import datetime
 import re
@@ -31,30 +32,6 @@ def check_is_on_disk(f):
             raise PulseMissingNode("Missing work space : " + args[0].directory)
         return f(*args, **kw)
     return deco
-
-
-class PulseError(Exception):
-    def __init__(self, reason):
-        Exception.__init__(self)
-        self._reason = reason
-
-    def reason(self):
-        return self._reason
-
-    def __str__(self):
-        return self._reason
-
-
-class PulseMissingNode(Exception):
-    def __init__(self, reason):
-        Exception.__init__(self)
-        self._reason = reason
-
-    def reason(self):
-        return self._reason
-
-    def __str__(self):
-        return self._reason
 
 
 class PulseDbObject:

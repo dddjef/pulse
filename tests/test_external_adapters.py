@@ -16,10 +16,10 @@ test_project_name = "testProj"
 
 # you have to set this a mysql database first, pulse user needs rights to create and drop database
 # mysql://<username>:<password>@<host>:<port>/<db_name>
-db_host = "192.168.1.2"
+db_host = "sql213.epizy.com"
 db_port = "3306"
-db_user = "pulse"
-db_password = "ijifd_-ygy"
+db_user = "epiz_26047074"
+db_password = "v9gcp1bk"
 
 # you have to set this to a ftp server. pulseTest should be able to write to the ftp_root
 ftp_host = "192.168.1.2"

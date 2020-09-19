@@ -2,6 +2,27 @@ from pulse.api import *
 import unittest
 import subprocess
 
+
+"""
+associate .py with the python interpreter.
+
+Use commands ftype and assoc
+
+ftype PythonScript=c:\pathtofolder\python.exe %*
+
+assoc .py=PythonScript
+Then add your SCRIPT path to the path command
+
+Setx path "%path%;C:\MyPythonScriptFolder"
+
+Set path="%path%;C:\MyPythonScriptFolder"
+
+Then tell windows command prompt to assume .py files are executable so it will search the path for it.
+
+Set pathext=%pathext%;.py
+
+
+"""
 # TODO : test trashing an open file
 
 test_dir = os.path.dirname(__file__)
