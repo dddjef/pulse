@@ -6,6 +6,15 @@
 Welcome to Pulse's documentation!
 =================================
 
+Pulse is a resource version control system.
+
+A resource is project fragment, generating products used by other resources.
+
+Here is a basic description of the object you will manipulate when using pulse
+
+.. image:: pulse_objects.png
+    :align: center
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
