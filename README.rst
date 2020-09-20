@@ -20,10 +20,10 @@ How does this api look likes?
 # create a new resource, a shot animation
 
 >>> shot_anim_work = shot_anim.checkout()
-# check out the resource in the user sandbox
+# check out the resource in the user work space
 
 >>> shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last").get_product("proxy_rig"))
-# add the last Joe's proxy rig to this shot (download it to user cache if needed)
+# add the last Joe's proxy rig to this shot (download it to user space if needed)
 
 >>> shot_anim_work.create_product("alembic")
 # create a product folder to receive an alembic export
@@ -84,8 +84,8 @@ Q/A
 ===
 
 My artists work all in the same location, what's the point to use Pulse?
-    Yes! Pulse act like a local cache, it leverages greatly server access even in the same network. The fastest file transfer
-    is the one which doesn't need to occur.
+    Pulse act like a local cache, it leverages greatly server access even in the same network. The fastest file transfer
+    is the one which doesn't need to occur. Plus, it secures published files and prevent concurrent work.
 
 
 What's the difference between Pulse and Shotgun?
