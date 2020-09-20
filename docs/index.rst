@@ -10,7 +10,7 @@ Pulse is a resource version control system.
 
 A resource is project fragment, generating products used by other resources.
 
-Here is a basic description of the objects you will manipulate when using pulse
+Here is a basic description of the main objects you will manipulate when using pulse
 
 .. image:: pulse_objects.png
     :align: center
