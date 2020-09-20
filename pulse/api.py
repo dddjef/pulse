@@ -26,14 +26,6 @@ DEFAULT_VERSION_PREFIX = "V"
 # TODO : don't support adding wip product to work (remove unneeded check in the trash function)
 
 
-def _check_is_on_disk(f):
-    def deco(*args, **kw):
-        if not os.path.exists(args[0].directory):
-            raise PulseMissingNode("Missing work space : " + args[0].directory)
-        return f(*args, **kw)
-    return deco
-
-
 class PulseDbObject:
     """
         abstract class for all objects which need to save persistent data
@@ -298,6 +290,10 @@ class Work(WorkNode):
         self.resource = resource
         self.version = None
         self.data_file = os.path.join(self.directory, "work.pipe")
+        
+    def _check_exists_in_user_workspace(self):
+        if not os.path.exists(self.directory):
+            raise PulseMissingNode("Missing work space : " + self.directory)
 
     def _get_trash_directory(self):
 
@@ -314,42 +310,42 @@ class Work(WorkNode):
                 work_files.append(os.path.join(self.directory, f))
         return work_files
 
-    @_check_is_on_disk
     def get_product(self, product_type):
         """
         return the resource's work product based on the given type
         :param product_type:
         :return: a work product
         """
+        self._check_exists_in_user_workspace()
         return WorkProduct(self, product_type)
 
-    @_check_is_on_disk
     def list_products(self):
         """
         return the work's product's list
         :return: a work product list
         """
+        self._check_exists_in_user_workspace()
         return os.listdir(self.get_products_directory())
 
-    @_check_is_on_disk
     def create_product(self, product_type):
         """
         create a new product for the work
         :param product_type: string
         :return: the new work product object
         """
+        self._check_exists_in_user_workspace()
         if product_type in self.list_products():
             raise PulseError("product already exists : " + product_type)
         work_product = WorkProduct(self, product_type)
         os.makedirs(work_product.directory)
         return work_product
 
-    @_check_is_on_disk
     def trash_product(self, product_type):
         """
         move the specified product to the trash directory
         :param product_type: string
         """
+        self._check_exists_in_user_workspace()
         if product_type not in self.list_products():
             raise PulseError("product does not exists : " + product_type)
         product = WorkProduct(self, product_type)
@@ -372,11 +368,11 @@ class Work(WorkNode):
         # move folder
         shutil.move(product.directory, os.path.join(trash_directory, "PRODUCTS", product_type))
 
-    @_check_is_on_disk
     def write(self):
         """
         write the work object to user workspace
         """
+        self._check_exists_in_user_workspace()
         # remove old version file
         old_version_file = self.version_pipe_filepath(self.resource.last_version)
         if os.path.exists(old_version_file):
@@ -393,19 +389,18 @@ class Work(WorkNode):
         # write data to json
         fu.write_data(self.data_file, {"version": self.version})
 
-    @_check_is_on_disk
     def read(self):
         """
         read the work data from user work space
         :return: the updated work
         """
+        self._check_exists_in_user_workspace()
         if not os.path.exists(self.directory):
             raise PulseError("work does not exists : " + self.directory)
         work_data = fu.read_data(self.data_file)
         self.version = work_data["version"]
         return self
 
-    @_check_is_on_disk
     def commit(self, comment="", trash_unused_products=False):
         """
         commit the work to the repository, and publish it to the database
@@ -413,6 +408,7 @@ class Work(WorkNode):
         :param trash_unused_products: if a work's product is not used anymore, move it to trash
         :return: the created commit object
         """
+        self._check_exists_in_user_workspace()
         # check current the user permission
         if self.resource.user_needs_lock():
             raise PulseError("resource is locked by another user : " + self.resource.lock_user)
@@ -479,13 +475,13 @@ class Work(WorkNode):
 
         return commit
 
-    @_check_is_on_disk
     def trash(self, no_backup=False):
         """
         remove the work from user workspace
         :param no_backup: if False, the work folder is moved to trash directory. If True, it is removed from disk
         :return: True on success
         """
+        self._check_exists_in_user_workspace()
         # test the work and products folder are movable
         products_directory = self.get_products_directory()
         for path in [self.directory, products_directory]:
@@ -527,24 +523,24 @@ class Work(WorkNode):
 
         return True
 
-    @_check_is_on_disk
     def version_pipe_filepath(self, index):
         """
         get the pipe file path
         :param index:
         :return: filepath
         """
+        self._check_exists_in_user_workspace()
         return os.path.join(
             self.directory,
             self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
         )
 
-    @_check_is_on_disk
     def get_files_changes(self):
         """
         return the file's changes since last commit. Based on the files modification date time
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
+        self._check_exists_in_user_workspace()
         current_work_files = fu.get_directory_content(
             self.directory,
             ignore_list=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
