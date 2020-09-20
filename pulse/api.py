@@ -62,7 +62,7 @@ class PulseDbObject:
             read all object attributes from database.
 
             Will pass if the database have an attribute missing on the object
-            :return: the PulseDbObject
+            :return: PulseDbObject
             :rtype: PulseDbObject
         """
         data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
@@ -76,7 +76,7 @@ class PulseDbObject:
         """
             initialize the object in database
 
-            use all the attributes lists is ._storage.vars and save them to the DB
+            use all the attributes lists in ._storage.vars and save them to the DB
             the key is the uri
             raise DbError if the object already exists
         """
@@ -86,7 +86,7 @@ class PulseDbObject:
 
 class Product:
     """
-        abstract class for all products (local or comited)
+        abstract class for all products
     """
     def __init__(self, parent, product_type):
         self.uri = dict_to_uri({
@@ -101,15 +101,32 @@ class Product:
         self.product_users_file = os.path.join(self.directory, "product_users.pipe")
 
     def add_product_user(self, user_directory):
+        """
+        add a local resource or product as product's user
+        :param user_directory: the resource path
+        """
         fu.json_list_append(self.product_users_file, user_directory)
 
     def remove_product_user(self, user_directory):
+        """
+        remove the specified local resource or product from the product's user
+        :param user_directory: the resource path
+        """
         fu.json_list_remove(self.product_users_file, user_directory)
 
     def get_product_users(self):
+        """
+        return the list of local resources or product using this product
+        :return: resources filepath list
+        """
         return fu.json_list_get(self.product_users_file)
 
     def get_unused_time(self):
+        """
+        return the time since the local product has not been used by any resource or product.
+        Mainly used to purge local products from pulse's cache
+        :return: time value
+        """
         if not os.path.exists(self.directory):
             return -1
         users = self.get_product_users()
@@ -123,7 +140,7 @@ class Product:
 
 class CommitProduct(PulseDbObject, Product):
     """
-        class for products which has been registered to database
+        Product which has been published to database
     """
     def __init__(self, parent, product_type):
         Product.__init__(self, parent, product_type)
@@ -132,6 +149,10 @@ class CommitProduct(PulseDbObject, Product):
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
 
     def download(self):
+        """
+        download the product to local pulse cache
+        :return: the product's local filepath
+        """
         self.project.repositories[self.parent.resource.repository].download_product(self)
         fu.write_data(self.product_users_file, [])
         self.register_to_user_products()
@@ -142,12 +163,23 @@ class CommitProduct(PulseDbObject, Product):
         return self.directory
 
     def register_to_user_products(self):
+        """
+        register the product to the user local products list
+        """
         fu.json_list_append(self.project.cfg.get_user_products_list_filepath(), self.uri)
 
     def unregister_to_user_products(self):
+        """
+        unregister the product to the user local products list
+        """
         fu.json_list_remove(self.project.cfg.get_user_products_list_filepath(), self.uri)
 
     def remove_from_user_products(self, recursive_clean=False):
+        """
+        remove the product from local pulse cache
+        will raise a pulse error if the product is used by a resource
+        will raise an error if the product's folder is locked by the filesystem
+        """
         if len(self.get_product_users()) > 0:
             raise PulseError("Can't remove a product still in use")
 
@@ -177,7 +209,8 @@ class CommitProduct(PulseDbObject, Product):
 
 class Commit(PulseDbObject):
     """
-        class for a resource version
+        Object created when a resource has been published to database
+        The commit is the versioned
     """
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
@@ -192,9 +225,19 @@ class Commit(PulseDbObject):
         self._storage_vars = ['version', 'products', 'files', 'comment']
 
     def get_product(self, product_type):
+        """
+        return the commit's product with the specified product type
+        #TODO : check what's return if the product type does not exists
+        :param product_type: string
+        :return: a CommitProduct
+        """
         return CommitProduct(self, product_type).db_read()
 
     def get_products_directory(self):
+        """
+        return the commit's products directory
+        :return: filepath
+        """
         return self.resource.get_products_directory(self.version)
 
 
@@ -208,10 +251,19 @@ class WorkNode:
         self.project = project
 
     def get_inputs(self):
+        """
+        return a list of products used by this local work or product
+        :return: products uri list
+        """
         return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
 
     # TODO : add input should support a product list
     def add_input(self, product):
+        """
+        # TODO : check if it should be a specific product type here (local or published)
+        add a local product to work or product inputs list
+        :param product: product object
+        """
         if not os.path.exists(product.directory):
             # if the product is a WorkProduct try to convert it first
             product = self.project.get_product(product.uri)
@@ -220,6 +272,10 @@ class WorkNode:
         product.add_product_user(self.directory)
 
     def remove_input(self, local_product):
+        """
+        remove a product from object's inputs list
+        :param local_product: local product object
+        """
         fu.json_list_remove(self.products_inputs_file, local_product.uri)
         local_product.remove_product_user(self.directory)
 
@@ -235,7 +291,7 @@ class WorkProduct(Product, WorkNode):
 
 class Work(WorkNode):
     """
-        class for resource work in progress
+        Resource downloaded locally to be modified
     """
     def __init__(self, resource):
         WorkNode.__init__(self, resource.project, resource.sandbox_path)
@@ -244,8 +300,7 @@ class Work(WorkNode):
         self.data_file = os.path.join(self.directory, "work.pipe")
 
     def _get_trash_directory(self):
-        """custom function to build a sandbox trash path.
-        """
+
         date_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
         path = self.project.cfg.work_user_root + "\\" + self.project.name + "\\" + "TRASH" + "\\"
         path += self.resource.resource_type + "-" + self.resource.entity.replace(":", "_") + "-" + date_time
@@ -261,14 +316,28 @@ class Work(WorkNode):
 
     @check_is_on_disk
     def get_product(self, product_type):
+        """
+        return the resource's work product based on the given type
+        :param product_type:
+        :return: a work product
+        """
         return WorkProduct(self, product_type)
 
     @check_is_on_disk
     def list_products(self):
+        """
+        return the work's product's list
+        :return: a work product list
+        """
         return os.listdir(self.get_products_directory())
 
     @check_is_on_disk
     def create_product(self, product_type):
+        """
+        create a new product for the work
+        :param product_type: string
+        :return: the new work product object
+        """
         if product_type in self.list_products():
             raise PulseError("product already exists : " + product_type)
         work_product = WorkProduct(self, product_type)
@@ -277,6 +346,10 @@ class Work(WorkNode):
 
     @check_is_on_disk
     def trash_product(self, product_type):
+        """
+        move the specified product to the trash directory
+        :param product_type: string
+        """
         if product_type not in self.list_products():
             raise PulseError("product does not exists : " + product_type)
         product = WorkProduct(self, product_type)
@@ -301,6 +374,9 @@ class Work(WorkNode):
 
     @check_is_on_disk
     def write(self):
+        """
+        write the work object to user workspace
+        """
         # remove old version file
         old_version_file = self.version_pipe_filepath(self.resource.last_version)
         if os.path.exists(old_version_file):
@@ -319,6 +395,10 @@ class Work(WorkNode):
 
     @check_is_on_disk
     def read(self):
+        """
+        read the work data from user work space
+        :return: the updated work
+        """
         if not os.path.exists(self.directory):
             raise PulseError("work does not exists : " + self.directory)
         work_data = fu.read_data(self.data_file)
@@ -327,6 +407,12 @@ class Work(WorkNode):
 
     @check_is_on_disk
     def commit(self, comment="", trash_unused_products=False):
+        """
+        commit the work to the repository, and publish it to the database
+        :param comment: a user comment string
+        :param trash_unused_products: if a work's product is not used anymore, move it to trash
+        :return: the created commit object
+        """
         # check current the user permission
         if self.resource.user_needs_lock():
             raise PulseError("resource is locked by another user : " + self.resource.lock_user)
@@ -386,7 +472,7 @@ class Work(WorkNode):
 
         # increment the work and the products files
         self.version += 1
-        self.write()
+        self._write()
 
         # restore the resource lock state
         self.resource.set_lock(lock_state, lock_user, steal=True)
@@ -395,6 +481,11 @@ class Work(WorkNode):
 
     @check_is_on_disk
     def trash(self, no_backup=False):
+        """
+        remove the work from user workspace
+        :param no_backup: if False, the work folder is moved to trash directory. If True, it is removed from disk
+        :return: True on success
+        """
         # test the work and products folder are movable
         products_directory = self.get_products_directory()
         for path in [self.directory, products_directory]:
@@ -438,6 +529,11 @@ class Work(WorkNode):
 
     @check_is_on_disk
     def version_pipe_filepath(self, index):
+        """
+        get the pipe file path
+        :param index:
+        :return: filepath
+        """
         return os.path.join(
             self.directory,
             self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
@@ -445,6 +541,10 @@ class Work(WorkNode):
 
     @check_is_on_disk
     def get_files_changes(self):
+        """
+        return the file's changes since last commit. Based on the files modification date time
+        :return: a list a tuple with the filepath and the edit type (edited, removed, added)
+        """
         current_work_files = fu.get_directory_content(
             self.directory,
             ignore_list=[os.path.basename(self.version_pipe_filepath(self.version)), os.path.basename(self.data_file)]
@@ -466,12 +566,16 @@ class Work(WorkNode):
         return diff
 
     def get_products_directory(self):
+        """
+        return the work products directory
+        :return: filepath
+        """
         return self.resource.get_products_directory(self.version)
 
 
 class Resource(PulseDbObject):
     """
-        class for project's resource
+        a project's resource.
     """
     def __init__(self, project, entity, resource_type):
         self.lock_state = False
