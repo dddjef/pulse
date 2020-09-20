@@ -13,7 +13,7 @@ Why would you need Pulse?
 
 How does this api look likes?
 
->>> prj = pulse.api.Connection({"host": "127.0.0.1", "user":"John", "password":"Snow"}).get_project("my_project")
+>>> prj = pulse.api.Connection({"host": "127.0.0.1", "user":"John", "password":"Snow"}).get_project("GOT")
 # connect to a pulse database and get a project from it
 
 >>> shot_anim = prj.create_resource("shot", "animation")
