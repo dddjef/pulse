@@ -370,53 +370,78 @@ add a local product to work or product inputs list
 <p>Resource downloaded locally to be modified</p>
 <dl class="method">
 <dt id="pulse.api.Work.get_product">
-<code class="descname">get_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_product" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">get_product</code><span class="sig-paren">(</span><em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_product" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the resource’s work product based on the given type
+:param product_type:
+:return: a work product</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.list_products">
-<code class="descname">list_products</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.list_products" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">list_products</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.list_products" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the work’s product’s list
+:return: a work product list</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.create_product">
-<code class="descname">create_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.create_product" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">create_product</code><span class="sig-paren">(</span><em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.create_product" title="Permalink to this definition">¶</a></dt>
+<dd><p>create a new product for the work
+:param product_type: string
+:return: the new work product object</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.trash_product">
-<code class="descname">trash_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.trash_product" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">trash_product</code><span class="sig-paren">(</span><em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.trash_product" title="Permalink to this definition">¶</a></dt>
+<dd><p>move the specified product to the trash directory
+:param product_type: string</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.write">
-<code class="descname">write</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.write" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">write</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>write the work object to user workspace</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.read">
-<code class="descname">read</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.read" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">read</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>read the work data from user work space
+:return: the updated work</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.commit">
-<code class="descname">commit</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.commit" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">commit</code><span class="sig-paren">(</span><em>comment=''</em>, <em>trash_unused_products=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>commit the work to the repository, and publish it to the database
+:param comment: a user comment string
+:param trash_unused_products: if a work’s product is not used anymore, move it to trash
+:return: the created commit object</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.trash">
-<code class="descname">trash</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.trash" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">trash</code><span class="sig-paren">(</span><em>no_backup=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.trash" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove the work from user workspace
+:param no_backup: if False, the work folder is moved to trash directory. If True, it is removed from disk
+:return: True on success</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.version_pipe_filepath">
-<code class="descname">version_pipe_filepath</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.version_pipe_filepath" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">version_pipe_filepath</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.version_pipe_filepath" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the pipe file path
+:param index:
+:return: filepath</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.get_files_changes">
-<code class="descname">get_files_changes</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_files_changes" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">get_files_changes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_files_changes" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the file’s changes since last commit. Based on the files modification date time
+:return: a list a tuple with the filepath and the edit type (edited, removed, added)</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pulse.api.Work.get_products_directory">
