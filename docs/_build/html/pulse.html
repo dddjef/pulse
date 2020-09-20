@@ -187,32 +187,84 @@
 <span id="pulse-api-module"></span><h2>pulse.api module<a class="headerlink" href="#module-pulse.api" title="Permalink to this headline">¶</a></h2>
 <p>Created on 07 September 2020
 &#64;author: Jean Francois Sarazin</p>
-<dl class="class">
-<dt id="pulse.api.Commit">
-<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Commit</code><span class="sig-paren">(</span><em>resource</em>, <em>version</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Commit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#pulse.api.PulseDbObject" title="pulse.api.PulseDbObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.PulseDbObject</span></code></a></p>
-<p>Object created when a resource has been published to database
-The commit is the versioned</p>
-<dl class="method">
-<dt id="pulse.api.Commit.get_product">
-<code class="descname">get_product</code><span class="sig-paren">(</span><em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Commit.get_product" title="Permalink to this definition">¶</a></dt>
-<dd><p>return the commit’s product with the specified product type
-#TODO : check what’s return if the product type does not exists
-:param product_type: string
-:return: a CommitProduct</p>
-</dd></dl>
+<dl class="function">
+<dt id="pulse.api.check_is_on_disk">
+<code class="descclassname">pulse.api.</code><code class="descname">check_is_on_disk</code><span class="sig-paren">(</span><em>f</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.check_is_on_disk" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
-<dl class="method">
-<dt id="pulse.api.Commit.get_products_directory">
-<code class="descname">get_products_directory</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Commit.get_products_directory" title="Permalink to this definition">¶</a></dt>
-<dd><p>return the commit’s products directory
-:return: filepath</p>
+<dl class="class">
+<dt id="pulse.api.PulseDbObject">
+<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">PulseDbObject</code><span class="sig-paren">(</span><em>project</em>, <em>uri</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.PulseDbObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>abstract class for all objects which need to save persistent data</p>
+<dl class="attribute">
+<dt id="pulse.api.PulseDbObject.uri">
+<code class="descname">uri</code><em class="property"> = None</em><a class="headerlink" href="#pulse.api.PulseDbObject.uri" title="Permalink to this definition">¶</a></dt>
+<dd><p>universal resource identifier - string</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="pulse.api.Commit.products">
-<code class="descname">products</code><em class="property"> = None</em><a class="headerlink" href="#pulse.api.Commit.products" title="Permalink to this definition">¶</a></dt>
-<dd><p>list of product names</p>
+<dt id="pulse.api.PulseDbObject.project">
+<code class="descname">project</code><em class="property"> = None</em><a class="headerlink" href="#pulse.api.PulseDbObject.project" title="Permalink to this definition">¶</a></dt>
+<dd><p>the project this object rely to - Project</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pulse.api.PulseDbObject.metas">
+<code class="descname">metas</code><em class="property"> = None</em><a class="headerlink" href="#pulse.api.PulseDbObject.metas" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store custom attributes, passed to repository - dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.PulseDbObject.db_read">
+<code class="descname">db_read</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.PulseDbObject.db_read" title="Permalink to this definition">¶</a></dt>
+<dd><p>read all object attributes from database.</p>
+<p>Will pass if the database have an attribute missing on the object
+:return: PulseDbObject
+:rtype: PulseDbObject</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.PulseDbObject.db_create">
+<code class="descname">db_create</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.PulseDbObject.db_create" title="Permalink to this definition">¶</a></dt>
+<dd><p>initialize the object in database</p>
+<p>use all the attributes lists in ._storage.vars and save them to the DB
+the key is the uri
+raise DbError if the object already exists</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pulse.api.Product">
+<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Product</code><span class="sig-paren">(</span><em>parent</em>, <em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product" title="Permalink to this definition">¶</a></dt>
+<dd><p>abstract class for all products</p>
+<dl class="method">
+<dt id="pulse.api.Product.add_product_user">
+<code class="descname">add_product_user</code><span class="sig-paren">(</span><em>user_directory</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product.add_product_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>add a local resource or product as product’s user
+:param user_directory: the resource path</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Product.remove_product_user">
+<code class="descname">remove_product_user</code><span class="sig-paren">(</span><em>user_directory</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product.remove_product_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove the specified local resource or product from the product’s user
+:param user_directory: the resource path</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Product.get_product_users">
+<code class="descname">get_product_users</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product.get_product_users" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the list of local resources or product using this product
+:return: resources filepath list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Product.get_unused_time">
+<code class="descname">get_unused_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product.get_unused_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the time since the local product has not been used by any resource or product.
+Mainly used to purge local products from pulse’s cache
+:return: time value</p>
 </dd></dl>
 
 </dd></dl>
@@ -236,6 +288,12 @@ The commit is the versioned</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="pulse.api.CommitProduct.unregister_to_user_products">
+<code class="descname">unregister_to_user_products</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.CommitProduct.unregister_to_user_products" title="Permalink to this definition">¶</a></dt>
+<dd><p>unregister the product to the user local products list</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="pulse.api.CommitProduct.remove_from_user_products">
 <code class="descname">remove_from_user_products</code><span class="sig-paren">(</span><em>recursive_clean=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.CommitProduct.remove_from_user_products" title="Permalink to this definition">¶</a></dt>
 <dd><p>remove the product from local pulse cache
@@ -243,11 +301,188 @@ will raise a pulse error if the product is used by a resource
 will raise an error if the product’s folder is locked by the filesystem</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="pulse.api.CommitProduct.unregister_to_user_products">
-<code class="descname">unregister_to_user_products</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.CommitProduct.unregister_to_user_products" title="Permalink to this definition">¶</a></dt>
-<dd><p>unregister the product to the user local products list</p>
 </dd></dl>
+
+<dl class="class">
+<dt id="pulse.api.Commit">
+<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Commit</code><span class="sig-paren">(</span><em>resource</em>, <em>version</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pulse.api.PulseDbObject" title="pulse.api.PulseDbObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.PulseDbObject</span></code></a></p>
+<p>Object created when a resource has been published to database
+The commit is the versioned</p>
+<dl class="attribute">
+<dt id="pulse.api.Commit.products">
+<code class="descname">products</code><em class="property"> = None</em><a class="headerlink" href="#pulse.api.Commit.products" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of product names</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Commit.get_product">
+<code class="descname">get_product</code><span class="sig-paren">(</span><em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Commit.get_product" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the commit’s product with the specified product type
+#TODO : check what’s return if the product type does not exists
+:param product_type: string
+:return: a CommitProduct</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Commit.get_products_directory">
+<code class="descname">get_products_directory</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Commit.get_products_directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the commit’s products directory
+:return: filepath</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pulse.api.WorkNode">
+<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">WorkNode</code><span class="sig-paren">(</span><em>project</em>, <em>directory</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkNode" title="Permalink to this definition">¶</a></dt>
+<dd><p>abstract class for unpublished data (work or product)</p>
+<dl class="method">
+<dt id="pulse.api.WorkNode.get_inputs">
+<code class="descname">get_inputs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkNode.get_inputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>return a list of products used by this local work or product
+:return: products uri list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.WorkNode.add_input">
+<code class="descname">add_input</code><span class="sig-paren">(</span><em>product</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkNode.add_input" title="Permalink to this definition">¶</a></dt>
+<dd><p># TODO : check if it should be a specific product type here (local or published)
+add a local product to work or product inputs list
+:param product: product object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.WorkNode.remove_input">
+<code class="descname">remove_input</code><span class="sig-paren">(</span><em>local_product</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkNode.remove_input" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove a product from object’s inputs list
+:param local_product: local product object</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pulse.api.WorkProduct">
+<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">WorkProduct</code><span class="sig-paren">(</span><em>work</em>, <em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkProduct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pulse.api.Product" title="pulse.api.Product"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.Product</span></code></a>, <a class="reference internal" href="#pulse.api.WorkNode" title="pulse.api.WorkNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.WorkNode</span></code></a></p>
+<p>class for products which has not been registered to database yet</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pulse.api.Work">
+<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Work</code><span class="sig-paren">(</span><em>resource</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pulse.api.WorkNode" title="pulse.api.WorkNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.WorkNode</span></code></a></p>
+<p>Resource downloaded locally to be modified</p>
+<dl class="method">
+<dt id="pulse.api.Work.get_product">
+<code class="descname">get_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_product" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.list_products">
+<code class="descname">list_products</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.list_products" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.create_product">
+<code class="descname">create_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.create_product" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.trash_product">
+<code class="descname">trash_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.trash_product" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.write">
+<code class="descname">write</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.write" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.read">
+<code class="descname">read</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.read" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.commit">
+<code class="descname">commit</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.commit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.trash">
+<code class="descname">trash</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.trash" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.version_pipe_filepath">
+<code class="descname">version_pipe_filepath</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.version_pipe_filepath" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.get_files_changes">
+<code class="descname">get_files_changes</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_files_changes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Work.get_products_directory">
+<code class="descname">get_products_directory</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_products_directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the work products directory
+:return: filepath</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pulse.api.Resource">
+<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Resource</code><span class="sig-paren">(</span><em>project</em>, <em>entity</em>, <em>resource_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pulse.api.PulseDbObject" title="pulse.api.PulseDbObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.PulseDbObject</span></code></a></p>
+<p>a project’s resource.</p>
+<dl class="method">
+<dt id="pulse.api.Resource.get_products_directory">
+<code class="descname">get_products_directory</code><span class="sig-paren">(</span><em>version_index</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.get_products_directory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Resource.set_last_version">
+<code class="descname">set_last_version</code><span class="sig-paren">(</span><em>version</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.set_last_version" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Resource.user_needs_lock">
+<code class="descname">user_needs_lock</code><span class="sig-paren">(</span><em>user=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.user_needs_lock" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Resource.get_index">
+<code class="descname">get_index</code><span class="sig-paren">(</span><em>version_name</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.get_index" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Resource.get_commit">
+<code class="descname">get_commit</code><span class="sig-paren">(</span><em>version</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.get_commit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Resource.get_work">
+<code class="descname">get_work</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.get_work" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Resource.checkout">
+<code class="descname">checkout</code><span class="sig-paren">(</span><em>index='last'</em>, <em>destination_folder=None</em>, <em>template_resource=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.checkout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Download the resource work files in the user sandbox.
+Download related dependencies if they are not available in products path</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Resource.set_lock">
+<code class="descname">set_lock</code><span class="sig-paren">(</span><em>state</em>, <em>user=None</em>, <em>steal=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.set_lock" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Resource.set_repository">
+<code class="descname">set_repository</code><span class="sig-paren">(</span><em>new_repository</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.set_repository" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -257,18 +492,13 @@ will raise an error if the product’s folder is locked by the filesystem</p>
 <dd><p>Bases: <a class="reference internal" href="#pulse.api.PulseDbObject" title="pulse.api.PulseDbObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.PulseDbObject</span></code></a></p>
 <p>class for project’s configuration</p>
 <dl class="method">
-<dt id="pulse.api.Config.add_repository">
-<code class="descname">add_repository</code><span class="sig-paren">(</span><em>name</em>, <em>adapter</em>, <em>url</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Config.add_repository" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Config.edit_repository">
-<code class="descname">edit_repository</code><span class="sig-paren">(</span><em>repository_name</em>, <em>repository_type</em>, <em>repository_parameters</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Config.edit_repository" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
 <dt id="pulse.api.Config.get_user_products_list_filepath">
 <code class="descname">get_user_products_list_filepath</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Config.get_user_products_list_filepath" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Config.add_repository">
+<code class="descname">add_repository</code><span class="sig-paren">(</span><em>name</em>, <em>adapter</em>, <em>url</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Config.add_repository" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -277,8 +507,49 @@ will raise an error if the product’s folder is locked by the filesystem</p>
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="pulse.api.Config.edit_repository">
+<code class="descname">edit_repository</code><span class="sig-paren">(</span><em>repository_name</em>, <em>repository_type</em>, <em>repository_parameters</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Config.edit_repository" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
 <dt id="pulse.api.Config.save">
 <code class="descname">save</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Config.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pulse.api.Project">
+<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Project</code><span class="sig-paren">(</span><em>connection</em>, <em>project_name</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project" title="Permalink to this definition">¶</a></dt>
+<dd><p>class for a Pulse project</p>
+<dl class="method">
+<dt id="pulse.api.Project.get_product">
+<code class="descname">get_product</code><span class="sig-paren">(</span><em>uri_string</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.get_product" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Project.list_products">
+<code class="descname">list_products</code><span class="sig-paren">(</span><em>uri_pattern</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.list_products" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Project.purge_unused_user_products">
+<code class="descname">purge_unused_user_products</code><span class="sig-paren">(</span><em>unused_days=0</em>, <em>resource_filter=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.purge_unused_user_products" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Project.load_config">
+<code class="descname">load_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.load_config" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Project.get_resource">
+<code class="descname">get_resource</code><span class="sig-paren">(</span><em>entity</em>, <em>resource_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.get_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.api.Project.create_resource">
+<code class="descname">create_resource</code><span class="sig-paren">(</span><em>entity</em>, <em>resource_type</em>, <em>repository='default'</em>, <em>template_resource=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.create_resource" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -299,282 +570,6 @@ will raise an error if the product’s folder is locked by the filesystem</p>
 
 </dd></dl>
 
-<dl class="class">
-<dt id="pulse.api.Product">
-<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Product</code><span class="sig-paren">(</span><em>parent</em>, <em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product" title="Permalink to this definition">¶</a></dt>
-<dd><p>abstract class for all products</p>
-<dl class="method">
-<dt id="pulse.api.Product.add_product_user">
-<code class="descname">add_product_user</code><span class="sig-paren">(</span><em>user_directory</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product.add_product_user" title="Permalink to this definition">¶</a></dt>
-<dd><p>add a local resource or product as product’s user
-:param user_directory: the resource path</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Product.get_product_users">
-<code class="descname">get_product_users</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product.get_product_users" title="Permalink to this definition">¶</a></dt>
-<dd><p>return the list of local resources or product using this product
-:return: resources filepath list</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Product.get_unused_time">
-<code class="descname">get_unused_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product.get_unused_time" title="Permalink to this definition">¶</a></dt>
-<dd><p>return the time since the local product has not been used by any resource or product.
-Mainly used to purge local products from pulse’s cache
-:return: time value</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Product.remove_product_user">
-<code class="descname">remove_product_user</code><span class="sig-paren">(</span><em>user_directory</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Product.remove_product_user" title="Permalink to this definition">¶</a></dt>
-<dd><p>remove the specified local resource or product from the product’s user
-:param user_directory: the resource path</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="pulse.api.Project">
-<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Project</code><span class="sig-paren">(</span><em>connection</em>, <em>project_name</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project" title="Permalink to this definition">¶</a></dt>
-<dd><p>class for a Pulse project</p>
-<dl class="method">
-<dt id="pulse.api.Project.create_resource">
-<code class="descname">create_resource</code><span class="sig-paren">(</span><em>entity</em>, <em>resource_type</em>, <em>repository='default'</em>, <em>template_resource=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.create_resource" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Project.get_product">
-<code class="descname">get_product</code><span class="sig-paren">(</span><em>uri_string</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.get_product" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Project.get_resource">
-<code class="descname">get_resource</code><span class="sig-paren">(</span><em>entity</em>, <em>resource_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.get_resource" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Project.list_products">
-<code class="descname">list_products</code><span class="sig-paren">(</span><em>uri_pattern</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.list_products" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Project.load_config">
-<code class="descname">load_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.load_config" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Project.purge_unused_user_products">
-<code class="descname">purge_unused_user_products</code><span class="sig-paren">(</span><em>unused_days=0</em>, <em>resource_filter=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Project.purge_unused_user_products" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="pulse.api.PulseDbObject">
-<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">PulseDbObject</code><span class="sig-paren">(</span><em>project</em>, <em>uri</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.PulseDbObject" title="Permalink to this definition">¶</a></dt>
-<dd><p>abstract class for all objects which need to save persistent data</p>
-<dl class="method">
-<dt id="pulse.api.PulseDbObject.db_create">
-<code class="descname">db_create</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.PulseDbObject.db_create" title="Permalink to this definition">¶</a></dt>
-<dd><p>initialize the object in database</p>
-<p>use all the attributes lists in ._storage.vars and save them to the DB
-the key is the uri
-raise DbError if the object already exists</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.PulseDbObject.db_read">
-<code class="descname">db_read</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.PulseDbObject.db_read" title="Permalink to this definition">¶</a></dt>
-<dd><p>read all object attributes from database.</p>
-<p>Will pass if the database have an attribute missing on the object
-:return: PulseDbObject
-:rtype: PulseDbObject</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="pulse.api.PulseDbObject.metas">
-<code class="descname">metas</code><em class="property"> = None</em><a class="headerlink" href="#pulse.api.PulseDbObject.metas" title="Permalink to this definition">¶</a></dt>
-<dd><p>Store custom attributes, passed to repository - dict</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="pulse.api.PulseDbObject.project">
-<code class="descname">project</code><em class="property"> = None</em><a class="headerlink" href="#pulse.api.PulseDbObject.project" title="Permalink to this definition">¶</a></dt>
-<dd><p>the project this object rely to - Project</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="pulse.api.PulseDbObject.uri">
-<code class="descname">uri</code><em class="property"> = None</em><a class="headerlink" href="#pulse.api.PulseDbObject.uri" title="Permalink to this definition">¶</a></dt>
-<dd><p>universal resource identifier - string</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="pulse.api.Resource">
-<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Resource</code><span class="sig-paren">(</span><em>project</em>, <em>entity</em>, <em>resource_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#pulse.api.PulseDbObject" title="pulse.api.PulseDbObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.PulseDbObject</span></code></a></p>
-<p>a project’s resource.</p>
-<dl class="method">
-<dt id="pulse.api.Resource.checkout">
-<code class="descname">checkout</code><span class="sig-paren">(</span><em>index='last'</em>, <em>destination_folder=None</em>, <em>template_resource=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.checkout" title="Permalink to this definition">¶</a></dt>
-<dd><p>Download the resource work files in the user sandbox.
-Download related dependencies if they are not available in products path</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Resource.get_commit">
-<code class="descname">get_commit</code><span class="sig-paren">(</span><em>version</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.get_commit" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Resource.get_index">
-<code class="descname">get_index</code><span class="sig-paren">(</span><em>version_name</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.get_index" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Resource.get_products_directory">
-<code class="descname">get_products_directory</code><span class="sig-paren">(</span><em>version_index</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.get_products_directory" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Resource.get_work">
-<code class="descname">get_work</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.get_work" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Resource.set_last_version">
-<code class="descname">set_last_version</code><span class="sig-paren">(</span><em>version</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.set_last_version" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Resource.set_lock">
-<code class="descname">set_lock</code><span class="sig-paren">(</span><em>state</em>, <em>user=None</em>, <em>steal=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.set_lock" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Resource.set_repository">
-<code class="descname">set_repository</code><span class="sig-paren">(</span><em>new_repository</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.set_repository" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Resource.user_needs_lock">
-<code class="descname">user_needs_lock</code><span class="sig-paren">(</span><em>user=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Resource.user_needs_lock" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="pulse.api.Work">
-<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">Work</code><span class="sig-paren">(</span><em>resource</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#pulse.api.WorkNode" title="pulse.api.WorkNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.WorkNode</span></code></a></p>
-<p>Resource downloaded locally to be modified</p>
-<dl class="method">
-<dt id="pulse.api.Work.commit">
-<code class="descname">commit</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.commit" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.create_product">
-<code class="descname">create_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.create_product" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.get_files_changes">
-<code class="descname">get_files_changes</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_files_changes" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.get_product">
-<code class="descname">get_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_product" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.get_products_directory">
-<code class="descname">get_products_directory</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.get_products_directory" title="Permalink to this definition">¶</a></dt>
-<dd><p>return the work products directory
-:return: filepath</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.list_products">
-<code class="descname">list_products</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.list_products" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.read">
-<code class="descname">read</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.read" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.trash">
-<code class="descname">trash</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.trash" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.trash_product">
-<code class="descname">trash_product</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.trash_product" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.version_pipe_filepath">
-<code class="descname">version_pipe_filepath</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.version_pipe_filepath" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.Work.write">
-<code class="descname">write</code><span class="sig-paren">(</span><em>**kw</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.Work.write" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="pulse.api.WorkNode">
-<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">WorkNode</code><span class="sig-paren">(</span><em>project</em>, <em>directory</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkNode" title="Permalink to this definition">¶</a></dt>
-<dd><p>abstract class for unpublished data (work or product)</p>
-<dl class="method">
-<dt id="pulse.api.WorkNode.add_input">
-<code class="descname">add_input</code><span class="sig-paren">(</span><em>product</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkNode.add_input" title="Permalink to this definition">¶</a></dt>
-<dd><p># TODO : check if it should be a specific product type here (local or published)
-add a local product to work or product inputs list
-:param product: product object</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.WorkNode.get_inputs">
-<code class="descname">get_inputs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkNode.get_inputs" title="Permalink to this definition">¶</a></dt>
-<dd><p>return a list of products used by this local work or product
-:return: products uri list</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.api.WorkNode.remove_input">
-<code class="descname">remove_input</code><span class="sig-paren">(</span><em>local_product</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkNode.remove_input" title="Permalink to this definition">¶</a></dt>
-<dd><p>remove a product from object’s inputs list
-:param local_product: local product object</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="pulse.api.WorkProduct">
-<em class="property">class </em><code class="descclassname">pulse.api.</code><code class="descname">WorkProduct</code><span class="sig-paren">(</span><em>work</em>, <em>product_type</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.WorkProduct" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#pulse.api.Product" title="pulse.api.Product"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.Product</span></code></a>, <a class="reference internal" href="#pulse.api.WorkNode" title="pulse.api.WorkNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.api.WorkNode</span></code></a></p>
-<p>class for products which has not been registered to database yet</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="pulse.api.check_is_on_disk">
-<code class="descclassname">pulse.api.</code><code class="descname">check_is_on_disk</code><span class="sig-paren">(</span><em>f</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.check_is_on_disk" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pulse.api.dict_to_uri">
-<code class="descclassname">pulse.api.</code><code class="descname">dict_to_uri</code><span class="sig-paren">(</span><em>uri_dict</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.dict_to_uri" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="function">
 <dt id="pulse.api.import_adapter">
 <code class="descclassname">pulse.api.</code><code class="descname">import_adapter</code><span class="sig-paren">(</span><em>adapter_type</em>, <em>adapter_name</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.import_adapter" title="Permalink to this definition">¶</a></dt>
@@ -587,6 +582,11 @@ add a local product to work or product inputs list
 :param uri_string:
 :return uri dict:</p>
 </dd></dl>
+
+<dl class="function">
+<dt id="pulse.api.dict_to_uri">
+<code class="descclassname">pulse.api.</code><code class="descname">dict_to_uri</code><span class="sig-paren">(</span><em>uri_dict</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.api.dict_to_uri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </div>
 <div class="section" id="module-pulse.file_utils">
@@ -602,6 +602,26 @@ add a local product to work or product inputs list
 <dd></dd></dl>
 
 <dl class="function">
+<dt id="pulse.file_utils.test_path_write_access">
+<code class="descclassname">pulse.file_utils.</code><code class="descname">test_path_write_access</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.test_path_write_access" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pulse.file_utils.read_data">
+<code class="descclassname">pulse.file_utils.</code><code class="descname">read_data</code><span class="sig-paren">(</span><em>filepath</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.read_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pulse.file_utils.write_data">
+<code class="descclassname">pulse.file_utils.</code><code class="descname">write_data</code><span class="sig-paren">(</span><em>filepath</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.write_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pulse.file_utils.json_list_remove">
+<code class="descclassname">pulse.file_utils.</code><code class="descname">json_list_remove</code><span class="sig-paren">(</span><em>json_path</em>, <em>item</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.json_list_remove" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
 <dt id="pulse.file_utils.json_list_append">
 <code class="descclassname">pulse.file_utils.</code><code class="descname">json_list_append</code><span class="sig-paren">(</span><em>json_path</em>, <em>item</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.json_list_append" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -612,28 +632,8 @@ add a local product to work or product inputs list
 <dd></dd></dl>
 
 <dl class="function">
-<dt id="pulse.file_utils.json_list_remove">
-<code class="descclassname">pulse.file_utils.</code><code class="descname">json_list_remove</code><span class="sig-paren">(</span><em>json_path</em>, <em>item</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.json_list_remove" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pulse.file_utils.read_data">
-<code class="descclassname">pulse.file_utils.</code><code class="descname">read_data</code><span class="sig-paren">(</span><em>filepath</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.read_data" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
 <dt id="pulse.file_utils.remove_empty_parents_directory">
 <code class="descclassname">pulse.file_utils.</code><code class="descname">remove_empty_parents_directory</code><span class="sig-paren">(</span><em>directory</em>, <em>root_dirs</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.remove_empty_parents_directory" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pulse.file_utils.test_path_write_access">
-<code class="descclassname">pulse.file_utils.</code><code class="descname">test_path_write_access</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.test_path_write_access" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pulse.file_utils.write_data">
-<code class="descclassname">pulse.file_utils.</code><code class="descname">write_data</code><span class="sig-paren">(</span><em>filepath</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.file_utils.write_data" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </div>

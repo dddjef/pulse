@@ -162,55 +162,10 @@
 </div>
 <div class="section" id="module-pulse.repository_adapters.ftp_repo">
 <span id="pulse-repository-adapters-ftp-repo-module"></span><h2>pulse.repository_adapters.ftp_repo module<a class="headerlink" href="#module-pulse.repository_adapters.ftp_repo" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="pulse.repository_adapters.ftp_repo.Repository">
-<em class="property">class </em><code class="descclassname">pulse.repository_adapters.ftp_repo.</code><code class="descname">Repository</code><span class="sig-paren">(</span><em>url</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#pulse.repository_adapters.interface_class.PulseRepository" title="pulse.repository_adapters.interface_class.PulseRepository"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.repository_adapters.interface_class.PulseRepository</span></code></a></p>
-<dl class="method">
-<dt id="pulse.repository_adapters.ftp_repo.Repository.download_product">
-<code class="descname">download_product</code><span class="sig-paren">(</span><em>product</em>, <em>product_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.download_product" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.repository_adapters.ftp_repo.Repository.download_resource">
-<code class="descname">download_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>destination</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.download_resource" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.repository_adapters.ftp_repo.Repository.download_work">
-<code class="descname">download_work</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.download_work" title="Permalink to this definition">¶</a></dt>
-<dd><p>build_work_user_filepath</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pulse.repository_adapters.ftp_repo.Repository.remove_resource">
-<code class="descname">remove_resource</code><span class="sig-paren">(</span><em>resource</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.remove_resource" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.repository_adapters.ftp_repo.Repository.upload_resource">
-<code class="descname">upload_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>source</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.upload_resource" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.repository_adapters.ftp_repo.Repository.upload_resource_commit">
-<code class="descname">upload_resource_commit</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em>, <em>work_files</em>, <em>products_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.upload_resource_commit" title="Permalink to this definition">¶</a></dt>
-<dd><p>create a new resource default folders and file from a resource template</p>
-</dd></dl>
-
-</dd></dl>
-
 <dl class="function">
 <dt id="pulse.repository_adapters.ftp_repo.ftp_copytree">
 <code class="descclassname">pulse.repository_adapters.ftp_repo.</code><code class="descname">ftp_copytree</code><span class="sig-paren">(</span><em>source</em>, <em>ftp_connection</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.ftp_copytree" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<dl class="function">
-<dt id="pulse.repository_adapters.ftp_repo.ftp_download">
-<code class="descclassname">pulse.repository_adapters.ftp_repo.</code><code class="descname">ftp_download</code><span class="sig-paren">(</span><em>source</em>, <em>destination</em>, <em>ftp_connection</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.ftp_download" title="Permalink to this definition">¶</a></dt>
-<dd><p>path &amp; destination are str of the form “/dir/folder/something/”
-#path should be the abs path to the root FOLDER of the file tree to download</p>
-</dd></dl>
 
 <dl class="function">
 <dt id="pulse.repository_adapters.ftp_repo.ftp_makedirs">
@@ -224,44 +179,54 @@
 #path should be the abs path to the root FOLDER of the file tree to download</p>
 </dd></dl>
 
-</div>
-<div class="section" id="module-pulse.repository_adapters.interface_class">
-<span id="pulse-repository-adapters-interface-class-module"></span><h2>pulse.repository_adapters.interface_class module<a class="headerlink" href="#module-pulse.repository_adapters.interface_class" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pulse.repository_adapters.ftp_repo.ftp_download">
+<code class="descclassname">pulse.repository_adapters.ftp_repo.</code><code class="descname">ftp_download</code><span class="sig-paren">(</span><em>source</em>, <em>destination</em>, <em>ftp_connection</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.ftp_download" title="Permalink to this definition">¶</a></dt>
+<dd><p>path &amp; destination are str of the form “/dir/folder/something/”
+#path should be the abs path to the root FOLDER of the file tree to download</p>
+</dd></dl>
+
 <dl class="class">
-<dt id="pulse.repository_adapters.interface_class.PulseRepository">
-<em class="property">class </em><code class="descclassname">pulse.repository_adapters.interface_class.</code><code class="descname">PulseRepository</code><span class="sig-paren">(</span><em>url</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="method">
-<dt id="pulse.repository_adapters.interface_class.PulseRepository.download_product">
-<code class="descname">download_product</code><span class="sig-paren">(</span><em>product</em>, <em>product_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.download_product" title="Permalink to this definition">¶</a></dt>
+<dt id="pulse.repository_adapters.ftp_repo.Repository">
+<em class="property">class </em><code class="descclassname">pulse.repository_adapters.ftp_repo.</code><code class="descname">Repository</code><span class="sig-paren">(</span><em>url</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pulse.repository_adapters.interface_class.PulseRepository" title="pulse.repository_adapters.interface_class.PulseRepository"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.repository_adapters.interface_class.PulseRepository</span></code></a></p>
+<dl class="method">
+<dt id="pulse.repository_adapters.ftp_repo.Repository.upload_resource_commit">
+<code class="descname">upload_resource_commit</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em>, <em>work_files</em>, <em>products_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.upload_resource_commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>create a new resource default folders and file from a resource template</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.repository_adapters.ftp_repo.Repository.download_work">
+<code class="descname">download_work</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.download_work" title="Permalink to this definition">¶</a></dt>
+<dd><p>build_work_user_filepath</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.repository_adapters.ftp_repo.Repository.download_product">
+<code class="descname">download_product</code><span class="sig-paren">(</span><em>product</em>, <em>product_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.download_product" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="pulse.repository_adapters.interface_class.PulseRepository.download_resource">
-<code class="descname">download_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>destination</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.download_resource" title="Permalink to this definition">¶</a></dt>
+<dt id="pulse.repository_adapters.ftp_repo.Repository.download_resource">
+<code class="descname">download_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>destination</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.download_resource" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="pulse.repository_adapters.interface_class.PulseRepository.download_work">
-<code class="descname">download_work</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.download_work" title="Permalink to this definition">¶</a></dt>
+<dt id="pulse.repository_adapters.ftp_repo.Repository.upload_resource">
+<code class="descname">upload_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>source</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.upload_resource" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="pulse.repository_adapters.interface_class.PulseRepository.remove_resource">
-<code class="descname">remove_resource</code><span class="sig-paren">(</span><em>resource</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.remove_resource" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.repository_adapters.interface_class.PulseRepository.upload_resource">
-<code class="descname">upload_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>source</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.upload_resource" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.repository_adapters.interface_class.PulseRepository.upload_resource_commit">
-<code class="descname">upload_resource_commit</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em>, <em>work_files</em>, <em>products_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.upload_resource_commit" title="Permalink to this definition">¶</a></dt>
+<dt id="pulse.repository_adapters.ftp_repo.Repository.remove_resource">
+<code class="descname">remove_resource</code><span class="sig-paren">(</span><em>resource</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.ftp_repo.Repository.remove_resource" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
+</div>
+<div class="section" id="module-pulse.repository_adapters.interface_class">
+<span id="pulse-repository-adapters-interface-class-module"></span><h2>pulse.repository_adapters.interface_class module<a class="headerlink" href="#module-pulse.repository_adapters.interface_class" title="Permalink to this headline">¶</a></h2>
 <dl class="exception">
 <dt id="pulse.repository_adapters.interface_class.PulseRepositoryError">
 <em class="property">exception </em><code class="descclassname">pulse.repository_adapters.interface_class.</code><code class="descname">PulseRepositoryError</code><span class="sig-paren">(</span><em>reason</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepositoryError" title="Permalink to this definition">¶</a></dt>
@@ -273,13 +238,66 @@
 
 </dd></dl>
 
+<dl class="class">
+<dt id="pulse.repository_adapters.interface_class.PulseRepository">
+<em class="property">class </em><code class="descclassname">pulse.repository_adapters.interface_class.</code><code class="descname">PulseRepository</code><span class="sig-paren">(</span><em>url</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="pulse.repository_adapters.interface_class.PulseRepository.upload_resource_commit">
+<code class="descname">upload_resource_commit</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em>, <em>work_files</em>, <em>products_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.upload_resource_commit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.repository_adapters.interface_class.PulseRepository.download_work">
+<code class="descname">download_work</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.download_work" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.repository_adapters.interface_class.PulseRepository.download_product">
+<code class="descname">download_product</code><span class="sig-paren">(</span><em>product</em>, <em>product_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.download_product" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.repository_adapters.interface_class.PulseRepository.download_resource">
+<code class="descname">download_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>destination</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.download_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.repository_adapters.interface_class.PulseRepository.upload_resource">
+<code class="descname">upload_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>source</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.upload_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pulse.repository_adapters.interface_class.PulseRepository.remove_resource">
+<code class="descname">remove_resource</code><span class="sig-paren">(</span><em>resource</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.interface_class.PulseRepository.remove_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="module-pulse.repository_adapters.shell_repo">
 <span id="pulse-repository-adapters-shell-repo-module"></span><h2>pulse.repository_adapters.shell_repo module<a class="headerlink" href="#module-pulse.repository_adapters.shell_repo" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pulse.repository_adapters.shell_repo.copy_folder_tree">
+<code class="descclassname">pulse.repository_adapters.shell_repo.</code><code class="descname">copy_folder_tree</code><span class="sig-paren">(</span><em>source_folder</em>, <em>destination_folder</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.copy_folder_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>copy a folder tree, and creates subsequents destination folders if needed</p>
+</dd></dl>
+
 <dl class="class">
 <dt id="pulse.repository_adapters.shell_repo.Repository">
 <em class="property">class </em><code class="descclassname">pulse.repository_adapters.shell_repo.</code><code class="descname">Repository</code><span class="sig-paren">(</span><em>url</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#pulse.repository_adapters.interface_class.PulseRepository" title="pulse.repository_adapters.interface_class.PulseRepository"><code class="xref py py-class docutils literal notranslate"><span class="pre">pulse.repository_adapters.interface_class.PulseRepository</span></code></a></p>
+<dl class="method">
+<dt id="pulse.repository_adapters.shell_repo.Repository.upload_resource_commit">
+<code class="descname">upload_resource_commit</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em>, <em>work_files</em>, <em>products_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository.upload_resource_commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>create a new resource default folders and file from a resource template</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pulse.repository_adapters.shell_repo.Repository.download_work">
+<code class="descname">download_work</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository.download_work" title="Permalink to this definition">¶</a></dt>
+<dd><p>build_work_user_filepath</p>
+</dd></dl>
+
 <dl class="method">
 <dt id="pulse.repository_adapters.shell_repo.Repository.download_product">
 <code class="descname">download_product</code><span class="sig-paren">(</span><em>product</em>, <em>product_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository.download_product" title="Permalink to this definition">¶</a></dt>
@@ -292,33 +310,15 @@
 <dd></dd></dl>
 
 <dl class="method">
-<dt id="pulse.repository_adapters.shell_repo.Repository.download_work">
-<code class="descname">download_work</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository.download_work" title="Permalink to this definition">¶</a></dt>
-<dd><p>build_work_user_filepath</p>
-</dd></dl>
+<dt id="pulse.repository_adapters.shell_repo.Repository.upload_resource">
+<code class="descname">upload_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>source</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository.upload_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="method">
 <dt id="pulse.repository_adapters.shell_repo.Repository.remove_resource">
 <code class="descname">remove_resource</code><span class="sig-paren">(</span><em>resource</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository.remove_resource" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="method">
-<dt id="pulse.repository_adapters.shell_repo.Repository.upload_resource">
-<code class="descname">upload_resource</code><span class="sig-paren">(</span><em>resource</em>, <em>source</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository.upload_resource" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="pulse.repository_adapters.shell_repo.Repository.upload_resource_commit">
-<code class="descname">upload_resource_commit</code><span class="sig-paren">(</span><em>commit</em>, <em>work_folder</em>, <em>work_files</em>, <em>products_folder=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.Repository.upload_resource_commit" title="Permalink to this definition">¶</a></dt>
-<dd><p>create a new resource default folders and file from a resource template</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="function">
-<dt id="pulse.repository_adapters.shell_repo.copy_folder_tree">
-<code class="descclassname">pulse.repository_adapters.shell_repo.</code><code class="descname">copy_folder_tree</code><span class="sig-paren">(</span><em>source_folder</em>, <em>destination_folder</em><span class="sig-paren">)</span><a class="headerlink" href="#pulse.repository_adapters.shell_repo.copy_folder_tree" title="Permalink to this definition">¶</a></dt>
-<dd><p>copy a folder tree, and creates subsequents destination folders if needed</p>
 </dd></dl>
 
 </div>

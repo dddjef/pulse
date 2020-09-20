@@ -26,7 +26,7 @@ DEFAULT_VERSION_PREFIX = "V"
 # TODO : don't support adding wip product to work (remove unneeded check in the trash function)
 
 
-def check_is_on_disk(f):
+def _check_is_on_disk(f):
     def deco(*args, **kw):
         if not os.path.exists(args[0].directory):
             raise PulseMissingNode("Missing work space : " + args[0].directory)
@@ -314,7 +314,7 @@ class Work(WorkNode):
                 work_files.append(os.path.join(self.directory, f))
         return work_files
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def get_product(self, product_type):
         """
         return the resource's work product based on the given type
@@ -323,7 +323,7 @@ class Work(WorkNode):
         """
         return WorkProduct(self, product_type)
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def list_products(self):
         """
         return the work's product's list
@@ -331,7 +331,7 @@ class Work(WorkNode):
         """
         return os.listdir(self.get_products_directory())
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def create_product(self, product_type):
         """
         create a new product for the work
@@ -344,7 +344,7 @@ class Work(WorkNode):
         os.makedirs(work_product.directory)
         return work_product
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def trash_product(self, product_type):
         """
         move the specified product to the trash directory
@@ -372,7 +372,7 @@ class Work(WorkNode):
         # move folder
         shutil.move(product.directory, os.path.join(trash_directory, "PRODUCTS", product_type))
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def write(self):
         """
         write the work object to user workspace
@@ -393,7 +393,7 @@ class Work(WorkNode):
         # write data to json
         fu.write_data(self.data_file, {"version": self.version})
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def read(self):
         """
         read the work data from user work space
@@ -405,7 +405,7 @@ class Work(WorkNode):
         self.version = work_data["version"]
         return self
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def commit(self, comment="", trash_unused_products=False):
         """
         commit the work to the repository, and publish it to the database
@@ -472,14 +472,14 @@ class Work(WorkNode):
 
         # increment the work and the products files
         self.version += 1
-        self._write()
+        self.write()
 
         # restore the resource lock state
         self.resource.set_lock(lock_state, lock_user, steal=True)
 
         return commit
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def trash(self, no_backup=False):
         """
         remove the work from user workspace
@@ -527,7 +527,7 @@ class Work(WorkNode):
 
         return True
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def version_pipe_filepath(self, index):
         """
         get the pipe file path
@@ -539,7 +539,7 @@ class Work(WorkNode):
             self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
         )
 
-    @check_is_on_disk
+    @_check_is_on_disk
     def get_files_changes(self):
         """
         return the file's changes since last commit. Based on the files modification date time
