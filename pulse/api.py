@@ -392,6 +392,7 @@ class Work(WorkNode):
     def read(self):
         """
         read the work data from user work space
+        if the work doesn't exists in user work space, raise a pulse error
         :return: the updated work
         """
         self._check_exists_in_user_workspace()
@@ -571,7 +572,7 @@ class Work(WorkNode):
 
 class Resource(PulseDbObject):
     """
-        a project's resource.
+        a project's resource. A resource is meant to generate products, and use products from other resources
     """
     def __init__(self, project, entity, resource_type):
         self.lock_state = False
@@ -592,6 +593,11 @@ class Resource(PulseDbObject):
             'lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
     def get_products_directory(self, version_index):
+        """
+        return products filepath of the given resource version
+        :param version_index: integer
+        :return: string
+        """
         version = str(version_index).zfill(self.project.cfg.version_padding)
         path = os.path.join(
             self.project.cfg.product_user_root,
@@ -603,29 +609,56 @@ class Resource(PulseDbObject):
         return path
 
     def set_last_version(self, version):
+        """
+        set resource last version index
+        :param version: integer
+        """
         self.last_version = version
         self._db_update(["last_version"])
 
     def user_needs_lock(self, user=None):
+        """
+        return if the given user needs to get the resource lock to modify it
+        if no user is specified, the current connexion user will be used
+        :param user: string
+        :return: boolean
+        """
         if not user:
             user = self.project.cnx.user_name
         return self.lock_state and self.lock_user != user
 
     def get_index(self, version_name):
+        """
+        given an index or a tag, return the corresponding version number.
+        accepted tag : "last"
+        :param version_name: string or integer
+        :return: integer
+        """
         if version_name == "last":
             return self.last_version
+        # TODO : should raise an error if tag is unknown
         return int(version_name)
 
     def get_commit(self, version):
+        """
+        get the commit object from the given version number
+        :param version: integer
+        :return: Commit
+        """
         return Commit(self, self.get_index(version)).db_read()
 
     def get_work(self):
+        """
+        get the Work object associated to the resource.
+        IF there's no current work in user work space, raise a pulse error
+        :return:
+        """
         return Work(self).read()
 
     def checkout(self, index="last", destination_folder=None, template_resource=None):
         """
-        Download the resource work files in the user sandbox.
-        Download related dependencies if they are not available in products path
+        Download the resource work files in the user work space.
+        Download related dependencies if they are not available in user products space
         """
         if not destination_folder:
             destination_folder = self.sandbox_path
@@ -662,6 +695,14 @@ class Resource(PulseDbObject):
         return work
 
     def set_lock(self, state, user=None, steal=False):
+        """
+        change the lock state, and the lock user.
+        raise a pulse error if the resource is already locked by someonelse, except the steal argement is True.
+
+        :param state: boolean
+        :param user: string
+        :param steal: boolean
+        """
         # abort if the resource is locked by someone else and the user doesn't want to steal the lock
         if not steal:
             self.db_read()
@@ -676,6 +717,10 @@ class Resource(PulseDbObject):
         self._db_update(['lock_user', 'lock_state'])
 
     def set_repository(self, new_repository):
+        """
+        move the resource to another repository.
+        :param new_repository: Repository
+        """
         if self.repository == new_repository:
             raise PulseError("the destination repository have to be different as current one :" + new_repository)
 
@@ -700,7 +745,7 @@ class Resource(PulseDbObject):
 
 class Config(PulseDbObject):
     """
-        class for project's configuration
+        project's configuration stored in database
     """
     def __init__(self, project):
         self.work_user_root = None
@@ -719,9 +764,19 @@ class Config(PulseDbObject):
         ]
 
     def get_user_products_list_filepath(self):
+        """
+        get the user products list filepath
+        :return: string
+        """
         return os.path.join(self.product_user_root, "products_list.pipe")
 
     def add_repository(self, name, adapter, url):
+        """
+        add a new repository to the project.
+        :param name: the new repository name
+        :param adapter: must be an existing module from repository adapters.
+        :param url: the repository address passed to the module
+        """
         if name in self.repositories:
             raise PulseError("Repository already exists : " + name)
         self.repositories[name] = {
@@ -732,14 +787,27 @@ class Config(PulseDbObject):
         self.project.load_config()
 
     def remove_repository(self, repository_name):
+        """
+        remove the given repository from the project
+        :param repository_name: the repository name to remove
+        """
         del self.repositories[repository_name]
         self._db_update(["repositories"])
         self.project.load_config()
 
     # TODO : Should write a test for edit and remove
     def edit_repository(self, repository_name, repository_type, repository_parameters):
+        """
+        edit the repository property
+        raise a PulseErrot if the repository is not found
+        :param repository_name: name of the edited repository
+        :param repository_type:
+        :param repository_parameters:
+        :return:
+        """
         if repository_name not in self.repositories:
             raise PulseError("Repository does not exists : " + repository_name)
+        # TODO ! the dict key below seems depracated
         self.repositories[repository_name] = {
             "type": repository_type,
             "parameters": repository_parameters
@@ -748,12 +816,15 @@ class Config(PulseDbObject):
         self.project.load_config()
 
     def save(self):
+        """
+        save the project configuration to database
+        """
         self._db_update(self._storage_vars)
 
 
 class Project:
     """
-        class for a Pulse project
+        a Pulse project, containing resources and a configuration
     """
     def __init__(self, connection, project_name):
         self.cnx = connection
@@ -764,6 +835,12 @@ class Project:
     # TODO : get product should return last product of no version specified
     # TODO : get product should return all resource products if no product specified
     def get_product(self, uri_string):
+        """
+        return the product corresponding of the given uri
+        raise a PuleSrrorEif the uri is not found in the project
+        :param uri_string: a pulse product uri
+        :return: Product
+        """
         uri_dict = uri_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         resource.db_read()
@@ -779,9 +856,20 @@ class Project:
         return product_parent.get_product(uri_dict["product_type"])
 
     def list_products(self, uri_pattern):
+        """
+        return a products list matching the uri pattern.
+        The pattern should be in the glob search type
+        :param uri_pattern: string
+        :return: a Products list
+        """
         return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
 
     def purge_unused_user_products(self, unused_days=0, resource_filter=None):
+        """
+        remove unused products from the user product space, based on a unused time
+        :param unused_days: for how many days this products have not been used by the user
+        :param resource_filter: affect only products with the uri starting by the given string
+        """
         if not os.path.exists(self.cfg.get_user_products_list_filepath()):
             return
         for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
@@ -795,15 +883,32 @@ class Project:
                 product.remove_from_user_products(recursive_clean=True)
 
     def load_config(self):
+        """
+        load the project configuration from database
+        """
         self.cfg.db_read()
         for repo_name in self.cfg.repositories:
             repo = self.cfg.repositories[repo_name]
             self.repositories[repo_name] = import_adapter("repository", repo['adapter']).Repository(repo['url'])
 
     def get_resource(self, entity, resource_type):
+        """
+        return a project resource based on its entity name and its type
+        :param entity:
+        :param resource_type:
+        :return:
+        """
         return Resource(self, entity, resource_type).db_read()
 
     def create_resource(self, entity, resource_type, repository='default', template_resource=None):
+        """
+        create a new project's resource
+        :param entity: entity of this new resource. Entity is like a namespace
+        :param resource_type:
+        :param repository: a pulse Repository
+        :param template_resource: if given the resource content will be initialized with the given resource
+        :return: the created resource
+        """
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
         resource.db_create()
@@ -838,7 +943,7 @@ class Project:
 
 class Connection:
     """
-        class for a connection to a Pulse database
+        connection instance to a Pulse database
     """
     def __init__(self, url, database_adapter=None):
         if not database_adapter:
@@ -855,6 +960,17 @@ class Connection:
                        version_prefix=DEFAULT_VERSION_PREFIX,
                        repository_adapter="shell_repo",
                        ):
+        """
+        create a new project in the connexion database
+        :param project_name:
+        :param work_user_root: user work space path
+        :param repository_url: default repository url
+        :param product_user_root: product work space path
+        :param version_padding: optional, set ehe number of digits used to number version. 3 by default
+        :param version_prefix: optional, set the prefix used before version number. "V" by default
+        :param repository_adapter: default repository adapter (should be an existng module in repository_adapters)
+        :return: the new pulse Project
+        """
         # TODO : test admin rights in db and repo before registering anything else
         project = Project(self, project_name)
         if not product_user_root:
@@ -870,12 +986,23 @@ class Connection:
         return project
 
     def get_project(self, project_name):
+        """
+        return a pulse project from the database
+        :param project_name: the pulse project's name
+        :return: Project
+        """
         project = Project(self, project_name)
         project.load_config()
         return project
 
 
 def import_adapter(adapter_type, adapter_name):
+    """
+    dynamically import a module adapter from plugins directory
+    :param adapter_type: should be "database" or "repository"
+    :param adapter_name:
+    :return: the adapater module
+    """
     pulse_filepath = os.path.dirname(os.path.realpath(__file__))
     return imp.load_source(adapter_type, os.path.join(pulse_filepath, adapter_type + "_adapters", adapter_name + ".py"))
 
@@ -903,6 +1030,11 @@ def uri_to_dict(uri_string):
 
 
 def dict_to_uri(uri_dict):
+    """
+    transform a dictionary to an uri.
+    :param uri_dict: dictionary with minimum keys : "entity" and "resource_type"
+    :return: uri string
+    """
     uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
     if 'product_type' in uri_dict:
         uri += "-" + uri_dict['product_type']
