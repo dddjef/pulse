@@ -719,6 +719,7 @@ class Resource(PulseDbObject):
     def set_repository(self, new_repository):
         """
         move the resource to another repository.
+
         :param new_repository: Repository
         """
         if self.repository == new_repository:
@@ -766,6 +767,7 @@ class Config(PulseDbObject):
     def get_user_products_list_filepath(self):
         """
         get the user products list filepath
+
         :return: string
         """
         return os.path.join(self.product_user_root, "products_list.pipe")
@@ -773,6 +775,7 @@ class Config(PulseDbObject):
     def add_repository(self, name, adapter, url):
         """
         add a new repository to the project.
+
         :param name: the new repository name
         :param adapter: must be an existing module from repository adapters.
         :param url: the repository address passed to the module
@@ -789,6 +792,7 @@ class Config(PulseDbObject):
     def remove_repository(self, repository_name):
         """
         remove the given repository from the project
+
         :param repository_name: the repository name to remove
         """
         del self.repositories[repository_name]
@@ -800,6 +804,7 @@ class Config(PulseDbObject):
         """
         edit the repository property
         raise a PulseErrot if the repository is not found
+
         :param repository_name: name of the edited repository
         :param repository_type:
         :param repository_parameters:
@@ -838,6 +843,7 @@ class Project:
         """
         return the product corresponding of the given uri
         raise a PuleSrrorEif the uri is not found in the project
+
         :param uri_string: a pulse product uri
         :return: Product
         """
