@@ -18,6 +18,8 @@ def reset_files():
                 filepath = os.path.join(path, name)
                 if filepath.endswith(".pipe"):
                     os.chmod(filepath, 0o777)
+        if not os.path.exists(directory):
+            continue
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
             try:
