@@ -13,24 +13,26 @@ Why would you need Pulse?
 
 How does this api look likes?
 
->>> prj = pulse.api.Connection({"host": "127.0.0.1", "user":"John", "password":"Snow"}).get_project("GOT")
 # connect to a pulse database and get a project from it
+>>> prj = pulse.api.Connection({"host": "127.0.0.1", "user":"John", "password":"Snow"}).get_project("GOT")
 
->>> shot_anim = prj.create_resource("shot", "animation")
-# create a new resource, a shot animation
+# create a new resource in this project, animation of shot 99
+>>> shot_anim = prj.create_resource("shot_99", "animation")
 
+# check out this resource in the user work space
 >>> shot_anim_work = shot_anim.checkout()
-# check out the resource in the user work space
 
->>> shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last").get_product("proxy_rig"))
 # add the last Joe's proxy rig to this shot (download it to user space if needed)
+>>> shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last").get_product("proxy_rig"))
 
+# Create a product folder to receive an alembic export
 >>> shot_anim_work.create_product("alembic")
-# create a product folder to receive an alembic export
 
->>> shot_anim_work.commit()
 # commit the new resource version and its related products
+>>> shot_anim_work.commit()
 
+Pulse is just an api, it's up to you to automatize and configure it to your needs. You will find a example CLI
+provided with this project
 
 
 Version Control System
