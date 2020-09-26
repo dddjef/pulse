@@ -15,11 +15,10 @@ test_project_name = "testProj"
 # pip install mysql-connector-python
 
 # you have to set this a mysql database first, pulse user needs rights to create and drop database
-# mysql://<username>:<password>@<host>:<port>/<db_name>
-db_host = "sql213.epizy.com"
+db_host = "192.168.1.2"
 db_port = "3306"
-db_user = "epiz_26047074"
-db_password = "v9gcp1bk"
+db_user = "pulseTest"
+db_password = "8JfHRNGuvL5P"
 
 # you have to set this to a ftp server. pulseTest should be able to write to the ftp_root
 ftp_host = "192.168.1.2"
