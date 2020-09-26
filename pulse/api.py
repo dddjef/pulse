@@ -43,6 +43,7 @@ class PulseDbObject:
     def _db_update(self, attribute_list):
         """
             save selected attributes value to database
+
             :param: attribute_list: attributes name which will be saved to database
             :type: attribute_list: list
         """
@@ -54,6 +55,7 @@ class PulseDbObject:
             read all object attributes from database.
 
             Will pass if the database have an attribute missing on the object
+
             :return: PulseDbObject
             :rtype: PulseDbObject
         """
@@ -95,6 +97,7 @@ class Product:
     def add_product_user(self, user_directory):
         """
         add a local resource or product as product's user
+
         :param user_directory: the resource path
         """
         fu.json_list_append(self.product_users_file, user_directory)
@@ -102,6 +105,7 @@ class Product:
     def remove_product_user(self, user_directory):
         """
         remove the specified local resource or product from the product's user
+
         :param user_directory: the resource path
         """
         fu.json_list_remove(self.product_users_file, user_directory)
@@ -109,6 +113,7 @@ class Product:
     def get_product_users(self):
         """
         return the list of local resources or product using this product
+
         :return: resources filepath list
         """
         return fu.json_list_get(self.product_users_file)
@@ -117,6 +122,7 @@ class Product:
         """
         return the time since the local product has not been used by any resource or product.
         Mainly used to purge local products from pulse's cache
+
         :return: time value
         """
         if not os.path.exists(self.directory):
@@ -143,6 +149,7 @@ class CommitProduct(PulseDbObject, Product):
     def download(self):
         """
         download the product to local pulse cache
+
         :return: the product's local filepath
         """
         self.project.repositories[self.parent.resource.repository].download_product(self)
@@ -219,7 +226,8 @@ class Commit(PulseDbObject):
     def get_product(self, product_type):
         """
         return the commit's product with the specified product type
-        #TODO : check what's return if the product type does not exists
+        # TODO : check what's return if the product type does not exists
+
         :param product_type: string
         :return: a CommitProduct
         """
@@ -228,6 +236,7 @@ class Commit(PulseDbObject):
     def get_products_directory(self):
         """
         return the commit's products directory
+
         :return: filepath
         """
         return self.resource.get_products_directory(self.version)
@@ -245,6 +254,7 @@ class WorkNode:
     def get_inputs(self):
         """
         return a list of products used by this local work or product
+
         :return: products uri list
         """
         return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
@@ -254,6 +264,7 @@ class WorkNode:
         """
         # TODO : check if it should be a specific product type here (local or published)
         add a local product to work or product inputs list
+
         :param product: product object
         """
         if not os.path.exists(product.directory):
@@ -266,6 +277,7 @@ class WorkNode:
     def remove_input(self, local_product):
         """
         remove a product from object's inputs list
+
         :param local_product: local product object
         """
         fu.json_list_remove(self.products_inputs_file, local_product.uri)
@@ -313,6 +325,7 @@ class Work(WorkNode):
     def get_product(self, product_type):
         """
         return the resource's work product based on the given type
+
         :param product_type:
         :return: a work product
         """
@@ -322,6 +335,7 @@ class Work(WorkNode):
     def list_products(self):
         """
         return the work's product's list
+
         :return: a work product list
         """
         self._check_exists_in_user_workspace()
@@ -330,6 +344,7 @@ class Work(WorkNode):
     def create_product(self, product_type):
         """
         create a new product for the work
+
         :param product_type: string
         :return: the new work product object
         """
@@ -343,6 +358,7 @@ class Work(WorkNode):
     def trash_product(self, product_type):
         """
         move the specified product to the trash directory
+
         :param product_type: string
         """
         self._check_exists_in_user_workspace()
@@ -393,6 +409,7 @@ class Work(WorkNode):
         """
         read the work data from user work space
         if the work doesn't exists in user work space, raise a pulse error
+
         :return: the updated work
         """
         self._check_exists_in_user_workspace()
@@ -405,6 +422,7 @@ class Work(WorkNode):
     def commit(self, comment="", trash_unused_products=False):
         """
         commit the work to the repository, and publish it to the database
+
         :param comment: a user comment string
         :param trash_unused_products: if a work's product is not used anymore, move it to trash
         :return: the created commit object
@@ -479,6 +497,7 @@ class Work(WorkNode):
     def trash(self, no_backup=False):
         """
         remove the work from user workspace
+
         :param no_backup: if False, the work folder is moved to trash directory. If True, it is removed from disk
         :return: True on success
         """
@@ -527,6 +546,7 @@ class Work(WorkNode):
     def version_pipe_filepath(self, index):
         """
         get the pipe file path
+
         :param index:
         :return: filepath
         """
@@ -539,6 +559,7 @@ class Work(WorkNode):
     def get_files_changes(self):
         """
         return the file's changes since last commit. Based on the files modification date time
+
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
         self._check_exists_in_user_workspace()
@@ -565,6 +586,7 @@ class Work(WorkNode):
     def get_products_directory(self):
         """
         return the work products directory
+
         :return: filepath
         """
         return self.resource.get_products_directory(self.version)
@@ -595,6 +617,7 @@ class Resource(PulseDbObject):
     def get_products_directory(self, version_index):
         """
         return products filepath of the given resource version
+
         :param version_index: integer
         :return: string
         """
@@ -611,6 +634,7 @@ class Resource(PulseDbObject):
     def set_last_version(self, version):
         """
         set resource last version index
+
         :param version: integer
         """
         self.last_version = version
@@ -620,6 +644,7 @@ class Resource(PulseDbObject):
         """
         return if the given user needs to get the resource lock to modify it
         if no user is specified, the current connexion user will be used
+
         :param user: string
         :return: boolean
         """
@@ -631,6 +656,7 @@ class Resource(PulseDbObject):
         """
         given an index or a tag, return the corresponding version number.
         accepted tag : "last"
+
         :param version_name: string or integer
         :return: integer
         """
@@ -642,6 +668,7 @@ class Resource(PulseDbObject):
     def get_commit(self, version):
         """
         get the commit object from the given version number
+
         :param version: integer
         :return: Commit
         """
@@ -651,6 +678,7 @@ class Resource(PulseDbObject):
         """
         get the Work object associated to the resource.
         IF there's no current work in user work space, raise a pulse error
+
         :return:
         """
         return Work(self).read()
@@ -865,6 +893,7 @@ class Project:
         """
         return a products list matching the uri pattern.
         The pattern should be in the glob search type
+
         :param uri_pattern: string
         :return: a Products list
         """
@@ -873,6 +902,7 @@ class Project:
     def purge_unused_user_products(self, unused_days=0, resource_filter=None):
         """
         remove unused products from the user product space, based on a unused time
+
         :param unused_days: for how many days this products have not been used by the user
         :param resource_filter: affect only products with the uri starting by the given string
         """
@@ -900,6 +930,7 @@ class Project:
     def get_resource(self, entity, resource_type):
         """
         return a project resource based on its entity name and its type
+
         :param entity:
         :param resource_type:
         :return:
@@ -909,6 +940,7 @@ class Project:
     def create_resource(self, entity, resource_type, repository='default', template_resource=None):
         """
         create a new project's resource
+
         :param entity: entity of this new resource. Entity is like a namespace
         :param resource_type:
         :param repository: a pulse Repository
@@ -968,6 +1000,7 @@ class Connection:
                        ):
         """
         create a new project in the connexion database
+
         :param project_name:
         :param work_user_root: user work space path
         :param repository_url: default repository url
@@ -994,6 +1027,7 @@ class Connection:
     def get_project(self, project_name):
         """
         return a pulse project from the database
+
         :param project_name: the pulse project's name
         :return: Project
         """
@@ -1005,6 +1039,7 @@ class Connection:
 def import_adapter(adapter_type, adapter_name):
     """
     dynamically import a module adapter from plugins directory
+
     :param adapter_type: should be "database" or "repository"
     :param adapter_name:
     :return: the adapater module
@@ -1016,6 +1051,7 @@ def import_adapter(adapter_type, adapter_name):
 def uri_to_dict(uri_string):
     """
     transform a string uri in a dict uri
+
     :param uri_string:
     :return uri dict:
     """
@@ -1038,6 +1074,7 @@ def uri_to_dict(uri_string):
 def dict_to_uri(uri_dict):
     """
     transform a dictionary to an uri.
+
     :param uri_dict: dictionary with minimum keys : "entity" and "resource_type"
     :return: uri string
     """
