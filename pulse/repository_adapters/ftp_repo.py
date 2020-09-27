@@ -36,9 +36,7 @@ def ftp_makedirs(directory, ftp_connection):
 
 
 def ftp_rmtree(path, ftp):
-    """path & destination are str of the form "/dir/folder/something/"
-    #path should be the abs path to the root FOLDER of the file tree to download
-    """
+    """path should be the absolute path to the root FOLDER of the file tree to download"""
     try:
         names = ftp.nlst(path)
     except ftplib.all_errors as e:
