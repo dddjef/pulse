@@ -28,33 +28,47 @@ ftp_password = "okds-ki_se*84877sEE"
 ftp_root = "/pulseTest/"
 
 
+def remove_ftp_dir(ftp, path):
+    for (name, properties) in ftp.nlst(path=path):
+        if name in ['.', '..']:
+            continue
+        elif properties['type'] == 'file':
+            ftp.delete(path + "/" + name)
+        elif properties['type'] == 'dir':
+            remove_ftp_dir(ftp, path + "/" + name)
+    ftp.rmd(path)
+
+
 def ftp_rmtree(ftp, path):
     """Recursively delete a directory tree on a remote server."""
-
     wd = ftp.pwd()
 
     try:
         names = ftp.nlst(path)
-    except ftplib.all_errors:
+    except ftplib.all_errors as e:
+        print ('FtpRmTree: Could not remove {0}: {1}'.format(path, e))
         return
 
     for name in names:
+        # some ftp return the full path on nlst command, ensure you get only the file or folder name here
+        name = name.split("/")[-1]
         if os.path.split(name)[1] in ('.', '..'):
             continue
+
         try:
-            ftp.cwd(name)  # if we can cwd to it, it's a folder
+            ftp.cwd(path + "/" + name)  # if we can cwd to it, it's a folder
             ftp.cwd(wd)  # don't try a nuke a folder we're in
-            ftp_rmtree(ftp, name)
+            ftp_rmtree(ftp, path + "/" + name)
         except ftplib.all_errors:
-            ftp.delete(name)
+            ftp.delete(path + "/" + name)
+
     try:
         ftp.rmd(path)
     except ftplib.all_errors as e:
-        print('FtpRmTree: Could not remove {0}: {1}'.format(path, e))
+        raise e
 
 
 def reset_files():
-
     cnx = mariadb.connect(host=db_host, port=db_port, user=db_user, password=db_password)
     cnx.cursor().execute("DROP DATABASE IF EXISTS " + test_project_name)
     cnx.close()
