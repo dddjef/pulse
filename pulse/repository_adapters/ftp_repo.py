@@ -39,31 +39,29 @@ def ftp_rmtree(path, ftp):
     """path & destination are str of the form "/dir/folder/something/"
     #path should be the abs path to the root FOLDER of the file tree to download
     """
-    wd = ftp.pwd()
-
     try:
         names = ftp.nlst(path)
     except ftplib.all_errors as e:
-        print ('FtpRmTree: Could not remove {0}: {1}'.format(path, e))
+        print ('FtpRmTree: Could not list {0}: {1}'.format(path, e))
         return
 
     for name in names:
-        #some ftp return the full path on nlst command, ensure you get only the file or folder name here
+        # some ftp return the full path on nlst command,ensure you get only the file or folder name here
         name = name.split("/")[-1]
+
         if os.path.split(name)[1] in ('.', '..'):
             continue
 
         try:
-            ftp.cwd(path + "/" + name)  # if we can cwd to it, it's a folder
-            ftp.cwd(wd)  # don't try a nuke a folder we're in
-            ftp_rmtree(ftp, path + "/" + name)
-        except ftplib.all_errors:
             ftp.delete(path + "/" + name)
+        except ftplib.all_errors:
+            ftp_rmtree(ftp, path + "/" + name)
 
     try:
         ftp.rmd(path)
     except ftplib.all_errors as e:
         raise e
+
 
 def ftp_download(source, destination, ftp_connection):
     """path & destination are str of the form "/dir/folder/something/"
