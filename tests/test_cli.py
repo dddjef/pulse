@@ -33,7 +33,7 @@ repos = os.path.join(test_dir, "repos")
 test_project_name = "cli_project"
 cli_project_path = os.path.join(test_dir, "works", test_project_name)
 
-cli_path = r"C:\Users\dddje\PycharmProjects\pulse\cli\cli.py"
+cli_path = r"C:\Users\dddje\PycharmProjects\pulse\cli\pls.py"
 python_exe = "c:\\python27\\python.exe"
 
 
