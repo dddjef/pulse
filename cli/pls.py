@@ -82,17 +82,18 @@ def create_project(args):
             return
 
     if not args.database_type:
-        database_type = config.get('database', 'default_adapter')
-    else:
-        database_type = args.database_type
+        args.database_type = config.get('database', 'default_adapter')
 
-    default_repository_adapter = config.get('repository', 'default_adapter')
     if not args.repository_url:
         args.repository_url = config.get('repository', 'default_parameters')
+
+    if not args.repository_type:
+        args.repository_type = config.get('repository', 'default_adapter')
+
     version_prefix = config.get('version', 'prefix')
     version_padding = int(config.get('version', 'padding'))
 
-    cnx = pulse.Connection(url=args.url, database_adapter=database_type)
+    cnx = pulse.Connection(url=args.url, database_adapter=args.database_type)
     cnx.create_project(
         project_name,
         sandbox_path,
@@ -100,12 +101,12 @@ def create_project(args):
         product_user_root=args.user_products,
         version_padding=version_padding,
         version_prefix=version_prefix,
-        repository_adapter=default_repository_adapter,
+        repository_adapter=args.repository_type,
     )
 
     connexion_data = {
         'url': args.url,
-        'db_adapter': database_type
+        'db_adapter': args.database_type
     }
     with open(os.path.join(os.getcwd(), project_data_filename), "w") as write_file:
         json.dump(connexion_data, write_file, indent=4, sort_keys=True)
@@ -183,6 +184,7 @@ parser_create_project.add_argument('url', type=str)
 parser_create_project.add_argument('--database_type', type=str)
 parser_create_project.add_argument('--user_products', type=str)
 parser_create_project.add_argument('--repository_url', type=str)
+parser_create_project.add_argument('--repository_type', type=str)
 parser_create_project.add_argument('--silent_mode', '-s', action='store_true')
 
 parser_create_project.set_defaults(func=create_project)
