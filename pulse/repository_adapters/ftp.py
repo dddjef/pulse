@@ -107,6 +107,7 @@ class Repository(PulseRepository):
         ftp_copytree(source, self.connection)
 
     def _download_folder(self, source, destination):
+        source = source.replace("\\", "/")
         if not os.path.exists(destination):
             os.makedirs(destination)
         self._refresh_connection()
