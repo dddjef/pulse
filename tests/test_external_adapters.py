@@ -14,18 +14,25 @@ test_project_name = "testProj"
 # you have to install mysql connector
 # pip install mysql-connector-python
 
-# you have to set this a mysql database first, pulse user needs rights to create and drop database
-db_host = "192.168.1.2"
-db_port = "3306"
-db_user = "pulseTest"
-db_password = "8JfHRNGuvL5P"
+import sys
+cmd_folder = os.path.dirname(os.path.abspath(__file__))
+if cmd_folder not in sys.path:
+    sys.path.insert(0, cmd_folder)
+try:
+    from connections import *
+except:
+    # you have to set this a mysql database first, pulse user needs rights to create and drop database
+    db_host = "192.168.1.2"
+    db_port = "3306"
+    db_user = "pulseTest"
+    db_password = "8JfHRNGuvL5P"
 
-# you have to set this to a ftp server. pulseTest should be able to write to the ftp_root
-ftp_host = "192.168.1.2"
-ftp_port = "21"
-ftp_login = "pulseTest"
-ftp_password = "okds-ki_se*84877sEE"
-ftp_root = "/pulseTest/"
+    # you have to set this to a ftp server. pulseTest should be able to write to the ftp_root
+    ftp_host = "192.168.1.2"
+    ftp_port = "21"
+    ftp_login = "pulseTest"
+    ftp_password = "okds-ki_se*84877sEE"
+    ftp_root = "/pulseTest/"
 
 
 def remove_ftp_dir(ftp, path):
@@ -207,4 +214,4 @@ class TestBasic(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    reset_files()
+    # reset_files()

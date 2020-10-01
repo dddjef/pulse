@@ -167,7 +167,9 @@ def trash_resource(args):
 def commit(args):
     # TODO : manage locked resource message with an dedicated exception
     work = get_work(os.getcwd())
+    print (work.resource.uri)
     commit_obj = work.commit()
+    print (commit_obj.uri)
     print 'work commit in version "' + str(commit_obj.version) + '"'
 
 

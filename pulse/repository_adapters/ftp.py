@@ -65,6 +65,8 @@ def ftp_download(source, destination, ftp_connection):
     """path & destination are str of the form "/dir/folder/something/"
     #path should be the abs path to the root FOLDER of the file tree to download
     """
+    source = source.replace("\\", "/")
+    destination = destination.replace("\\", "/")
     for filename in ftp_connection.nlst():
         if filename == "." or filename == "..":
             continue
@@ -107,7 +109,6 @@ class Repository(PulseRepository):
         ftp_copytree(source, self.connection)
 
     def _download_folder(self, source, destination):
-        source = source.replace("\\", "/")
         if not os.path.exists(destination):
             os.makedirs(destination)
         self._refresh_connection()
