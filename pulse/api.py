@@ -21,6 +21,7 @@ DEFAULT_VERSION_PREFIX = "V"
 # TODO : add a purge trash function
 # TODO : add "force" option to trash or remove product to avoid dependency check
 # TODO : support linux user path
+# TODO : should propose option for project's absolute path or relative path
 # TODO : unify the repo parameters as a single string to path, login and password optionals
 # TODO : work.commit should have an option to remove the commit products
 # TODO : don't support adding wip product to work (remove unneeded check in the trash function)

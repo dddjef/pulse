@@ -107,7 +107,7 @@ def create_test_project(prj_name=test_project_name):
     prj = cnx.create_project(
         prj_name,
         user_works,
-        repository_adapter="ftp_repo",
+        repository_adapter="ftp",
         repository_url='ftp://' + ftp_login + ':' + ftp_password + '@' + ftp_host + ':' + ftp_port + '/' + ftp_root,
         product_user_root=user_products
     )

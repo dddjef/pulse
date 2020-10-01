@@ -38,6 +38,32 @@ def get_pulse_project(path):
     cnx = pulse.Connection(url=connection_data["url"], database_adapter=connection_data["db_adapter"])
     return cnx.get_project(os.path.basename(path))
 
+def get_project(args):
+    # TODO : should check if the current path match with project path (and create it if needed)
+    cli_filepath = os.path.dirname(os.path.realpath(__file__))
+    config = ConfigParser()
+    config.read(os.path.join(cli_filepath, "config.ini"))
+    project_path = os.getcwd()
+    project_name = os.path.basename(project_path)
+
+    if not args.database_type:
+        database_type = config.get('database', 'default_adapter')
+    else:
+        database_type = args.database_type
+
+    pulse.Connection(url=args.url, database_adapter=database_type)
+
+    connexion_data = {
+        'url': args.url,
+        'db_adapter': database_type
+    }
+
+    with open(os.path.join(os.getcwd(), project_data_filename), "w") as write_file:
+        json.dump(connexion_data, write_file, indent=4, sort_keys=True)
+
+    print 'project "' + project_name + '" connected on "' + args.url + '"'
+
+
 
 def create_project(args):
     cli_filepath = os.path.dirname(os.path.realpath(__file__))
@@ -55,7 +81,11 @@ def create_project(args):
         if confirmation.lower() != 'y':
             return
 
-    database_type = config.get('database', 'default_adapter')
+    if not args.database_type:
+        database_type = config.get('database', 'default_adapter')
+    else:
+        database_type = args.database_type
+
     default_repository_adapter = config.get('repository', 'default_adapter')
     if not args.repository_url:
         args.repository_url = config.get('repository', 'default_parameters')
@@ -131,10 +161,16 @@ def trash_resource(args):
 
 
 def commit(args):
+    # TODO : manage locked resource message with an dedicated exception
     work = get_work(os.getcwd())
     commit_obj = work.commit()
     print 'work commit in version "' + str(commit_obj.version) + '"'
-    # print resource.sandbox_path
+
+
+def unlock(args):
+    resource = get_work(os.getcwd()).resource
+    resource.set_lock(state=False, steal=True)
+    print 'resource unlocked "' + str(resource.uri) + '"'
 
 
 # create the top-level parser
@@ -144,11 +180,19 @@ subparsers = parser.add_subparsers()
 # create project subparser
 parser_create_project = subparsers.add_parser('create_project')
 parser_create_project.add_argument('url', type=str)
+parser_create_project.add_argument('--database_type', type=str)
 parser_create_project.add_argument('--user_products', type=str)
 parser_create_project.add_argument('--repository_url', type=str)
 parser_create_project.add_argument('--silent_mode', '-s', action='store_true')
 
 parser_create_project.set_defaults(func=create_project)
+
+
+# get project subparser
+parser_get_project = subparsers.add_parser('get_project')
+parser_get_project.add_argument('url', type=str)
+parser_get_project.add_argument('--database_type', type=str)
+parser_get_project.set_defaults(func=get_project)
 
 # create_resource subparser
 parser_create_resource = subparsers.add_parser('create_resource')
@@ -179,6 +223,10 @@ parser_trash_resource.set_defaults(func=trash_resource)
 # commit subparser
 parser_commit = subparsers.add_parser('commit')
 parser_commit.set_defaults(func=commit)
+
+# unlock subparser
+parser_unlock = subparsers.add_parser('unlock')
+parser_unlock.set_defaults(func=unlock)
 
 # add_input subparser
 parser_add_input = subparsers.add_parser('add_input')
