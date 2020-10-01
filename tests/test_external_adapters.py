@@ -144,7 +144,7 @@ class TestBasic(unittest.TestCase):
             template_resource.set_repository("serverB")
 
     def test_sql_db(self):
-        cnx = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql_db")
+        cnx = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql")
         prj = cnx.create_project(
             test_project_name,
             user_works,
@@ -177,7 +177,7 @@ class TestBasic(unittest.TestCase):
         # you have to close the connection to allow the database reset by the test
         cnx.db.connection.close()
 
-        cnx2 = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql_db")
+        cnx2 = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql")
         prj = cnx2.get_project(test_project_name)
         rig2 = prj.get_resource("ch_anna", "rigging")
         self.assertTrue(rig2.get_commit("last").products[0] == 'actor_anim')
