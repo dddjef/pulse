@@ -132,6 +132,7 @@ def add_input(args):
     product = project.get_product(args.uri)
     if not product:
         print ('no product found for ' + args.uri)
+        return
     work = get_work(os.getcwd(), project)
     work.add_input(product)
     print 'product registered "' + args.uri + '"'
