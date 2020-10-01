@@ -103,12 +103,16 @@ class Repository(PulseRepository):
         self.connection.cwd(self.root)
 
     def _upload_folder(self, source, destination):
+        source = source.replace("\\", "/")
+        destination = destination.replace("\\", "/")
         self._refresh_connection()
         ftp_makedirs(self.root + destination, self.connection)
         self.connection.cwd(self.root + destination)
         ftp_copytree(source, self.connection)
 
     def _download_folder(self, source, destination):
+        source = source.replace("\\", "/")
+        destination = destination.replace("\\", "/")
         if not os.path.exists(destination):
             os.makedirs(destination)
         self._refresh_connection()
