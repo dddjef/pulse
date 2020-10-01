@@ -340,7 +340,8 @@ class Work(WorkNode):
         :return: a work product list
         """
         self._check_exists_in_user_workspace()
-        return os.listdir(self.get_products_directory())
+        product_directory = self.get_products_directory()
+        return [p for p in os.listdir(product_directory) if os.path.isdir(os.path.join(product_directory, p))]
 
     def create_product(self, product_type):
         """
