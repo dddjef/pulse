@@ -130,8 +130,10 @@ def create_output(args):
 def add_input(args):
     project = get_pulse_project(os.getcwd())
     product = project.get_product(args.uri)
+    if not product:
+        print ('no product found for ' + args.uri)
     work = get_work(os.getcwd(), project)
-    product = work.add_input(product)
+    work.add_input(product)
     print 'product registered "' + args.uri + '"'
 
 
