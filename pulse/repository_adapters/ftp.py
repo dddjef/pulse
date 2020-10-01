@@ -174,7 +174,7 @@ class Repository(PulseRepository):
 
     def download_product(self, product, product_folder=None):
         # build_products_repository_path
-        product_repo_path = self._build_commit_path("products", product.commit) + "\\" + product.product_type
+        product_repo_path = self._build_commit_path("products", product.parent) + "\\" + product.product_type
         if not product_folder:
             product_folder = product.directory
         self._download_folder(product_repo_path, product_folder)
