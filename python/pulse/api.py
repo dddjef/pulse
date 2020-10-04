@@ -261,9 +261,9 @@ class WorkNode:
         return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
 
     # TODO : add input should support a product list
+    # TODO : check if it should be a specific product type here (local or published)
     def add_input(self, product):
         """
-        # TODO : check if it should be a specific product type here (local or published)
         add a local product to work or product inputs list
 
         :param product: product object

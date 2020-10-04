@@ -1,7 +1,7 @@
-from pulse.api import *
 import unittest
 import subprocess
-
+import os
+import shutil
 
 """
 associate .py with the python interpreter.
