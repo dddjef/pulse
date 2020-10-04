@@ -405,7 +405,11 @@ class Work(WorkNode):
         os.makedirs(self.get_products_directory())
 
         # write data to json
-        fu.write_data(self.data_file, {"version": self.version})
+        fu.write_data(self.data_file, {
+            "version": self.version,
+            "entity": self.resource.entity,
+            "resource_type":self.resource.resource_type
+            })
 
     def read(self):
         """
