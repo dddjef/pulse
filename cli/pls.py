@@ -3,22 +3,26 @@ import pulse.api as pulse
 from ConfigParser import ConfigParser
 import os
 import json
-
+import sys
 
 project_data_filename = "project.pipe"
+work_data_filename = "work.pipe"
+
+
+def failure_message(message):
+    print(message)
+    sys.exit()
 
 
 def get_work(path, project=None):
     if not project:
         project = get_pulse_project(path)
-    relative_path = path[len(project.cfg.work_user_root+project.name) + 2:]
-    split_path = relative_path.split(os.sep)
-    entity_name = ""
-    for part in split_path[1:]:
-        entity_name += ":" + part
-    entity_name = entity_name[1:]
-    resource_type = split_path[0]
-    return project.get_resource(entity_name, resource_type).get_work()
+    work_data_filepath = os.path.join(path,work_data_filename)
+    if not os.path.exists(work_data_filepath):
+        failure_message("Not in a work folder. Can't find " + work_data_filepath)
+    with open(work_data_filepath, "r") as read_file:
+        work_data = json.load(read_file)
+    return project.get_resource(work_data['entity'], work_data['resource_type']).get_work()
 
 
 def get_pulse_project(path):
@@ -37,6 +41,7 @@ def get_pulse_project(path):
 
     cnx = pulse.Connection(url=connection_data["url"], database_adapter=connection_data["db_adapter"])
     return cnx.get_project(os.path.basename(path))
+
 
 def get_project(args):
     # TODO : should check if the current path match with project path (and create it if needed)
