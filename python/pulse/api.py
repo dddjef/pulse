@@ -851,22 +851,16 @@ class Config(PulseDbObject):
         self.project.load_config()
 
     # TODO : Should write a test for edit and remove
-    def edit_repository(self, repository_name, repository_type, repository_parameters):
+    def edit_repository(self, name, adapter, url):
         """
         edit the repository property
-        raise a PulseErrot if the repository is not found
-
-        :param repository_name: name of the edited repository
-        :param repository_type:
-        :param repository_parameters:
-        :return:
+        raise a PulseError if the repository is not found
         """
-        if repository_name not in self.repositories:
-            raise PulseError("Repository does not exists : " + repository_name)
-        # TODO : the dict key below seems deprecated
-        self.repositories[repository_name] = {
-            "type": repository_type,
-            "parameters": repository_parameters
+        if name not in self.repositories:
+            raise PulseError("Repository does not exists : " + name)
+        self.repositories[name] = {
+            "adapter": adapter,
+            "url": url
         }
         self._db_update(["repositories"])
         self.project.load_config()
