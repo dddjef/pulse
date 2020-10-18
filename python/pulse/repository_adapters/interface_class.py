@@ -19,19 +19,31 @@ class PulseRepository:
         self.url = urlparse(url)
 
     def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
+        """upload a commit content to repository
+        """
         pass
 
     def download_work(self, commit, work_folder):
+        """download a resource work content to a local folder. Creates the folder if needed
+        """
         pass
 
     def download_product(self, product, product_folder=None):
+        """download a product content to a local folder. Creates the folder if needed
+        """
         pass
 
     def download_resource(self, resource, destination):
+        """download a resource content  and all its history to a local folder. Creates the folder if needed
+         """
         pass
 
     def upload_resource(self, resource, source):
+        """upload a resource content and all its history to repository from a local source directory
+         """
         pass
 
     def remove_resource(self, resource):
+        """remove a resource and all its history from repository
+         """
         pass
