@@ -1,7 +1,7 @@
 import os
 import shutil
 from pulse.repository_adapters.interface_class import *
-
+from distutils.dir_util import copy_tree
 
 # TODO : define the "products" and "work" wording in the interface class
 
@@ -13,7 +13,7 @@ def copy_folder_tree(source_folder, destination_folder):
     parent_folder = os.path.dirname(destination_folder.rstrip("\\"))
     if not os.path.exists(parent_folder):
         os.makedirs(parent_folder)
-    shutil.copytree(source_folder, destination_folder) 
+    copy_tree(source_folder, destination_folder)
 
 
 class Repository(PulseRepository):
@@ -42,8 +42,6 @@ class Repository(PulseRepository):
         )
         
     def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
-        """create a new resource default folders and file from a resource template
-        """
         version_directory = self._build_commit_path("work", commit)
         print version_directory
         os.makedirs(version_directory)
@@ -55,7 +53,6 @@ class Repository(PulseRepository):
             else:
                 copy_folder_tree(f, destination)
 
-    
         # Copy products folder to repo
         if not products_folder or not os.path.exists(products_folder):
             return True
@@ -71,15 +68,11 @@ class Repository(PulseRepository):
         return True
         
     def download_work(self, commit, work_folder):
-        """build_work_user_filepath
-        """
         repo_work_path = self._build_commit_path("work", commit)
         # copy repo work to sandbox
         copy_folder_tree(repo_work_path, work_folder)
 
     def download_product(self, product, product_folder=None):
-        """build_products_user_filepath
-        """
         # build_products_repository_path
         product_repo_path = os.path.join(self._build_commit_path("products", product.parent), product.product_type)
         # copy repo products type to products_user_filepath

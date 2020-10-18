@@ -35,6 +35,7 @@ def reset_files():
 
 def create_test_project(prj_name="test"):
     cnx = Connection(db_root)
+    print repos
     prj = cnx.create_project(
         prj_name,
         user_works,
@@ -56,6 +57,18 @@ class TestBasic(unittest.TestCase):
 
     # def tearDown(self):
     #     reset_files()
+
+    def test_template_resource(self):
+        cnx, prj = create_test_project()
+        template_mdl = prj.create_template("mdl")
+        template_mdl_work = template_mdl.checkout()
+        template_mdl_work.create_product("abc")
+        template_mdl_v1 = template_mdl_work.commit()
+        template_mdl_work.trash()
+        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl_work = anna_mdl.checkout()
+        self.assertTrue(os.path.exists(os.path.join(anna_mdl_work.get_products_directory(), "abc")))
+
 
     def test_unused_time_on_purged_product(self):
         cnx, prj = create_test_project()
@@ -140,7 +153,7 @@ class TestBasic(unittest.TestCase):
         add_file_to_directory(shader_product.directory, shader_product_file)
         template_work.commit()
 
-        anna_shd_resource = prj.create_resource("ch_anna", "surface", template_resource=template_resource)
+        anna_shd_resource = prj.create_resource("ch_anna", "surface", source_resource=template_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
 

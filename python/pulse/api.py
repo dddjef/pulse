@@ -17,6 +17,7 @@ import re
 
 DEFAULT_VERSION_PADDING = 3
 DEFAULT_VERSION_PREFIX = "V"
+template_name = "_template"
 
 # TODO : add a purge trash function
 # TODO : add "force" option to trash or remove product to avoid dependency check
@@ -210,7 +211,7 @@ class CommitProduct(PulseDbObject, Product):
 class Commit(PulseDbObject):
     """
         Object created when a resource has been published to database
-        The commit is the versioned
+        The commit is a versionned resource
     """
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
@@ -233,6 +234,18 @@ class Commit(PulseDbObject):
         :return: a CommitProduct
         """
         return CommitProduct(self, product_type).db_read()
+
+    def get_products(self):
+        """
+        return the commit's products list
+        """
+        uri = dict_to_uri({
+            "resource_type": self.resource.resource_type,
+            "entity": self.resource.entity,
+            "version": self.version,
+            "product_type": "*"
+        })
+        return self.project.list_products(uri)
 
     def get_products_directory(self):
         """
@@ -335,9 +348,9 @@ class Work(WorkNode):
 
     def list_products(self):
         """
-        return the work's product's list
+        return the work's product's type list
 
-        :return: a work product list
+        :return: a string list
         """
         self._check_exists_in_user_workspace()
         product_directory = self.get_products_directory()
@@ -605,7 +618,7 @@ class Resource(PulseDbObject):
     def __init__(self, project, entity, resource_type):
         self.lock_state = False
         self.lock_user = ''
-        self.last_version = 0
+        self.last_version = -1
         self.resource_type = resource_type
         self.entity = entity
         self.repository = None
@@ -689,7 +702,7 @@ class Resource(PulseDbObject):
         """
         return Work(self).read()
 
-    def checkout(self, index="last", destination_folder=None, template_resource=None):
+    def checkout(self, index="last", destination_folder=None):
         """
         Download the resource work files in the user work space.
         Download related dependencies if they are not available in user products space
@@ -701,25 +714,29 @@ class Resource(PulseDbObject):
         if os.path.exists(destination_folder):
             return Work(self).read()
 
-        if not template_resource:
-            # if there's no template, and there's not version yet, just create a sandbox empty folder
-            if self.last_version == 0:
-                os.makedirs(destination_folder)
+        # if there's no version yet, just create a sandbox empty folder
+        if self.last_version <= 0:
+            os.makedirs(destination_folder)
 
-            # else get the resource version
-            else:
-                commit = self.get_commit(index)
-                self.project.repositories[self.repository].download_work(commit, destination_folder)
-
-        # if there's a template resource, get the commit from it
+        # else get the resource version
         else:
-            commit = template_resource.get_commit(index)
+            commit = self.get_commit(index)
             self.project.repositories[self.repository].download_work(commit, destination_folder)
 
         # create the work object
         work = Work(self)
         work.version = self.last_version + 1
         work.write()
+
+        # create the empty products from the resource template type
+        try:
+            template_resource = self.project.get_resource(template_name, self.resource_type)
+            template_products = template_resource.get_commit("last").get_products()
+
+            for product in template_products:
+                work.create_product(product.product_type)
+        except PulseDatabaseMissingObject:
+            pass
 
         # download requested input products if needed
         for product in work.get_inputs():
@@ -846,7 +863,7 @@ class Config(PulseDbObject):
         """
         if repository_name not in self.repositories:
             raise PulseError("Repository does not exists : " + repository_name)
-        # TODO ! the dict key below seems depracated
+        # TODO : the dict key below seems deprecated
         self.repositories[repository_name] = {
             "type": repository_type,
             "parameters": repository_parameters
@@ -897,13 +914,14 @@ class Project:
 
     def list_products(self, uri_pattern):
         """
-        return a products list matching the uri pattern.
+        return a product objects list matching the uri pattern.
         The pattern should be in the glob search type
 
         :param uri_pattern: string
         :return: a Products list
         """
         return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
+
 
     def purge_unused_user_products(self, unused_days=0, resource_filter=None):
         """
@@ -936,6 +954,7 @@ class Project:
     def get_resource(self, entity, resource_type):
         """
         return a project resource based on its entity name and its type
+        will raise a PulseError on missing resource
 
         :param entity:
         :param resource_type:
@@ -943,33 +962,48 @@ class Project:
         """
         return Resource(self, entity, resource_type).db_read()
 
-    def create_resource(self, entity, resource_type, repository='default', template_resource=None):
+    def create_template(self, resource_type, repository='default', source_resource=None):
+        return self.create_resource(template_name, resource_type, repository='default', source_resource=None)
+
+    def create_resource(self, entity, resource_type, repository='default', source_resource=None):
         """
         create a new project's resource
 
         :param entity: entity of this new resource. Entity is like a namespace
         :param resource_type:
         :param repository: a pulse Repository
-        :param template_resource: if given the resource content will be initialized with the given resource
-        :return: the created resource
+        :param source_resource: if given the resource content will be initialized with the given resource
+        :return: the created resource object
         """
+
+        # if no source resource is given, try to get an existing type template
+        if not source_resource:
+            try:
+                source_resource = self.get_resource(template_name, resource_type)
+            except PulseDatabaseMissingObject:
+                pass
+
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
-        resource.db_create()
-        if template_resource:
+
+        # if a source resource is given initialize the first commit with its data
+        if source_resource:
+            resource.db_create()
             try:
-                template_commit = template_resource.get_commit("last")
+                source_commit = source_resource.get_commit("last")
             except PulseDatabaseMissingObject:
-                raise PulseError("no commit found for template : " + template_resource.uri)
+                raise PulseError("no commit found for template : " + source_resource.uri)
 
             # checkout from last template commit
-            work = resource.checkout(template_resource=template_resource)
+            work = resource.checkout()
+            work_products = work.list_products()
 
-            # download template products in work products
-            for product_name in template_commit.products:
-                product_directory = os.path.join(work.get_products_directory(), product_name)
-                product = template_commit.get_product(product_name)
-                self.repositories[template_resource.repository].download_product(product, product_directory)
+            # TODO : initialize work and products data with source
+            self.repositories[source_resource.repository].download_work(source_commit, work.directory)
+            for product in source_commit.get_products():
+                if product.product_type not in work_products:
+                    work.create_product(product.product_type)
+                self.repositories[source_resource.repository].download_product(product, work.get_product(product.product_type).directory)
 
             # commit a first version
             commit = work.commit()
@@ -977,10 +1011,14 @@ class Project:
             # clean the sandbox
             work.trash(no_backup=True)
 
+            # TODO : check this is still usedfull, trashing a work should trash its unused products too
             # trash the V01 product
             products_v1 = [commit.get_product(product_name) for product_name in commit.products]
             for product in products_v1:
                 product.remove_from_user_products()
+        else:
+            resource.last_version = 0
+            resource.db_create()
 
         return resource
 
@@ -1081,7 +1119,7 @@ def dict_to_uri(uri_dict):
     """
     transform a dictionary to an uri.
 
-    :param uri_dict: dictionary with minimum keys : "entity" and "resource_type"
+    :param uri_dict: dictionary with minimum keys "entity" and "resource_type", optionally "product type" and "version"
     :return: uri string
     """
     uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
