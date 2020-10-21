@@ -103,6 +103,8 @@ class Repository(PulseRepository):
         self.connection.cwd(self.root)
 
     def _upload_folder(self, source, destination):
+        if not os.path.exists(source):
+            return
         source = source.replace("\\", "/")
         destination = destination.replace("\\", "/")
         self._refresh_connection()

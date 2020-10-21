@@ -353,8 +353,7 @@ class Work(WorkNode):
         :return: a string list
         """
         self._check_exists_in_user_workspace()
-        product_directory = self.get_products_directory()
-        return [p for p in os.listdir(product_directory) if os.path.isdir(os.path.join(product_directory, p))]
+        return fu.read_data(self.data_file)["outputs"]
 
     def create_product(self, product_type):
         """
@@ -364,10 +363,18 @@ class Work(WorkNode):
         :return: the new work product object
         """
         self._check_exists_in_user_workspace()
-        if product_type in self.list_products():
+        outputs = self.list_products()
+        if product_type in outputs:
             raise PulseError("product already exists : " + product_type)
         work_product = WorkProduct(self, product_type)
         os.makedirs(work_product.directory)
+
+        #update work pipe file with the new output
+        outputs.append(product_type)
+        data_dict = fu.read_data(self.data_file)
+        data_dict["outputs"] = outputs
+        fu.write_data(self.data_file, data_dict)
+
         return work_product
 
     def trash_product(self, product_type):
@@ -399,11 +406,24 @@ class Work(WorkNode):
         # move folder
         shutil.move(product.directory, os.path.join(trash_directory, "PRODUCTS", product_type))
 
+        # remove the product from work outputs
+        data_dict = fu.read_data(self.data_file)
+        data_dict["outputs"].remove(product_type)
+        fu.write_data(self.data_file, data_dict)
+
+        # remove the products directory if it's empty
+        products_directory = self.get_products_directory()
+        if not os.listdir(products_directory):
+            shutil.rmtree(products_directory)
+
     def write(self):
         """
         write the work object to user workspace
         """
-        self._check_exists_in_user_workspace()
+        # create work folder if needed
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+
         # remove old version file
         old_version_file = self.version_pipe_filepath(self.resource.last_version)
         if os.path.exists(old_version_file):
@@ -414,14 +434,12 @@ class Work(WorkNode):
         with open(new_version_file, "w") as write_file:
             json.dump({"created_by": self.resource.project.cnx.user_name}, write_file, indent=4, sort_keys=True)
 
-        # create a new products folder
-        os.makedirs(self.get_products_directory())
-
         # write data to json
         fu.write_data(self.data_file, {
             "version": self.version,
             "entity": self.resource.entity,
-            "resource_type":self.resource.resource_type
+            "resource_type":self.resource.resource_type,
+            "outputs":[]
             })
 
     def read(self):
@@ -486,9 +504,7 @@ class Work(WorkNode):
         commit.products_inputs = self.get_inputs()
         commit.products = self.list_products()
         # if there's no product, delete the products version directory
-        if not commit.products:
-            os.rmdir(products_directory)
-        else:
+        if commit.products:
             # register work products to user products list
             for product_type in commit.products:
                 work_product = self.get_product(product_type)
@@ -524,7 +540,7 @@ class Work(WorkNode):
         # test the work and products folder are movable
         products_directory = self.get_products_directory()
         for path in [self.directory, products_directory]:
-            if not fu.test_path_write_access(path):
+            if os.path.exists(path) and not fu.test_path_write_access(path):
                 raise PulseError("can't move folder " + path)
 
         # check workProducts are not in use
@@ -544,7 +560,8 @@ class Work(WorkNode):
             os.makedirs(trash_directory)
 
         # move folders
-        shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
+        if os.path.exists(products_directory):
+            shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
         trashed_work = os.path.join(trash_directory, "WORK")
         os.makedirs(trashed_work)
         for f in self._get_work_files():
@@ -577,7 +594,7 @@ class Work(WorkNode):
 
     def get_files_changes(self):
         """
-        return the file's changes since last commit. Based on the files modification date time
+        return the work files changes since last commit. Based on the files modification date time
 
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
@@ -597,8 +614,10 @@ class Work(WorkNode):
         diff = fu.compare_directory_content(current_work_files, last_files)
 
         # add products
-        for path in os.listdir(self.get_products_directory()):
-            diff.append((path, "added"))
+        products_directory = self.get_products_directory()
+        if os.path.exists(products_directory):
+            for path in os.listdir(products_directory):
+                diff.append((path, "added"))
 
         return diff
 
@@ -618,10 +637,11 @@ class Resource(PulseDbObject):
     def __init__(self, project, entity, resource_type):
         self.lock_state = False
         self.lock_user = ''
-        self.last_version = -1
+        self.last_version = 0
         self.resource_type = resource_type
         self.entity = entity
         self.repository = None
+        self.resource_template = ''
         PulseDbObject.__init__(
             self,
             project,
@@ -714,35 +734,54 @@ class Resource(PulseDbObject):
         if os.path.exists(destination_folder):
             return Work(self).read()
 
-        # if there's no version yet, just create a sandbox empty folder
-        if self.last_version <= 0:
-            os.makedirs(destination_folder)
+        # create the work object
+        work = Work(self)
+        work.version = self.last_version + 1
 
-        # else get the resource version
+
+        # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
+        if self.last_version == 0:
+            source_resource = None
+            if self.resource_template != '':
+                template_dict = uri_to_dict(self.resource_template)
+                source_resource = self.project.get_resource(template_dict['entity'], template_dict['resource_type'])
+            else:
+                # try to find a template
+                try:
+                    if self.entity != template_name:
+                        source_resource = self.project.get_resource(template_name, self.resource_type)
+                except PulseDatabaseMissingObject:
+                    pass
+
+            # if no template has been found, just create empty work folder
+            if not source_resource:
+                os.makedirs(destination_folder)
+            else:
+                source_commit = source_resource.get_commit("last")
+                # initialize work and products data with source
+                self.project.repositories[source_resource.repository].download_work(source_commit, destination_folder)
+                for product in source_commit.get_products():
+                    product_directory = os.path.join(work.get_products_directory(), product.product_type)
+                    # os.makedirs(product_directory)
+                    self.project.repositories[source_resource.repository].download_product(
+                        product, product_directory)
+
+        # else get the resource commit
         else:
             commit = self.get_commit(index)
             self.project.repositories[self.repository].download_work(commit, destination_folder)
 
-        # create the work object
-        work = Work(self)
-        work.version = self.last_version + 1
-        work.write()
-
-        # create the empty products from the resource template type
-        try:
-            template_resource = self.project.get_resource(template_name, self.resource_type)
-            template_products = template_resource.get_commit("last").get_products()
-
-            for product in template_products:
+            # create the products from the last commit
+            for product in commit.get_products():
                 work.create_product(product.product_type)
-        except PulseDatabaseMissingObject:
-            pass
+
 
         # download requested input products if needed
         for product in work.get_inputs():
             product.download()
             product.add_product_user(self.sandbox_path)
 
+        work.write()
         return work
 
     def set_lock(self, state, user=None, steal=False):
@@ -970,49 +1009,20 @@ class Project:
         :return: the created resource object
         """
 
-        # if no source resource is given, try to get an existing type template
-        if not source_resource:
-            try:
-                source_resource = self.get_resource(template_name, resource_type)
-            except PulseDatabaseMissingObject:
-                pass
-
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
 
-        # if a source resource is given initialize the first commit with its data
+
+        # if a source resource is given keep its uri to db
         if source_resource:
-            resource.db_create()
             try:
-                source_commit = source_resource.get_commit("last")
+                source_resource.get_commit("last")
             except PulseDatabaseMissingObject:
                 raise PulseError("no commit found for template : " + source_resource.uri)
 
-            # checkout from last template commit
-            work = resource.checkout()
-            work_products = work.list_products()
+            resource.resource_template = source_resource.uri
 
-            # TODO : initialize work and products data with source
-            self.repositories[source_resource.repository].download_work(source_commit, work.directory)
-            for product in source_commit.get_products():
-                if product.product_type not in work_products:
-                    work.create_product(product.product_type)
-                self.repositories[source_resource.repository].download_product(product, work.get_product(product.product_type).directory)
-
-            # commit a first version
-            commit = work.commit()
-
-            # clean the sandbox
-            work.trash(no_backup=True)
-
-            # TODO : check this is still usedfull, trashing a work should trash its unused products too
-            # trash the V01 product
-            products_v1 = [commit.get_product(product_name) for product_name in commit.products]
-            for product in products_v1:
-                product.remove_from_user_products()
-        else:
-            resource.last_version = 0
-            resource.db_create()
+        resource.db_create()
 
         return resource
 
@@ -1122,3 +1132,4 @@ def dict_to_uri(uri_dict):
     if 'version' in uri_dict:
         uri += "@" + (str(int(uri_dict['version'])))
     return uri
+

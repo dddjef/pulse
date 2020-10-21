@@ -10,6 +10,9 @@ def copy_folder_tree(source_folder, destination_folder):
     """copy a folder tree, and creates subsequents destination folders if needed
     """
     destination_folder = os.path.normpath(destination_folder)
+    source_folder = os.path.normpath(source_folder)
+    if not os.path.exists(source_folder):
+        return
     parent_folder = os.path.dirname(destination_folder.rstrip("\\"))
     if not os.path.exists(parent_folder):
         os.makedirs(parent_folder)
@@ -20,6 +23,10 @@ class Repository(PulseRepository):
     def __init__(self, url):
         PulseRepository.__init__(self, url)
         self.root = self.url.path
+
+        # remove a leading / wrongly kept by the python urlparser module
+        self.root = self.root.lstrip("/")
+
         self.version_prefix = "V"
         self.version_padding = 3
 
@@ -43,7 +50,6 @@ class Repository(PulseRepository):
         
     def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
         version_directory = self._build_commit_path("work", commit)
-        print version_directory
         os.makedirs(version_directory)
         # Copy work files to repo
         for f in work_files:
@@ -83,7 +89,6 @@ class Repository(PulseRepository):
     def download_resource(self, resource, destination):
         resource_product_repo_path = self._build_resource_path("products", resource)
         resource_work_repo_path = self._build_resource_path("work", resource)
-
         copy_folder_tree(resource_product_repo_path, os.path.join(destination, "products"))
         copy_folder_tree(resource_work_repo_path, os.path.join(destination, "work"))
 
@@ -95,5 +100,7 @@ class Repository(PulseRepository):
         copy_folder_tree(os.path.join(source, "work"), resource_work_repo_path)
 
     def remove_resource(self, resource):
-        shutil.rmtree(self._build_resource_path("products", resource))
+        product_path = self._build_resource_path("products", resource)
+        if os.path.exists(product_path):
+            shutil.rmtree(self._build_resource_path("products", resource))
         shutil.rmtree(self._build_resource_path("work", resource))

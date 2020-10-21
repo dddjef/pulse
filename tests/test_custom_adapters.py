@@ -127,7 +127,7 @@ class TestBasic(unittest.TestCase):
 
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
-        prj.cfg.add_repository("serverB", "shell_repo", os.path.join(repos, "default"))
+        prj.cfg.add_repository("serverB", "shell_repo", "file:///" + os.path.join(repos, "default").replace("\\", "/"))
 
         template_resource = prj.create_resource("_template", "rig", repository="serverB")
         template_work = template_resource.checkout()

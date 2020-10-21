@@ -35,11 +35,10 @@ def reset_files():
 
 def create_test_project(prj_name="test"):
     cnx = Connection(db_root)
-    print repos
     prj = cnx.create_project(
         prj_name,
         user_works,
-        repository_url=os.path.join(repos, "default"),
+        repository_url="file:///" + os.path.join(repos, "default").replace("\\", "/"),
         product_user_root=user_products,
 
     )
@@ -68,7 +67,6 @@ class TestBasic(unittest.TestCase):
         anna_mdl = prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_mdl_work.get_products_directory(), "abc")))
-
 
     def test_unused_time_on_purged_product(self):
         cnx, prj = create_test_project()
@@ -143,6 +141,7 @@ class TestBasic(unittest.TestCase):
             res_work.commit()
 
     def test_check_out_from_another_resource(self):
+        reset_files()
         shader_work_file = "shader_work_file.ma"
         shader_product_file = "shader_product_file.ma"
         cnx, prj = create_test_project()
@@ -156,10 +155,7 @@ class TestBasic(unittest.TestCase):
         anna_shd_resource = prj.create_resource("ch_anna", "surface", source_resource=template_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
-
-        anna_shader_v1 = anna_shd_resource.get_commit(1).get_product("shader")
-        anna_shader_v1.download()
-        self.assertTrue(os.path.exists(os.path.join(anna_shader_v1.directory, shader_product_file)))
+        self.assertTrue(os.path.exists(os.path.join(anna_shd_work.get_product("shader").directory, shader_product_file)))
 
     def test_trashing_work_errors(self):
         cnx, prj = create_test_project()
@@ -216,7 +212,8 @@ class TestBasic(unittest.TestCase):
         # checkout, and check directories are created
         anna_mdl_work = anna_mdl_resource.checkout()
         self.assertTrue(os.path.exists(anna_mdl_work.directory))
-        self.assertTrue(os.path.exists(anna_mdl_work.get_products_directory()))
+        # by default products should not exists
+        self.assertFalse(os.path.exists(anna_mdl_work.get_products_directory()))
 
         # commit should file if nothing is change in work
         with self.assertRaises(PulseError):
@@ -232,6 +229,8 @@ class TestBasic(unittest.TestCase):
 
         # create a product
         anna_mdl_v2_abc = anna_mdl_work.create_product("ABC")
+        # now products directory should exists
+        self.assertTrue(os.path.exists(anna_mdl_work.get_products_directory()))
         open(anna_mdl_v2_abc.directory + "\\test.abc", 'a').close()
         # create a new commit
         anna_mdl_work.commit("some abc produced")
