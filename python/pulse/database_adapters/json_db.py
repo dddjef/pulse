@@ -1,6 +1,7 @@
 import json
 import os
 import glob
+import shutil
 from pulse.database_adapters.interface_class import *
 
 
@@ -14,6 +15,11 @@ class Database(PulseDatabase):
                 raise PulseDatabaseError("can't find json database :" + self.url.path)
         self._root = self.url.path
 
+    def delete_project(self, project_name):
+        project_directory = os.path.join(self._root, project_name)
+        if not os.path.exists(project_directory):
+            raise PulseDatabaseMissingProject("project missing : " + project_name)
+        shutil.rmtree(project_directory)
 
     def create_project(self, project_name):
         project_directory = os.path.join(self._root, project_name)

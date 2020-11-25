@@ -9,7 +9,7 @@ db_root = os.path.join(test_dir, "DB")
 user_works = os.path.join(test_dir, "works")
 user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
-
+test_project_name = "test"
 
 def reset_files():
     for directory in [db_root, user_products, user_works, repos]:
@@ -33,7 +33,7 @@ def reset_files():
     print "FILES RESETED"
 
 
-def create_test_project(prj_name="test"):
+def create_test_project(prj_name=test_project_name):
     cnx = Connection(db_root)
     prj = cnx.create_project(
         prj_name,
@@ -56,6 +56,16 @@ class TestBasic(unittest.TestCase):
 
     # def tearDown(self):
     #     reset_files()
+
+    def test_delete_project(self):
+        cnx, prj = create_test_project()
+        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl_work = anna_mdl.checkout()
+        anna_mdl_work.create_product("abc")
+        anna_mdl_work.commit()
+        cnx.delete_project(test_project_name)
+        with self.assertRaises(PulseDatabaseMissingObject):
+            cnx.get_project(test_project_name)
 
     def test_template_resource(self):
         cnx, prj = create_test_project()

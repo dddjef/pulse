@@ -26,7 +26,8 @@ template_name = "_template"
 # TODO : unify the repo parameters as a single string to path, login and password optionals
 # TODO : work.commit should have an option to remove the commit products
 # TODO : don't support adding wip product to work (remove unneeded check in the trash function)
-
+# TODO : separate admin methods which have permission to create and delete db table and which won't store password
+# TODO : separate uri methods to anticipate a "universal project path" module
 
 class PulseDbObject:
     """
@@ -926,7 +927,7 @@ class Project:
     def get_product(self, uri_string):
         """
         return the product corresponding of the given uri
-        raise a PuleSrrorEif the uri is not found in the project
+        raise a PulseError if the uri is not found in the project
 
         :param uri_string: a pulse product uri
         :return: Product
@@ -1082,6 +1083,9 @@ class Connection:
         project = Project(self, project_name)
         project.load_config()
         return project
+
+    def delete_project(self, project_name):
+        self.db.delete_project(project_name)
 
 
 def import_adapter(adapter_type, adapter_name):
