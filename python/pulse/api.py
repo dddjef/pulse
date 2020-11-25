@@ -20,14 +20,15 @@ DEFAULT_VERSION_PREFIX = "V"
 template_name = "_template"
 
 # TODO : add a purge trash function
-# TODO : add "force" option to trash or remove product to avoid dependency check
+# TODO : add "force" option for trash or remove product to avoid dependency check
 # TODO : support linux user path
 # TODO : should propose option for project's absolute path or relative path
 # TODO : unify the repo parameters as a single string to path, login and password optionals
-# TODO : work.commit should have an option to remove the commit products
+# TODO : work commit method should have an option to remove the commit products
 # TODO : don't support adding wip product to work (remove unneeded check in the trash function)
 # TODO : separate admin methods which have permission to create and delete db table and which won't store password
 # TODO : separate uri methods to anticipate a "universal project path" module
+
 
 class PulseDbObject:
     """
@@ -370,7 +371,7 @@ class Work(WorkNode):
         work_product = WorkProduct(self, product_type)
         os.makedirs(work_product.directory)
 
-        #update work pipe file with the new output
+        # update work pipe file with the new output
         outputs.append(product_type)
         data_dict = fu.read_data(self.data_file)
         data_dict["outputs"] = outputs
@@ -439,8 +440,8 @@ class Work(WorkNode):
         fu.write_data(self.data_file, {
             "version": self.version,
             "entity": self.resource.entity,
-            "resource_type":self.resource.resource_type,
-            "outputs":[]
+            "resource_type": self.resource.resource_type,
+            "outputs": []
             })
 
     def read(self):
@@ -739,7 +740,6 @@ class Resource(PulseDbObject):
         work = Work(self)
         work.version = self.last_version + 1
 
-
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
         if self.last_version == 0:
             source_resource = None
@@ -775,7 +775,6 @@ class Resource(PulseDbObject):
             # create the products from the last commit
             for product in commit.get_products():
                 work.create_product(product.product_type)
-
 
         # download requested input products if needed
         for product in work.get_inputs():
@@ -956,7 +955,6 @@ class Project:
         """
         return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
 
-
     def purge_unused_user_products(self, unused_days=0, resource_filter=None):
         """
         remove unused products from the user product space, based on a unused time
@@ -997,7 +995,7 @@ class Project:
         return Resource(self, entity, resource_type).db_read()
 
     def create_template(self, resource_type, repository='default', source_resource=None):
-        return self.create_resource(template_name, resource_type, repository='default', source_resource=None)
+        return self.create_resource(template_name, resource_type,  source_resource, repository)
 
     def create_resource(self, entity, resource_type, repository='default', source_resource=None):
         """
@@ -1012,7 +1010,6 @@ class Project:
 
         resource = Resource(self, entity, resource_type)
         resource.repository = repository
-
 
         # if a source resource is given keep its uri to db
         if source_resource:
@@ -1136,4 +1133,3 @@ def dict_to_uri(uri_dict):
     if 'version' in uri_dict:
         uri += "@" + (str(int(uri_dict['version'])))
     return uri
-
