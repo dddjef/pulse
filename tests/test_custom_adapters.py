@@ -3,24 +3,26 @@ import unittest
 import os
 import mysql.connector as mariadb
 import ftplib
+import sys
 
 test_dir = os.path.dirname(__file__)
 db_root = os.path.join(test_dir, "DB")
 user_works = os.path.join(test_dir, "works")
 user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
-test_project_name = "testProj"
+test_project_name = "testProject"
 
 # you have to install mysql connector
 # pip install mysql-connector-python
 
-import sys
+#########
+# you can save a tests/connections.py with the same variables as below to save your credentials in a unpublished file.
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 if cmd_folder not in sys.path:
     sys.path.insert(0, cmd_folder)
 try:
     from connections import *
-except:
+except ImportError:
     # you have to set this a mysql database first, pulse user needs rights to create and drop database
     db_host = "192.168.1.2"
     db_port = "3306"
@@ -33,7 +35,7 @@ except:
     ftp_login = "pulseTest"
     ftp_password = "okds-ki_se*84877sEE"
     ftp_root = "/pulseTest/"
-
+###########
 
 def remove_ftp_dir(ftp, path):
     for (name, properties) in ftp.nlst(path=path):
@@ -211,6 +213,21 @@ class TestBasic(unittest.TestCase):
         anna_mdl_resource.checkout()
         self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
 
+    def test_delete_project_sql_db(self):
+        cnx = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql")
+        prj = cnx.create_project(
+            test_project_name,
+            user_works,
+            repository_url=os.path.join(repos, "default"),
+            product_user_root=user_products
+        )
+        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl_work = anna_mdl.checkout()
+        anna_mdl_work.create_product("abc")
+        anna_mdl_work.commit()
+        cnx.delete_project(test_project_name)
+        with self.assertRaises(PulseDatabaseMissingObject):
+            cnx.get_project(test_project_name)
 
 if __name__ == '__main__':
     unittest.main()

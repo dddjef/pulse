@@ -42,6 +42,9 @@ class Database(PulseDatabase):
             cmd += ")"
             self.cursor.execute(cmd)
 
+    def delete_project(self, project_name):
+        self.cursor.execute("DROP DATABASE IF EXISTS " + project_name)
+
     def find_uris(self, project_name, entity_type, uri_pattern):
         self.cursor.execute("USE " + project_name)
         param = '{}%'.format(uri_pattern.replace("*", "%").replace("_", "\\_").replace("?", "_"))
@@ -83,7 +86,11 @@ class Database(PulseDatabase):
 
     def read(self, project_name, entity_type, uri):
         cursor = self.connection.cursor(dictionary=True)
-        cursor.execute("USE " + project_name)
+        try:
+            cursor.execute("USE " + project_name)
+        except mariadb.ProgrammingError:
+            raise PulseDatabaseMissingObject("missing project :" + project_name)
+
         cursor.execute("SELECT * FROM " + entity_type + " WHERE uri = '" + uri + "'")
         data = cursor.fetchone()
         if not data:
