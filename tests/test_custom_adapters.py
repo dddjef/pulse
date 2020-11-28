@@ -3,7 +3,7 @@ import unittest
 import os
 import mysql.connector as mariadb
 import ftplib
-import sys
+from ConfigParser import ConfigParser
 
 test_dir = os.path.dirname(__file__)
 db_root = os.path.join(test_dir, "DB")
@@ -14,28 +14,17 @@ test_project_name = "testProject"
 
 # you have to install mysql connector
 # pip install mysql-connector-python
+# TODO : set tup test sql to use different admin and user login
 
-#########
-# you can save a tests/connections.py with the same variables as below to save your credentials in a unpublished file.
-cmd_folder = os.path.dirname(os.path.abspath(__file__))
-if cmd_folder not in sys.path:
-    sys.path.insert(0, cmd_folder)
-try:
-    from connections import *
-except ImportError:
-    # you have to set this a mysql database first, pulse user needs rights to create and drop database
-    db_host = "192.168.1.2"
-    db_port = "3306"
-    db_user = "pulseTest"
-    db_password = "8JfHRNGuvL5P"
 
-    # you have to set this to a ftp server. pulseTest should be able to write to the ftp_root
-    ftp_host = "192.168.1.2"
-    ftp_port = "21"
-    ftp_login = "pulseTest"
-    ftp_password = "okds-ki_se*84877sEE"
-    ftp_root = "/pulseTest/"
-###########
+# you have to set up custom_adapters_config.ini file with mysql and ftp server to run this test
+config = ConfigParser()
+config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "custom_adapters_config.ini"))
+db_url = "mysql://" + config.get('db', 'login') + ':' + config.get('db', 'password')\
+         + '@' + config.get('db', 'host') + ':' + config.get('db', 'port')
+ftp_url = 'ftp://' + config.get('ftp', 'login') + ':' + config.get('ftp', 'password')\
+          + '@' + config.get('ftp', 'host') + ':' + config.get('ftp', 'port') + '/' + config.get('ftp', 'root')
+
 
 def remove_ftp_dir(ftp, path):
     for (name, properties) in ftp.nlst(path=path):
@@ -75,7 +64,8 @@ def ftp_rmtree(ftp, path):
 
 
 def reset_files():
-    cnx = mariadb.connect(host=db_host, port=db_port, user=db_user, password=db_password)
+    cnx = mariadb.connect(host=config.get('db', 'host'), port=config.get('db', 'port'), user=config.get('db', 'login'), password=config.get('db', 'password'))
+
     cnx.cursor().execute("DROP DATABASE IF EXISTS " + test_project_name)
     cnx.close()
 
@@ -99,13 +89,12 @@ def reset_files():
 
     # clean ftp files
     connection = ftplib.FTP()
-    connection.connect(ftp_host, ftp_port)
-    connection.login(ftp_login, ftp_password)
-    connection.cwd(ftp_root)
+    connection.connect(config.get('ftp', 'host'), int(config.get('ftp', 'port')))
+    connection.login(config.get('ftp', 'login'), config.get('ftp', 'password'))
+    connection.cwd(config.get('ftp', 'root'))
     for project in connection.nlst():
         if project.startswith("test"):
             ftp_rmtree(connection, project)
-    # connection.close()
     connection.quit()
 
     print "FILES RESET"
@@ -117,7 +106,7 @@ def create_test_project(prj_name=test_project_name):
         prj_name,
         user_works,
         repository_adapter="ftp",
-        repository_url='ftp://' + ftp_login + ':' + ftp_password + '@' + ftp_host + ':' + ftp_port + '/' + ftp_root,
+        repository_url= ftp_url,
         product_user_root=user_products
     )
     return cnx, prj
@@ -153,7 +142,7 @@ class TestBasic(unittest.TestCase):
             template_resource.set_repository("serverB")
 
     def test_sql_db(self):
-        cnx = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql")
+        cnx = Connection(db_url, "mysql")
         prj = cnx.create_project(
             test_project_name,
             user_works,
@@ -186,7 +175,7 @@ class TestBasic(unittest.TestCase):
         # you have to close the connection to allow the database reset by the test
         cnx.db.connection.close()
 
-        cnx2 = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql")
+        cnx2 = Connection(db_url, "mysql")
         prj = cnx2.get_project(test_project_name)
         rig2 = prj.get_resource("ch_anna", "rigging")
         self.assertTrue(rig2.get_commit("last").products[0] == 'actor_anim')
@@ -214,7 +203,8 @@ class TestBasic(unittest.TestCase):
         self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
 
     def test_delete_project_sql_db(self):
-        cnx = Connection("mysql://" + db_user + ':' + db_password + '@' + db_host + ':' + db_port, "mysql")
+        print db_url
+        cnx = Connection(db_url, "mysql")
         prj = cnx.create_project(
             test_project_name,
             user_works,

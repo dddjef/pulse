@@ -19,6 +19,7 @@ DEFAULT_VERSION_PADDING = 3
 DEFAULT_VERSION_PREFIX = "V"
 template_name = "_template"
 
+# TODO : move all todo list to github issue
 # TODO : add a purge trash function
 # TODO : add "force" option for trash or remove product to avoid dependency check
 # TODO : support linux user path
