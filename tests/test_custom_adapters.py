@@ -14,10 +14,8 @@ test_project_name = "testProject"
 
 # you have to install mysql connector
 # pip install mysql-connector-python
-# TODO : set tup test sql to use different admin and user login
+# you first have to set up custom_adapters_config.ini file with mysql and ftp configuration to run this test
 
-
-# you have to set up custom_adapters_config.ini file with mysql and ftp server to run this test
 config = ConfigParser()
 config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "custom_adapters_config.ini"))
 db_url = "mysql://" + config.get('db', 'login') + ':' + config.get('db', 'password')\
@@ -64,7 +62,8 @@ def ftp_rmtree(ftp, path):
 
 
 def reset_files():
-    cnx = mariadb.connect(host=config.get('db', 'host'), port=config.get('db', 'port'), user=config.get('db', 'login'), password=config.get('db', 'password'))
+    cnx = mariadb.connect(host=config.get('db', 'host'), port=config.get('db', 'port'),
+                          user=config.get('db', 'login'), password=config.get('db', 'password'))
 
     cnx.cursor().execute("DROP DATABASE IF EXISTS " + test_project_name)
     cnx.close()
@@ -106,7 +105,7 @@ def create_test_project(prj_name=test_project_name):
         prj_name,
         user_works,
         repository_adapter="ftp",
-        repository_url= ftp_url,
+        repository_url=ftp_url,
         product_user_root=user_products
     )
     return cnx, prj
@@ -219,6 +218,6 @@ class TestBasic(unittest.TestCase):
         with self.assertRaises(PulseDatabaseMissingObject):
             cnx.get_project(test_project_name)
 
+
 if __name__ == '__main__':
     unittest.main()
-    # reset_files()
