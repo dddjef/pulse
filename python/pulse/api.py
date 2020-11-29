@@ -19,17 +19,6 @@ DEFAULT_VERSION_PADDING = 3
 DEFAULT_VERSION_PREFIX = "V"
 template_name = "_template"
 
-# TODO : move all todo list to github issue
-# TODO : add a purge trash function
-# TODO : add "force" option for trash or remove product to avoid dependency check
-# TODO : support linux user path
-# TODO : should propose option for project's absolute path or relative path
-# TODO : unify the repo parameters as a single string to path, login and password optionals
-# TODO : work commit method should have an option to remove the commit products
-# TODO : don't support adding wip product to work (remove unneeded check in the trash function)
-# TODO : separate admin methods which have permission to create and delete db table and which won't store password
-# TODO : separate uri methods to anticipate a "universal project path" module
-
 
 class PulseDbObject:
     """
@@ -276,8 +265,6 @@ class WorkNode:
         """
         return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
 
-    # TODO : add input should support a product list
-    # TODO : check if it should be a specific product type here (local or published)
     def add_input(self, product):
         """
         add a local product to work or product inputs list
@@ -704,7 +691,6 @@ class Resource(PulseDbObject):
         """
         if version_name == "last":
             return self.last_version
-        # TODO : should raise an error if tag is unknown
         return int(version_name)
 
     def get_commit(self, version):
@@ -890,7 +876,6 @@ class Config(PulseDbObject):
         self._db_update(["repositories"])
         self.project.load_config()
 
-    # TODO : Should write a test for edit and remove
     def edit_repository(self, name, adapter, url):
         """
         edit the repository property
@@ -922,8 +907,6 @@ class Project:
         self.cfg = Config(self)
         self.repositories = {}
 
-    # TODO : get product should return last product of no version specified
-    # TODO : get product should return all resource products if no product specified
     def get_product(self, uri_string):
         """
         return the product corresponding of the given uri
@@ -1057,7 +1040,6 @@ class Connection:
         :param repository_adapter: default repository adapter (should be an existng module in repository_adapters)
         :return: the new pulse Project
         """
-        # TODO : test admin rights in db and repo before registering anything else
         project = Project(self, project_name)
         if not product_user_root:
             product_user_root = work_user_root

@@ -23,7 +23,6 @@ Set pathext=%pathext%;.py
 
 
 """
-# TODO : test trashing an open file
 
 test_dir = os.path.dirname(__file__)
 db_path = os.path.join(test_dir, "DB")

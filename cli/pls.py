@@ -44,7 +44,6 @@ def get_pulse_project(path):
 
 
 def get_project(args):
-    # TODO : should check if the current path match with project path (and create it if needed)
     cli_filepath = os.path.dirname(os.path.realpath(__file__))
     config = ConfigParser()
     config.read(os.path.join(cli_filepath, "config.ini"))
@@ -170,7 +169,6 @@ def trash_resource(args):
 
 
 def commit(args):
-    # TODO : manage locked resource message with an dedicated exception
     work = get_work(os.getcwd())
     print (work.resource.uri)
     commit_obj = work.commit()

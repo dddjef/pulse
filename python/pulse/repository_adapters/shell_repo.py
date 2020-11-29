@@ -3,8 +3,6 @@ import shutil
 from pulse.repository_adapters.interface_class import *
 from distutils.dir_util import copy_tree
 
-# TODO : define the "products" and "work" wording in the interface class
-
 
 def copy_folder_tree(source_folder, destination_folder):
     """copy a folder tree, and creates subsequents destination folders if needed
@@ -29,7 +27,6 @@ class Repository(PulseRepository):
 
         self.version_prefix = "V"
         self.version_padding = 3
-
 
     def _build_commit_path(self, path_type, commit):
         """custom function to build a repository path

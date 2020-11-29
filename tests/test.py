@@ -2,7 +2,6 @@ from pulse.api import *
 import unittest
 import os
 
-# TODO : test trashing an open file
 
 test_dir = os.path.dirname(__file__)
 db_root = os.path.join(test_dir, "DB")
@@ -10,6 +9,7 @@ user_works = os.path.join(test_dir, "works")
 user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
 test_project_name = "test"
+
 
 def reset_files():
     for directory in [db_root, user_products, user_works, repos]:
@@ -72,7 +72,7 @@ class TestBasic(unittest.TestCase):
         template_mdl = prj.create_template("mdl")
         template_mdl_work = template_mdl.checkout()
         template_mdl_work.create_product("abc")
-        template_mdl_v1 = template_mdl_work.commit()
+        template_mdl_work.commit()
         template_mdl_work.trash()
         anna_mdl = prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
@@ -165,7 +165,8 @@ class TestBasic(unittest.TestCase):
         anna_shd_resource = prj.create_resource("ch_anna", "surface", source_resource=template_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
-        self.assertTrue(os.path.exists(os.path.join(anna_shd_work.get_product("shader").directory, shader_product_file)))
+        self.assertTrue(os.path.exists(os.path.join(anna_shd_work.get_product("shader").directory,
+                                                    shader_product_file)))
 
     def test_trashing_work_errors(self):
         cnx, prj = create_test_project()

@@ -121,7 +121,6 @@ class Repository(PulseRepository):
         self.connection.cwd(self.root + source)
         ftp_download(self.root + source, destination, self.connection)
 
-    # TODO : conform the build path functions to shell repo
     def _build_commit_path(self, path_type, commit):
         """custom function to build a repository path
         """
