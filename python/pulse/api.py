@@ -996,7 +996,7 @@ class Project:
         return Resource(self, entity, resource_type).db_read()
 
     def create_template(self, resource_type, repository='default', source_resource=None):
-        return self.create_resource(template_name, resource_type,  source_resource, repository)
+        return self.create_resource(template_name, resource_type, repository,  source_resource)
 
     def create_resource(self, entity, resource_type, repository='default', source_resource=None):
         """
