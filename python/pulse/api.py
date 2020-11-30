@@ -1026,7 +1026,7 @@ class Connection:
                        product_user_root=None,
                        version_padding=DEFAULT_VERSION_PADDING,
                        version_prefix=DEFAULT_VERSION_PREFIX,
-                       repository_adapter="shell_repo",
+                       repository_adapter="file_storage",
                        ):
         """
         create a new project in the connexion database
