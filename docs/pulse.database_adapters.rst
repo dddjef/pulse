@@ -23,7 +23,7 @@ pulse.database\_adapters.json\_db module
 pulse.database\_adapters.mysql\_db module
 -----------------------------------------
 
-.. automodule:: pulse.database_adapters.mysql_db
+.. automodule:: pulse.database_adapters.mysql
     :members:
     :undoc-members:
     :show-inheritance:
