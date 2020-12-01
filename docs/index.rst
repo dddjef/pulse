@@ -53,7 +53,7 @@ Custom adapters
 You can write your own adapters, but Pulse also come with two custom adapters : a mysql database adapter,
 and a ftp repository adapter.
 Those adapters have their own test file : test_custom_adapters.py. Of course, they need you to setup a few things before
-launchig a test. First, you will have to install mysql connector : # pip install mysql-connector-python
+launching a test. First, you will have to install mysql connector : # pip install mysql-connector-python
 
 Then you will have to setup tests/custom_adapters_config.ini
 The mysql adapter has been test with a mariaDB 10 server. The mysql account you will setup needs to have rights to
