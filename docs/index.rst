@@ -34,6 +34,8 @@ Adapters
 To connect to a database or a file repository, Pulse has an "adapter" strategy.
 You can find them in /python/pulse/database_adapters and /python/pulse/repository_adapters
 In each folder you will find an interface_class.py you can derive from.
+An adapter determine the way you want to share data : the protocol you will use, and how it's stored.
+It's transparent for the user.
 
 By default, API is set to use json_db.py adapter for database, and file_storage.py for file
 repository.
@@ -45,6 +47,18 @@ everybody work on the same network.
 file_storage.py is a simple file repository system. It can stores files in any path writable for the user.
 This adapter is also used for the api test, because it's fast and easy to debug. It's also a good choice
 if you wish to store all the project's resources under a single network path.
+
+Custom adapters
+=================================
+You can write your own adapters, but Pulse also come with two custom adapters : a mysql database adapter,
+and a ftp repository adapter.
+Those adapters have their own test file : test_custom_adapters.py. Of course, they need you to setup a few things before
+launchig a test. First, you will have to install mysql connector : # pip install mysql-connector-python
+
+Then you will have to setup tests/custom_adapters_config.ini
+The mysql adapter has been test with a mariaDB 10 server. The mysql account you will setup needs to have rights to
+create or remove a database. The ftp account needs to write and delete in the root folder you will mention
+
 
 
 .. toctree::
