@@ -219,8 +219,8 @@ class Commit(PulseDbObject):
 
     def get_product(self, product_type):
         """
-        return the commit's product with the specified product type
-        # TODO : check what's return if the product type does not exists
+        return the commit's product with the specified product type. If the product doesn't exists return a
+        pulseDataBaseMissingObject exception
 
         :param product_type: string
         :return: a CommitProduct
