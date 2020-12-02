@@ -12,9 +12,25 @@ user_products = os.path.join(test_dir, "products")
 repos = os.path.join(test_dir, "repos")
 test_project_name = "testProject"
 
-# you have to install mysql connector
-# pip install mysql-connector-python
-# you first have to set up custom_adapters_config.ini file with mysql and ftp configuration to run this test
+
+"""
+CONFIGURATION
+# you have to install mysql connector (pip install mysql-connector-python)
+# you have to set up tests/custom_adapters_config.ini file according to your own connection parameters
+example :
+[db]
+host = 192.168.1.2
+port = 3306
+login = pulseAdmin
+password = ***
+[ftp]
+host = 192.168.1.2
+port = 21
+login = pulseTest
+password = ***
+root = pulseTest/
+"""
+
 
 config = ConfigParser()
 config.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "custom_adapters_config.ini"))
@@ -117,7 +133,8 @@ class TestBasic(unittest.TestCase):
 
     def test_multiple_repository_types(self):
         cnx, prj = create_test_project()
-        prj.cfg.add_repository("serverB", "file_storage", "file:///" + os.path.join(repos, "default").replace("\\", "/"))
+        prj.cfg.add_repository("serverB",
+                               "file_storage", "file:///" + os.path.join(repos, "default").replace("\\", "/"))
 
         template_resource = prj.create_resource("_template", "rig", repository="serverB")
         template_work = template_resource.checkout()
