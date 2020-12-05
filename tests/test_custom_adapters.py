@@ -149,9 +149,14 @@ class TestBasic(unittest.TestCase):
 
         # test moving resource between repo
         self.assertTrue(os.path.exists(os.path.join(repos, "default", test_project_name, "work\\rig\\_template")))
+        # TODO : the set_repository method should call a commit from ftp. Check why it does not happen
         template_resource.set_repository("default")
 
         self.assertFalse(os.path.exists(os.path.join(repos, "default", test_project_name, "work\\rig\\_template")))
+
+        # test commit the resource
+        template_resource.set_repository("default")
+
         # test moving resource between repo when the resource is locked
         template_resource.set_lock(True, "another_user")
         with self.assertRaises(PulseError):

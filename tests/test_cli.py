@@ -11,14 +11,14 @@ associate .py with the python interpreter.
 
 Use commands ftype and assoc
 
-ftype PythonScript=c:\pathtofolder\python.exe %*
+ftype PythonScript=c:/pathtofolder/python.exe %*
 
 assoc .py=PythonScript
 Then add your SCRIPT path to the path command
 
-Setx path "%path%;C:\MyPythonScriptFolder"
+Setx path "%path%;C:/MyPythonScriptFolder"
 
-Set path="%path%;C:\MyPythonScriptFolder"
+Set path="%path%;C:/MyPythonScriptFolder"
 
 Then tell windows command prompt to assume .py files are executable so it will search the path for it.
 
@@ -97,7 +97,7 @@ def reset_custom_adapters_data():
     connection.login(config.get('ftp', 'login'), config.get('ftp', 'password'))
     connection.cwd(config.get('ftp', 'root'))
     for project in connection.nlst():
-        if project.startswith("test"):
+        if project.startswith("cli_project"):
             ftp_rmtree(connection, project)
     connection.quit()
 
@@ -144,7 +144,8 @@ class TestBasic(unittest.TestCase):
         clean_directory(user_work)
 
     def test_create_project(self):
-        os.makedirs(cli_project_path)
+        if not os.path.exists(cli_project_path):
+            os.makedirs(cli_project_path)
         os.chdir(cli_project_path)
         repository_url = os.path.join(local_file_repository, 'default')
         cli_cmd_list(['create_project', jsonDB_path, '--repository_url "' + repository_url + '"', '--silent_mode'])
@@ -197,11 +198,12 @@ class TestCustomAdapters(unittest.TestCase):
         clean_directory(user_work)
 
     def test_create_project(self):
-        os.makedirs(cli_project_path)
+        if not os.path.exists(cli_project_path):
+            os.makedirs(cli_project_path)
         os.chdir(cli_project_path)
-        repository_url = os.path.join(local_file_repository, 'default')
         # create the project with db admin login (needs permission to create a new database)
-        cli_cmd_list(['create_project', mysql_url, '--repository_url "' + ftp_url + '"', "--database_type mysql", '--silent_mode'])
+        cli_cmd_list(['create_project', mysql_url, '--repository_url "' + ftp_url + '"',
+                      "--repository_type ftp",  "--database_type mysql", '--silent_mode'])
 
         cli_cmd_list(['get_project', mysql_url, "--database_type mysql"])
 
