@@ -68,7 +68,6 @@ def get_project(args):
     print 'project "' + project_name + '" connected on "' + args.url + '"'
 
 
-
 def create_project(args):
     cli_filepath = os.path.dirname(os.path.realpath(__file__))
     config = ConfigParser()
@@ -112,8 +111,8 @@ def create_project(args):
         'url': args.url,
         'db_adapter': args.database_type
     }
-    with open(os.path.join(os.getcwd(), project_data_filename), "w") as write_file:
-        json.dump(connexion_data, write_file, indent=4, sort_keys=True)
+    # with open(os.path.join(os.getcwd(), project_data_filename), "w") as write_file:
+    #     json.dump(connexion_data, write_file, indent=4, sort_keys=True)
 
     print 'project "' + project_name + '" created on "' + args.url + '"'
 
