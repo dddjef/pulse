@@ -80,7 +80,9 @@ to write your very own repository type.
 .. image:: multirepo.png
     :align: center
 
-
+Documentation
+=============
+Pulse documentation is available on `readthedocs <https://pulsevs.readthedocs.io/en/latest/index.html>`_.
 
 Q/A
 ===
