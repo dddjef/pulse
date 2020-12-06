@@ -1,45 +1,18 @@
 from pulse.api import *
 import unittest
 import os
+import config as cfg
 
-
-test_dir = os.path.dirname(__file__)
-db_root = os.path.join(test_dir, "DB")
-user_works = os.path.join(test_dir, "works")
-user_products = os.path.join(test_dir, "products")
-repos = os.path.join(test_dir, "repos")
 test_project_name = "test"
 
 
-def reset_files():
-    for directory in [db_root, user_products, user_works, repos]:
-        if not os.path.exists(directory):
-            continue
-        for path, subdirs, files in os.walk(directory):
-            for name in files:
-                filepath = os.path.join(path, name)
-                if filepath.endswith(".pipe"):
-                    os.chmod(filepath, 0o777)
-        for filename in os.listdir(directory):
-            file_path = os.path.join(directory, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
-
-    print "FILES RESETED"
-
-
 def create_test_project(prj_name=test_project_name):
-    cnx = Connection(db_root)
+    cnx = Connection(cfg.json_db_path)
     prj = cnx.create_project(
         prj_name,
-        user_works,
-        repository_url="file:///" + os.path.join(repos, "default").replace("\\", "/"),
-        product_user_root=user_products,
+        cfg.sandbox_work_path,
+        repository_url="file:///" + os.path.join(cfg.file_repository_path, "default").replace("\\", "/"),
+        product_user_root=cfg.sandbox_products_path,
 
     )
     return cnx, prj
@@ -52,8 +25,7 @@ def add_file_to_directory(directory, filename, source_filepath=None):
 
 class TestBasic(unittest.TestCase):
     def setUp(self):
-        reset_files()
-
+        cfg.reset_test_data()
     # def tearDown(self):
     #     reset_files()
 
@@ -90,11 +62,11 @@ class TestBasic(unittest.TestCase):
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_same_work_and_product_user_path(self):
-        cnx = Connection(db_root)
+        cnx = Connection(cfg.json_db_path)
         prj = cnx.create_project(
             "project_simple_sandbox",
-            user_works,
-            repository_url=os.path.join(repos, "default")
+            cfg.sandbox_work_path,
+            repository_url=os.path.join(cfg.file_repository_path, "default")
         )
         mdl_res = prj.create_resource("anna", "mdl")
         mdl_work = mdl_res.checkout()
@@ -151,7 +123,7 @@ class TestBasic(unittest.TestCase):
             res_work.commit()
 
     def test_check_out_from_another_resource(self):
-        reset_files()
+        cfg.reset_test_data()
         shader_work_file = "shader_work_file.ma"
         shader_product_file = "shader_product_file.ma"
         cnx, prj = create_test_project()
@@ -300,4 +272,3 @@ class TestBasic(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    reset_files()
