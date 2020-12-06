@@ -36,7 +36,7 @@ def ftp_makedirs(directory, ftp_connection):
 
 
 def ftp_rmtree(path, ftp):
-    """path should be the absolute path to the root FOLDER of the file tree to download"""
+    """path should be the absolute path to the root FOLDER of the file tree to remove"""
     try:
         names = ftp.nlst(path)
     except ftplib.all_errors as e:
@@ -53,7 +53,7 @@ def ftp_rmtree(path, ftp):
         try:
             ftp.delete(path + "/" + name)
         except ftplib.all_errors:
-            ftp_rmtree(ftp, path + "/" + name)
+            ftp_rmtree(path + "/" + name, ftp)
 
     try:
         ftp.rmd(path)
@@ -141,7 +141,7 @@ class Repository(PulseRepository):
     def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
         """create a new resource default folders and file from a resource template
         """
-    
+
         # create the version folder
         destination = self._build_commit_path("work", commit)
         self._refresh_connection()
@@ -164,15 +164,15 @@ class Repository(PulseRepository):
                 self.connection.storbinary('STOR %s' % filename, fh)
                 fh.close()
 
-    
+
         # Copy products folder to repo
         if not products_folder or not os.path.exists(products_folder):
             return True
         products_destination = self._build_commit_path("products", commit)
-    
+
         self._upload_folder(products_folder, products_destination)
         return True
-        
+
     def download_work(self, commit, work_folder):
         """build_work_user_filepath
         """
@@ -202,4 +202,11 @@ class Repository(PulseRepository):
         self._refresh_connection()
         ftp_rmtree(self.root + self._build_resource_path("products", resource), self.connection)
         ftp_rmtree(self.root + self._build_resource_path("work", resource), self.connection)
+
+    def reset_project(self, project):
+        self._refresh_connection()
+        self.connection.cwd(project.name)
+        for directory in self.connection.nlst():
+            ftp_rmtree(self.root + "/" + project.name + "/" + directory, self.connection)
+
 
