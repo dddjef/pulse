@@ -1,6 +1,5 @@
 import unittest
 import subprocess
-import os
 import config as cfg
 from pulse.api import *
 
