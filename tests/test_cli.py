@@ -2,6 +2,7 @@ import unittest
 import subprocess
 import os
 import config as cfg
+from pulse.api import *
 
 """
 associate .py with the python interpreter.
@@ -41,7 +42,7 @@ class TestBasic(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
 
-    def test_create_project(self):
+    def test_scenario(self):
         if not os.path.exists(cli_project_path):
             os.makedirs(cli_project_path)
         os.chdir(cli_project_path)
@@ -88,6 +89,17 @@ class TestBasic(unittest.TestCase):
         cli_cmd_list(['checkout', 'ch_anna-surfacing'])
         self.assertTrue(os.path.exists(anna_mdl_path))
 
+        # lock surfacing by another user (easier to simulate with with API)
+        cnx = Connection(cfg.json_db_path)
+        prj = cnx.get_project(test_project_name)
+        anna_surfacing_resource = prj.get_resource("ch_anna", "surfacing")
+        anna_surfacing_resource.set_lock(True, user="Joe")
+
+        # try to commit changes, and ensure there's a dedicated message for this error
+        cfg.add_file_to_directory(anna_surfacing_path, "a_work_file.txt")
+        os.chdir(anna_surfacing_path)
+        cli_cmd_list(['commit'])
+
 
 class TestCustomAdapters(unittest.TestCase):
     def setUp(self):
@@ -95,7 +107,7 @@ class TestCustomAdapters(unittest.TestCase):
         cfg.reset_sql_db(test_project_name)
         cfg.reset_ftp(test_project_name)
 
-    def test_create_project(self):
+    def test_scenario(self):
         if not os.path.exists(cli_project_path):
             os.makedirs(cli_project_path)
         os.chdir(cli_project_path)

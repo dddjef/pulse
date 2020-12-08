@@ -17,7 +17,7 @@ def failure_message(message):
 def get_work(path, project=None):
     if not project:
         project = get_pulse_project(path)
-    work_data_filepath = os.path.join(path,work_data_filename)
+    work_data_filepath = os.path.join(path, work_data_filename)
     if not os.path.exists(work_data_filepath):
         failure_message("Not in a work folder. Can't find " + work_data_filepath)
     with open(work_data_filepath, "r") as read_file:
@@ -107,13 +107,6 @@ def create_project(args):
         repository_adapter=args.repository_type,
     )
 
-    connexion_data = {
-        'url': args.url,
-        'db_adapter': args.database_type
-    }
-    # with open(os.path.join(os.getcwd(), project_data_filename), "w") as write_file:
-    #     json.dump(connexion_data, write_file, indent=4, sort_keys=True)
-
     print 'project "' + project_name + '" created on "' + args.url + '"'
 
 
@@ -169,10 +162,11 @@ def trash_resource(args):
 
 def commit(args):
     work = get_work(os.getcwd())
-    print (work.resource.uri)
-    commit_obj = work.commit()
-    print (commit_obj.uri)
-    print 'work commit in version "' + str(commit_obj.version) + '"'
+    try:
+        commit_obj = work.commit()
+        print('work commit in version "' + str(commit_obj.version) + '"')
+    except pulse.PulseError, e:
+        print('work commit failed :' + str(e))
 
 
 def unlock(args):
