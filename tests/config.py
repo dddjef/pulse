@@ -5,10 +5,10 @@ import ftplib
 from ConfigParser import ConfigParser
 
 test_dir = os.path.dirname(__file__)
-json_db_path = os.path.join(test_dir, "DB")
-sandbox_work_path = os.path.join(test_dir, "works")
-sandbox_products_path = os.path.join(test_dir, "products")
-file_repository_path = os.path.join(test_dir, "repos")
+json_db_path = os.path.join(test_dir, "data\\out\\DB")
+sandbox_work_path = os.path.join(test_dir, "data\\out\\works")
+sandbox_products_path = os.path.join(test_dir, "data\\out\\products")
+file_repository_path = os.path.join(test_dir, "data\\out\\repos")
 
 
 ini = ConfigParser()
