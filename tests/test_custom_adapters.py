@@ -25,35 +25,30 @@ root = pulseTest/
 """
 
 
-def create_test_project(prj_name=test_project_name):
-    cnx = Connection(cfg.json_db_path)
-    prj = cnx.create_project(
-        prj_name,
-        cfg.sandbox_work_path,
-        repository_adapter="ftp",
-        repository_url=cfg.ftp_url,
-        product_user_root=cfg.sandbox_products_path
-    )
-    return cnx, prj
-
-
 class TestFTP(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
         cfg.reset_ftp(test_project_name)
+        self.cnx = Connection(cfg.json_db_path)
+        self.prj = self.cnx.create_project(
+            test_project_name,
+            cfg.sandbox_work_path,
+            repository_adapter="ftp",
+            repository_url=cfg.ftp_url,
+            product_user_root=cfg.sandbox_products_path
+        )
 
     def test_multiple_repository_types(self):
-        cnx, prj = create_test_project()
-        prj.cfg.add_repository("serverB", "file_storage",
-                               "file:///" + os.path.join(cfg.file_repository_path, "default").replace("\\", "/"))
+        self.prj.cfg.add_repository("serverB", "file_storage",
+                                    "file:///" + os.path.join(cfg.file_repository_path, "default").replace("\\", "/"))
 
-        template_resource = prj.create_resource("_template", "rig", repository="serverB")
+        template_resource = self.prj.create_resource("_template", "rig", repository="serverB")
         template_work = template_resource.checkout()
         open(template_work.directory + "\\template_work.txt", 'a').close()
         template_work.commit()
         # self.assertTrue(os.path.exists(os.path.join(user_works, "test\\rig\\_template")))
         template_work.trash()
-        prj.purge_unused_user_products()
+        self.prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(os.path.join(cfg.sandbox_work_path, test_project_name, "rig\\_template")))
         template_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(cfg.sandbox_work_path, test_project_name, "rig\\_template")))
@@ -77,10 +72,8 @@ class TestFTP(unittest.TestCase):
 
     def test_work_subdirectories_are_commit(self):
         subdirectory_name = "subdirtest"
-        # create a connection
-        cnx, prj = create_test_project()
         # create a resource based on this template
-        anna_mdl_resource = prj.create_resource("ch_anna", "modeling")
+        anna_mdl_resource = self.prj.create_resource("ch_anna", "modeling")
         self.assertEqual(anna_mdl_resource.last_version, 0)
 
         # checkout, and check directories are created
@@ -99,39 +92,39 @@ class TestSQL(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
         cfg.reset_sql_db(test_project_name)
-
-    def test_sql_db(self):
-        cnx = Connection(cfg.db_url, "mysql")
-        prj = cnx.create_project(
+        self.cnx = Connection(cfg.db_url, "mysql")
+        self.prj = self.cnx.create_project(
             test_project_name,
             cfg.sandbox_work_path,
             repository_url=os.path.join(cfg.file_repository_path, "default"),
             product_user_root=cfg.sandbox_products_path
         )
-        anna_surf_resource = prj.create_resource("ch_anna", "surfacing")
+
+    def test_sql_db(self):
+        anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         anna_surf_textures = anna_surf_work.create_product("textures")
         open(anna_surf_textures.directory + "\\product_file.txt", 'a').close()
         anna_surf_work.commit(comment="test generated product")
-        anna_rig_resource = prj.create_resource("ch_anna", "rigging")
+        anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
         anna_rig_actor.add_input(anna_surf_textures)
         anna_rig_work.commit()
         anna_rig_work.trash()
         anna_surf_work.trash()
-        prj.purge_unused_user_products()
+        self.prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(anna_surf_textures.directory))
-        anim_resource = prj.create_resource("sh003", "anim")
+        anim_resource = self.prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
         anim_work.add_input(anna_rig_actor)
         self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
-        self.assertTrue(len(prj.list_products("ch_anna*")) == 2)
-        self.assertTrue(len(prj.list_products("ch_an?a*")) == 2)
+        self.assertTrue(len(self.prj.list_products("ch_anna*")) == 2)
+        self.assertTrue(len(self.prj.list_products("ch_an?a*")) == 2)
 
         # you have to close the connection to allow the database reset by the test
-        cnx.db.connection.close()
+        self.cnx.db.connection.close()
 
         cnx2 = Connection(cfg.db_url, "mysql")
         prj = cnx2.get_project(test_project_name)
@@ -142,20 +135,13 @@ class TestSQL(unittest.TestCase):
         cnx2.db.connection.close()
 
     def test_delete_project_sql_db(self):
-        cnx = Connection(cfg.db_url, "mysql")
-        prj = cnx.create_project(
-            test_project_name,
-            cfg.sandbox_work_path,
-            repository_url=os.path.join(cfg.file_repository_path, "default"),
-            product_user_root=cfg.sandbox_products_path
-        )
-        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl = self.prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         anna_mdl_work.create_product("abc")
         anna_mdl_work.commit()
-        cnx.delete_project(test_project_name)
+        self.cnx.delete_project(test_project_name)
         with self.assertRaises(PulseDatabaseMissingObject):
-            cnx.get_project(test_project_name)
+            self.cnx.get_project(test_project_name)
 
 
 if __name__ == '__main__':

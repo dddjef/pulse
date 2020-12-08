@@ -82,3 +82,8 @@ def reset_ftp(project_name):
         if project.startswith(project_name):
             ftp_rmtree(connection, project)
     connection.quit()
+
+
+def add_file_to_directory(directory, filename, source_filepath=None):
+    if not source_filepath:
+        open(os.path.join(directory, filename), 'a').close()

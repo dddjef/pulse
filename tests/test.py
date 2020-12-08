@@ -6,58 +6,43 @@ import config as cfg
 test_project_name = "test"
 
 
-def create_test_project(prj_name=test_project_name):
-    cnx = Connection(cfg.json_db_path)
-    prj = cnx.create_project(
-        prj_name,
-        cfg.sandbox_work_path,
-        repository_url="file:///" + os.path.join(cfg.file_repository_path, "default").replace("\\", "/"),
-        product_user_root=cfg.sandbox_products_path,
-
-    )
-    return cnx, prj
-
-
-def add_file_to_directory(directory, filename, source_filepath=None):
-    if not source_filepath:
-        open(os.path.join(directory, filename), 'a').close()
-
-
 class TestBasic(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
-    # def tearDown(self):
-    #     reset_files()
+        self.cnx = Connection(cfg.json_db_path)
+        self.prj = self.cnx.create_project(
+            test_project_name,
+            cfg.sandbox_work_path,
+            repository_url="file:///" + os.path.join(cfg.file_repository_path, "default").replace("\\", "/"),
+            product_user_root=cfg.sandbox_products_path
+        )
 
     def test_delete_project(self):
-        cnx, prj = create_test_project()
-        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl = self.prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         anna_mdl_work.create_product("abc")
         anna_mdl_work.commit()
-        cnx.delete_project(test_project_name)
+        self.cnx.delete_project(test_project_name)
         with self.assertRaises(PulseDatabaseMissingObject):
-            cnx.get_project(test_project_name)
+            self.cnx.get_project(test_project_name)
 
     def test_template_resource(self):
-        cnx, prj = create_test_project()
-        template_mdl = prj.create_template("mdl")
+        template_mdl = self.prj.create_template("mdl")
         template_mdl_work = template_mdl.checkout()
         template_mdl_work.create_product("abc")
         template_mdl_work.commit()
         template_mdl_work.trash()
-        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl = self.prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_mdl_work.get_products_directory(), "abc")))
 
     def test_unused_time_on_purged_product(self):
-        cnx, prj = create_test_project()
-        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl = self.prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         anna_mdl_work.create_product("abc")
         anna_mdl_v1 = anna_mdl_work.commit()
         anna_mdl_work.trash()
-        prj.purge_unused_user_products()
+        self.prj.purge_unused_user_products()
         product = anna_mdl_v1.get_product("abc")
         self.assertTrue(product.get_unused_time(), -1)
 
@@ -78,13 +63,12 @@ class TestBasic(unittest.TestCase):
         mdl_work.trash()
 
     def test_manipulating_trashed_work(self):
-        cnx, prj = create_test_project()
-        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl = self.prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         anna_mdl_v1_abc = anna_mdl_work.create_product("abc")
         anna_mdl_work.trash()
-        prj.purge_unused_user_products()
-        anna_surf_work = prj.create_resource("anna", "surfacing").checkout()
+        self.prj.purge_unused_user_products()
+        anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
         # add a trashed product
         with self.assertRaises(PulseMissingNode):
             anna_surf_work.add_input(anna_mdl_v1_abc)
@@ -96,8 +80,7 @@ class TestBasic(unittest.TestCase):
             anna_mdl_work.commit()
 
     def test_trash_product(self):
-        cnx, prj = create_test_project()
-        anna_mdl = prj.create_resource("anna", "mdl")
+        anna_mdl = self.prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         abc_product = anna_mdl_work.create_product("abc")
         anna_mdl_work.trash_product("abc")
@@ -115,36 +98,32 @@ class TestBasic(unittest.TestCase):
         # self.assertTrue(res.metas["site"] == "Paris")
 
     def test_lock_resource(self):
-        cnx, prj = create_test_project()
-        res_mdl = prj.create_resource("res", "mdl")
+        res_mdl = self.prj.create_resource("res", "mdl")
         res_mdl.set_lock(True, "another_user")
         res_work = res_mdl.checkout()
         with self.assertRaises(PulseError):
             res_work.commit()
 
     def test_check_out_from_another_resource(self):
-        cfg.reset_test_data()
         shader_work_file = "shader_work_file.ma"
         shader_product_file = "shader_product_file.ma"
-        cnx, prj = create_test_project()
-        template_resource = prj.create_resource("template", "surface")
+        template_resource = self.prj.create_resource("template", "surface")
         template_work = template_resource.checkout()
-        add_file_to_directory(template_work.directory, shader_work_file)
+        cfg.add_file_to_directory(template_work.directory, shader_work_file)
         shader_product = template_work.create_product("shader")
-        add_file_to_directory(shader_product.directory, shader_product_file)
+        cfg.add_file_to_directory(shader_product.directory, shader_product_file)
         template_work.commit()
 
-        anna_shd_resource = prj.create_resource("ch_anna", "surface", source_resource=template_resource)
+        anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=template_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.get_product("shader").directory,
                                                     shader_product_file)))
 
     def test_trashing_work_errors(self):
-        cnx, prj = create_test_project()
-        anna_mdl_work = prj.create_resource("anna", "mdl").checkout()
+        anna_mdl_work = self.prj.create_resource("anna", "mdl").checkout()
         anna_mdl_abc = anna_mdl_work.create_product("abc")
-        anna_surf_work = prj.create_resource("anna", "surfacing").checkout()
+        anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
         anna_surf_work.add_input(anna_mdl_abc)
         with self.assertRaises(PulseError):
             anna_mdl_work.trash()
@@ -152,44 +131,40 @@ class TestBasic(unittest.TestCase):
         anna_mdl_work.trash()
 
     def test_recursive_dependencies_download(self):
-        cnx, prj = create_test_project()
-        anna_surf_resource = prj.create_resource("ch_anna", "surfacing")
+        anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         anna_surf_textures = anna_surf_work.create_product("textures")
         open(anna_surf_textures.directory + "\\product_file.txt", 'a').close()
         anna_surf_work.commit(comment="test generated product")
-        anna_rig_resource = prj.create_resource("ch_anna", "rigging")
+        anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
         anna_rig_actor.add_input(anna_surf_textures)
         anna_rig_work.commit()
         anna_rig_work.trash()
         anna_surf_work.trash()
-        prj.purge_unused_user_products()
+        self.prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(anna_surf_textures.directory))
-        anim_resource = prj.create_resource("sh003", "anim")
+        anim_resource = self.prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
         anim_work.add_input(anna_rig_actor)
         self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
     def test_work_cannot_commit_with_unpublished_inputs(self):
-        cnx, prj = create_test_project()
-        anna_surf_resource = prj.create_resource("ch_anna", "surfacing")
+        anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         anna_surf_textures = anna_surf_work.create_product("textures")
         product_folder = anna_surf_textures.directory
         open(product_folder + "\\product_file.txt", 'a').close()
-        anna_rig_resource = prj.create_resource("ch_anna", "rigging")
+        anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_work.add_input(anna_surf_textures)
         with self.assertRaises(PulseError):
             anna_rig_work.commit()
 
     def test_complete_scenario(self):
-        # create a connection
-        cnx, prj = create_test_project()
         # create a resource based on this template
-        anna_mdl_resource = prj.create_resource("ch_anna", "modeling")
+        anna_mdl_resource = self.prj.create_resource("ch_anna", "modeling")
         self.assertEqual(anna_mdl_resource.last_version, 0)
 
         # checkout, and check directories are created
@@ -219,7 +194,7 @@ class TestBasic(unittest.TestCase):
         anna_mdl_work.commit("some abc produced")
         self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
-        hat_mdl_resource = prj.create_resource("hat", "modeling")
+        hat_mdl_resource = self.prj.create_resource("hat", "modeling")
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 
@@ -242,20 +217,16 @@ class TestBasic(unittest.TestCase):
         # check the unused time for the product
         self.assertTrue(anna_mdl_v2_abc.get_unused_time() > 0)
         # remove the product
-        prj.purge_unused_user_products()
+        self.prj.purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
         hat_mdl_work.remove_input(anna_mdl_v2_abc)
         anna_mdl_work.trash()
-        for nd in prj.list_products("*anna*"):
-            print nd.uri
 
     def test_work_subdirectories_are_commit(self):
         subdirectory_name = "subdirtest"
-        # create a connection
-        cnx, prj = create_test_project()
         # create a resource based on this template
-        anna_mdl_resource = prj.create_resource("ch_anna", "modeling")
+        anna_mdl_resource = self.prj.create_resource("ch_anna", "modeling")
         self.assertEqual(anna_mdl_resource.last_version, 0)
 
         # checkout, and check directories are created
