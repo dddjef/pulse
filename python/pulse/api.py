@@ -689,9 +689,15 @@ class Resource(PulseDbObject):
         :param version_name: string or integer
         :return: integer
         """
-        if version_name == "last":
-            return self.last_version
-        return int(version_name)
+        if isinstance(version_name, basestring):
+            if version_name == "last":
+                return self.last_version
+            else:
+                try:
+                    return int(version_name)
+                except ValueError:
+                    raise PulseError("unsupported version name")
+        return version_name
 
     def get_commit(self, version):
         """

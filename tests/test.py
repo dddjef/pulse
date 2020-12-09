@@ -240,6 +240,17 @@ class TestBasic(unittest.TestCase):
         anna_mdl_resource.checkout()
         self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
 
+    def test_get_unknown_resource_index(self):
+        template_mdl = self.prj.create_template("mdl")
+        template_mdl_work = template_mdl.checkout()
+        template_mdl_work.create_product("abc")
+        template_mdl_work.commit()
+        template_mdl_work.trash()
+        # test get an unknown tag raise a pulseError
+        with self.assertRaises(PulseError):
+            template_mdl.get_index("anytag")
+
+
 
 if __name__ == '__main__':
     unittest.main()
