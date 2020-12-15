@@ -736,6 +736,7 @@ class Resource(PulseDbObject):
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
         if self.last_version == 0:
             source_resource = None
+            # if a source resource is given, get its template
             if self.resource_template != '':
                 template_dict = uri_to_dict(self.resource_template)
                 source_resource = self.project.get_resource(template_dict['entity'], template_dict['resource_type'])

@@ -1,7 +1,6 @@
 import os
 import shutil
 from pulse.repository_adapters.interface_class import *
-from distutils.dir_util import copy_tree
 
 
 def copy_folder_tree(source_folder, destination_folder):
@@ -14,7 +13,7 @@ def copy_folder_tree(source_folder, destination_folder):
     parent_folder = os.path.dirname(destination_folder.rstrip("\\"))
     if not os.path.exists(parent_folder):
         os.makedirs(parent_folder)
-    copy_tree(source_folder, destination_folder)
+    shutil.copytree(source_folder, destination_folder)
 
 
 class Repository(PulseRepository):

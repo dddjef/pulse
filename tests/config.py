@@ -4,11 +4,12 @@ import mysql.connector as mysql
 import ftplib
 from ConfigParser import ConfigParser
 
-test_dir = os.path.dirname(__file__)
-json_db_path = os.path.join(test_dir, "data\\out\\DB")
-sandbox_work_path = os.path.join(test_dir, "data\\out\\works")
-sandbox_products_path = os.path.join(test_dir, "data\\out\\products")
-file_repository_path = os.path.join(test_dir, "data\\out\\repos")
+
+test_data_output_path = os.path.join(os.path.dirname(__file__), "data\\out")
+json_db_path = os.path.join(test_data_output_path, "DB")
+sandbox_work_path = os.path.join(test_data_output_path, "works")
+sandbox_products_path = os.path.join(test_data_output_path, "products")
+file_repository_path = os.path.join(test_data_output_path, "repos")
 
 
 ini = ConfigParser()
@@ -20,23 +21,16 @@ ftp_url = 'ftp://' + ini.get('ftp', 'login') + ':' + ini.get('ftp', 'password') 
 
 
 def reset_test_data():
-    for directory in [json_db_path, sandbox_work_path, sandbox_products_path, file_repository_path]:
-        if not os.path.exists(directory):
-            return
-        for path, subdirs, files in os.walk(directory):
+    if os.path.exists(test_data_output_path):
+        # first remove all read only mode from files attributes
+        for path, subdirs, files in os.walk(test_data_output_path):
             for name in files:
                 filepath = os.path.join(path, name)
                 if filepath.endswith(".pipe"):
                     os.chmod(filepath, 0o777)
-        for filename in os.listdir(directory):
-            file_path = os.path.join(directory, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+        shutil.rmtree(test_data_output_path)
+    os.mkdir(test_data_output_path)
 
 
 def reset_sql_db(project_name):
