@@ -6,14 +6,14 @@ from pulse.database_adapters.interface_class import *
 
 
 class Database(PulseDatabase):
-    def __init__(self, url):
-        PulseDatabase.__init__(self, url)
-        if not os.path.exists(self.url.path):
+    def __init__(self, settings):
+        PulseDatabase.__init__(self, settings)
+        if not os.path.exists(self.settings["path"]):
             try:
-                os.makedirs(self.url.path)
+                os.makedirs(self.settings["path"])
             except OSError:
-                raise PulseDatabaseError("can't find json database :" + self.url.path)
-        self._root = self.url.path
+                raise PulseDatabaseError("can't find json database :" + self.settings["path"])
+        self._root = self.settings["path"]
 
     def delete_project(self, project_name):
         project_directory = os.path.join(self._root, project_name)

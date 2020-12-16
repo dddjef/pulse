@@ -83,9 +83,9 @@ def ftp_download(source, destination, ftp_connection):
 
 
 class Repository(PulseRepository):
-    def __init__(self, url):
-        PulseRepository.__init__(self, url)
-        self.root = self.url.path
+    def __init__(self, settings, login, password):
+        PulseRepository.__init__(self, settings, login, password)
+        self.root = self.settings["root"]
         if not self.root.endswith('/'):
             self.root += '/'
         self.version_prefix = "V"
@@ -98,8 +98,8 @@ class Repository(PulseRepository):
             self.connection.voidcmd("NOOP")
         except:
             self.connection = ftplib.FTP()
-            self.connection.connect(self.url.hostname, self.url.port)
-            self.connection.login(self.url.username, self.url.password)
+            self.connection.connect(self.settings["host"], self.settings["port"])
+            self.connection.login(self.login, self.password)
         self.connection.cwd(self.root)
 
     def _upload_folder(self, source, destination):
@@ -149,7 +149,6 @@ class Repository(PulseRepository):
         ftp_makedirs(version_folder, self.connection)
         self.connection.cwd(version_folder)
 
-
         # Copy work files to repo
         for fp in work_files:
             filename = os.path.basename(fp)
@@ -163,7 +162,6 @@ class Repository(PulseRepository):
                 fh = open(fp, 'rb')
                 self.connection.storbinary('STOR %s' % filename, fh)
                 fh.close()
-
 
         # Copy products folder to repo
         if not products_folder or not os.path.exists(products_folder):
@@ -208,5 +206,3 @@ class Repository(PulseRepository):
         self.connection.cwd(project.name)
         for directory in self.connection.nlst():
             ftp_rmtree(self.root + "/" + project.name + "/" + directory, self.connection)
-
-

@@ -14,10 +14,18 @@ file_repository_path = os.path.join(test_data_output_path, "repos")
 
 ini = ConfigParser()
 ini.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "custom_adapters_config.ini"))
-db_url = "mysql://" + ini.get('db', 'login') + ':' + ini.get('db', 'password') \
-         + '@' + ini.get('db', 'host') + ':' + ini.get('db', 'port')
-ftp_url = 'ftp://' + ini.get('ftp', 'login') + ':' + ini.get('ftp', 'password') \
-          + '@' + ini.get('ftp', 'host') + ':' + ini.get('ftp', 'port') + '/' + ini.get('ftp', 'root')
+mysql_settings = {
+    "username": ini.get('mysql', 'username'),
+    'password': ini.get('mysql', 'password'),
+    'host': ini.get('mysql', 'host'),
+    'port': ini.get('mysql', 'port')}
+
+ftp_login = ini.get('ftp', 'login')
+ftp_password = ini.get('ftp', 'password')
+ftp_settings = {
+    "host": ini.get('ftp', 'host'),
+    "port": int(ini.get('ftp', 'port')),
+    "root": ini.get('ftp', 'root')}
 
 
 def reset_test_data():
@@ -34,8 +42,8 @@ def reset_test_data():
 
 
 def reset_sql_db(project_name):
-    cnx = mysql.connect(host=ini.get('db', 'host'), port=ini.get('db', 'port'),
-                        user=ini.get('db', 'login'), password=ini.get('db', 'password'))
+    cnx = mysql.connect(host=ini.get('mysql', 'host'), port=ini.get('mysql', 'port'),
+                        user=ini.get('mysql', 'username'), password=ini.get('mysql', 'password'))
 
     cnx.cursor().execute("DROP DATABASE IF EXISTS " + project_name)
     cnx.close()

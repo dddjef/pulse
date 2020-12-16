@@ -9,11 +9,11 @@ test_project_name = "test"
 class TestBasic(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
-        self.cnx = Connection(cfg.json_db_path)
+        self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
         self.prj = self.cnx.create_project(
             test_project_name,
             cfg.sandbox_work_path,
-            repository_url="file:///" + os.path.join(cfg.file_repository_path, "default").replace("\\", "/"),
+            repository_settings={"path": os.path.join(cfg.file_repository_path, "default").replace("\\", "/")},
             product_user_root=cfg.sandbox_products_path
         )
 
@@ -47,11 +47,11 @@ class TestBasic(unittest.TestCase):
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_same_work_and_product_user_path(self):
-        cnx = Connection(cfg.json_db_path)
+        cnx = Connection(adapter="json_db", path=cfg.json_db_path)
         prj = cnx.create_project(
             "project_simple_sandbox",
             cfg.sandbox_work_path,
-            repository_url=os.path.join(cfg.file_repository_path, "default")
+            repository_settings={"path": os.path.join(cfg.file_repository_path, "default")}
         )
         mdl_res = prj.create_resource("anna", "mdl")
         mdl_work = mdl_res.checkout()
@@ -249,7 +249,6 @@ class TestBasic(unittest.TestCase):
         # test get an unknown tag raise a pulseError
         with self.assertRaises(PulseError):
             template_mdl.get_index("anytag")
-
 
 
 if __name__ == '__main__':

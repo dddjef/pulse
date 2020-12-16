@@ -17,12 +17,9 @@ def copy_folder_tree(source_folder, destination_folder):
 
 
 class Repository(PulseRepository):
-    def __init__(self, url):
-        PulseRepository.__init__(self, url)
-        self.root = self.url.path
-
-        # remove a leading / wrongly kept by the python urlparser module
-        self.root = self.root.lstrip("/")
+    def __init__(self, settings, login="", password=""):
+        PulseRepository.__init__(self, settings, login="", password="")
+        self.root = self.settings["path"]
 
         self.version_prefix = "V"
         self.version_padding = 3

@@ -856,19 +856,23 @@ class Config(PulseDbObject):
         """
         return os.path.join(self.product_user_root, "products_list.pipe")
 
-    def add_repository(self, name, adapter, url):
+    def add_repository(self, name, adapter, settings, login="", password=""):
         """
         add a new repository to the project.
 
         :param name: the new repository name
         :param adapter: must be an existing module from repository adapters.
-        :param url: the repository address passed to the module
+        :param settings: dict containing the connection parameters passed to the module
+        :param login: the repository login
+        :param password: the repository password
         """
         if name in self.repositories:
             raise PulseError("Repository already exists : " + name)
         self.repositories[name] = {
             "adapter": adapter,
-            "url": url
+            "settings": settings,
+            "login": login,
+            "password": password
         }
         self._db_update(["repositories"])
         self.project.load_config()
@@ -883,7 +887,7 @@ class Config(PulseDbObject):
         self._db_update(["repositories"])
         self.project.load_config()
 
-    def edit_repository(self, name, adapter, url):
+    def edit_repository(self, name, adapter, path):
         """
         edit the repository property
         raise a PulseError if the repository is not found
@@ -892,7 +896,7 @@ class Config(PulseDbObject):
             raise PulseError("Repository does not exists : " + name)
         self.repositories[name] = {
             "adapter": adapter,
-            "url": url
+            "path": path
         }
         self._db_update(["repositories"])
         self.project.load_config()
@@ -972,7 +976,8 @@ class Project:
         self.cfg.db_read()
         for repo_name in self.cfg.repositories:
             repo = self.cfg.repositories[repo_name]
-            self.repositories[repo_name] = import_adapter("repository", repo['adapter']).Repository(repo['url'])
+            self.repositories[repo_name] = import_adapter("repository", repo['adapter']).Repository(
+                settings=repo['settings'], login=repo['login'], password=repo['password'])
 
     def get_resource(self, entity, resource_type):
         """
@@ -1020,31 +1025,33 @@ class Connection:
     """
         connection instance to a Pulse database
     """
-    def __init__(self, url, database_adapter=None):
-        if not database_adapter:
-            database_adapter = "json_db"
-        self.db = import_adapter("database", database_adapter).Database(url)
+    def __init__(self, adapter, **settings):
+        self.db = import_adapter("database", adapter).Database(settings)
         self.user_name = self.db.get_user_name()
 
     def create_project(self,
                        project_name,
                        work_user_root,
-                       repository_url,
+                       repository_settings,
                        product_user_root=None,
                        version_padding=DEFAULT_VERSION_PADDING,
                        version_prefix=DEFAULT_VERSION_PREFIX,
                        repository_adapter="file_storage",
+                       repository_login="",
+                       repository_password=""
                        ):
         """
         create a new project in the connexion database
 
         :param project_name:
         :param work_user_root: user work space path
-        :param repository_url: default repository url
+        :param repository_settings: default repository connection settings
         :param product_user_root: product work space path
         :param version_padding: optional, set ehe number of digits used to number version. 3 by default
         :param version_prefix: optional, set the prefix used before version number. "V" by default
         :param repository_adapter: default repository adapter (should be an existng module in repository_adapters)
+        :param repository_login: default repository login
+        :param repository_password: default repository password
         :return: the new pulse Project
         """
         project = Project(self, project_name)
@@ -1056,7 +1063,8 @@ class Connection:
         project.cfg.version_padding = version_padding
         project.cfg.version_prefix = version_prefix
         project.cfg.db_create()
-        project.cfg.add_repository("default", repository_adapter, repository_url)
+        project.cfg.add_repository(
+            "default", repository_adapter, repository_settings, repository_login, repository_password)
         project.load_config()
         return project
 

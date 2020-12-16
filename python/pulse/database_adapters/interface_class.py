@@ -1,5 +1,3 @@
-from urlparse import urlparse
-
 
 class PulseDatabaseError(Exception):
     def __init__(self, reason):
@@ -26,8 +24,8 @@ class PulseDatabaseMissingObject(Exception):
 
 
 class PulseDatabase:
-    def __init__(self, url):
-        self.url = urlparse(url)
+    def __init__(self, settings):
+        self.settings = settings
 
     tables_definition = {
         'Config': [

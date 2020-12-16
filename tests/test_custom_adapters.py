@@ -29,18 +29,22 @@ class TestFTP(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
         cfg.reset_ftp(test_project_name)
-        self.cnx = Connection(cfg.json_db_path)
+        self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
         self.prj = self.cnx.create_project(
             test_project_name,
             cfg.sandbox_work_path,
             repository_adapter="ftp",
-            repository_url=cfg.ftp_url,
+            repository_settings=cfg.ftp_settings,
+            repository_login=cfg.ftp_login,
+            repository_password=cfg.ftp_password,
             product_user_root=cfg.sandbox_products_path
         )
 
     def test_multiple_repository_types(self):
-        self.prj.cfg.add_repository("serverB", "file_storage",
-                                    "file:///" + os.path.join(cfg.file_repository_path, "default").replace("\\", "/"))
+        self.prj.cfg.add_repository(
+            "serverB",
+            "file_storage",
+            settings={"path": os.path.join(cfg.file_repository_path, "default").replace("\\", "/")})
 
         template_resource = self.prj.create_resource("_template", "rig", repository="serverB")
         template_work = template_resource.checkout()
@@ -92,11 +96,17 @@ class TestSQL(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
         cfg.reset_sql_db(test_project_name)
-        self.cnx = Connection(cfg.db_url, "mysql")
+        self.cnx = Connection(
+            adapter="mysql",
+            host=cfg.mysql_settings['host'],
+            username=cfg.mysql_settings['username'],
+            password=cfg.mysql_settings['password'],
+            port=cfg.mysql_settings['port']
+        )
         self.prj = self.cnx.create_project(
             test_project_name,
             cfg.sandbox_work_path,
-            repository_url=os.path.join(cfg.file_repository_path, "default"),
+            repository_settings={"path": os.path.join(cfg.file_repository_path, "default")},
             product_user_root=cfg.sandbox_products_path
         )
 
@@ -126,7 +136,13 @@ class TestSQL(unittest.TestCase):
         # you have to close the connection to allow the database reset by the test
         self.cnx.db.connection.close()
 
-        cnx2 = Connection(cfg.db_url, "mysql")
+        cnx2 = Connection(
+            adapter="mysql",
+            host=cfg.mysql_settings['host'],
+            username=cfg.mysql_settings['username'],
+            password=cfg.mysql_settings['password'],
+            port=cfg.mysql_settings['port']
+        )
         prj = cnx2.get_project(test_project_name)
         rig2 = prj.get_resource("ch_anna", "rigging")
         self.assertTrue(rig2.get_commit("last").products[0] == 'actor_anim')
