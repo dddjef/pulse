@@ -14,15 +14,37 @@ class Database(PulseDatabase):
             except OSError:
                 raise PulseDatabaseError("can't find json database :" + self.settings["path"])
         self._root = self.settings["path"]
+        self.config_name = "_Config"
+        self.repo_filepath = os.path.join(self._root, self.config_name, "Repository")
+
+    def get_repositories(self):
+        repositories = {}
+        if not os.path.exists(self.repo_filepath):
+            os.makedirs(self.repo_filepath)
+            return repositories
+        for json_file in glob.glob(os.path.join(self.repo_filepath, "*.json")):
+            with open(json_file, "r") as read_file:
+                data = json.load(read_file)
+            repositories[data["name"]] = data
+        return repositories
+
+    def create_repository(self, name, adapter, login, password, settings):
+        json_filepath = os.path.join(self.repo_filepath, name + ".json")
+        if os.path.exists(json_filepath):
+            raise PulseDatabaseError("repository already exists:" + name)
+
+        with open(json_filepath, "w") as write_file:
+            data = {"name": name, "adapter": adapter, "login": login, "password": password, "settings": settings}
+            json.dump(data, write_file, indent=4, sort_keys=True)
 
     def delete_project(self, project_name):
-        project_directory = os.path.join(self._root, project_name)
+        project_directory = self._get_project_filepath(project_name)
         if not os.path.exists(project_directory):
             raise PulseDatabaseMissingObject("project missing : " + project_name)
         shutil.rmtree(project_directory)
 
     def create_project(self, project_name):
-        project_directory = os.path.join(self._root, project_name)
+        project_directory = self._get_project_filepath(project_name)
         if os.path.exists(project_directory):
             raise PulseDatabaseError("project already exists")
         os.makedirs(project_directory)
@@ -68,5 +90,8 @@ class Database(PulseDatabase):
             data = json.load(read_file)
         return data
 
+    def _get_project_filepath(self, project_name):
+        return os.path.join(self._root, "Project", project_name)
+
     def _get_json_filepath(self, project_name, entity_type, uri):
-        return os.path.join(self._root, project_name, entity_type,  uri + ".json")
+        return os.path.join(self._get_project_filepath(project_name), entity_type,  uri + ".json")

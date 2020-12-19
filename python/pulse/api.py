@@ -146,7 +146,7 @@ class CommitProduct(PulseDbObject, Product):
 
         :return: the product's local filepath
         """
-        self.project.repositories[self.parent.resource.repository].download_product(self)
+        self.project.cnx.repositories[self.parent.resource.repository].download_product(self)
         fu.write_data(self.product_users_file, [])
         self.register_to_user_products()
         for uri in self.products_inputs:
@@ -482,7 +482,7 @@ class Work(WorkNode):
 
         # copy work files to a new version in repository
         commit = Commit(self.resource, self.version)
-        commit.project.repositories[self.resource.repository].upload_resource_commit(
+        commit.project.cnx.repositories[self.resource.repository].upload_resource_commit(
             commit, self.directory, self._get_work_files(), products_directory)
 
         # register changes to database
@@ -754,17 +754,20 @@ class Resource(PulseDbObject):
             else:
                 source_commit = source_resource.get_commit("last")
                 # initialize work and products data with source
-                self.project.repositories[source_resource.repository].download_work(source_commit, destination_folder)
+                self.project.cnx.repositories[source_resource.repository].download_work(
+                    source_commit,
+                    destination_folder
+                )
                 for product in source_commit.get_products():
                     product_directory = os.path.join(work.get_products_directory(), product.product_type)
                     # os.makedirs(product_directory)
-                    self.project.repositories[source_resource.repository].download_product(
+                    self.project.cnx.repositories[source_resource.repository].download_product(
                         product, product_directory)
 
         # else get the resource commit
         else:
             commit = self.get_commit(index)
-            self.project.repositories[self.repository].download_work(commit, destination_folder)
+            self.project.cnx.repositories[self.repository].download_work(commit, destination_folder)
 
             # create the products from the last commit
             for product in commit.get_products():
@@ -818,11 +821,11 @@ class Resource(PulseDbObject):
         self.set_lock(True, self.project.cnx.user_name + "_set_repo", steal=True)
 
         temp_directory = tempfile.mkdtemp()
-        if new_repository not in self.project.repositories:
+        if new_repository not in self.project.cnx.repositories:
             raise PulseError("unknown repository : " + new_repository)
-        self.project.repositories[self.repository].download_resource(self, temp_directory)
-        self.project.repositories[new_repository].upload_resource(self, temp_directory)
-        self.project.repositories[self.repository].remove_resource(self)
+        self.project.cnx.repositories[self.repository].download_resource(self, temp_directory)
+        self.project.cnx.repositories[new_repository].upload_resource(self, temp_directory)
+        self.project.cnx.repositories[self.repository].remove_resource(self)
         self.repository = new_repository
         self.set_lock(lock_state, lock_user, steal=True)
         self._db_update(['repository'])
@@ -837,13 +840,13 @@ class Config(PulseDbObject):
         self.product_user_root = None
         self.version_padding = None
         self.version_prefix = None
-        self.repositories = {}
+        self.default_repository = None
         self._storage_vars = vars(self).keys()
         PulseDbObject.__init__(self, project, "config")
         self._storage_vars = [
             "work_user_root",
             "product_user_root",
-            "repositories",
+            "default_repository",
             "version_padding",
             "version_prefix"
         ]
@@ -855,51 +858,6 @@ class Config(PulseDbObject):
         :return: string
         """
         return os.path.join(self.product_user_root, "products_list.pipe")
-
-    def add_repository(self, name, adapter, settings, login="", password=""):
-        """
-        add a new repository to the project.
-
-        :param name: the new repository name
-        :param adapter: must be an existing module from repository adapters.
-        :param settings: dict containing the connection parameters passed to the module
-        :param login: the repository login
-        :param password: the repository password
-        """
-        if name in self.repositories:
-            raise PulseError("Repository already exists : " + name)
-        self.repositories[name] = {
-            "adapter": adapter,
-            "settings": settings,
-            "login": login,
-            "password": password
-        }
-        self._db_update(["repositories"])
-        self.project.load_config()
-
-    def remove_repository(self, repository_name):
-        """
-        remove the given repository from the project
-
-        :param repository_name: the repository name to remove
-        """
-        del self.repositories[repository_name]
-        self._db_update(["repositories"])
-        self.project.load_config()
-
-    def edit_repository(self, name, adapter, path):
-        """
-        edit the repository property
-        raise a PulseError if the repository is not found
-        """
-        if name not in self.repositories:
-            raise PulseError("Repository does not exists : " + name)
-        self.repositories[name] = {
-            "adapter": adapter,
-            "path": path
-        }
-        self._db_update(["repositories"])
-        self.project.load_config()
 
     def save(self):
         """
@@ -916,7 +874,6 @@ class Project:
         self.cnx = connection
         self.name = project_name
         self.cfg = Config(self)
-        self.repositories = {}
 
     def get_product(self, uri_string):
         """
@@ -974,10 +931,6 @@ class Project:
         load the project configuration from database
         """
         self.cfg.db_read()
-        for repo_name in self.cfg.repositories:
-            repo = self.cfg.repositories[repo_name]
-            self.repositories[repo_name] = import_adapter("repository", repo['adapter']).Repository(
-                settings=repo['settings'], login=repo['login'], password=repo['password'])
 
     def get_resource(self, entity, resource_type):
         """
@@ -990,21 +943,24 @@ class Project:
         """
         return Resource(self, entity, resource_type).db_read()
 
-    def create_template(self, resource_type, repository='default', source_resource=None):
+    def create_template(self, resource_type, repository=None, source_resource=None):
         return self.create_resource(template_name, resource_type, repository,  source_resource)
 
-    def create_resource(self, entity, resource_type, repository='default', source_resource=None):
+    def create_resource(self, entity, resource_type, repository=None, source_resource=None):
         """
         create a new project's resource
 
         :param entity: entity of this new resource. Entity is like a namespace
         :param resource_type:
-        :param repository: a pulse Repository
+        :param repository: a pulse Repository, if None, the project default repository is used
         :param source_resource: if given the resource content will be initialized with the given resource
         :return: the created resource object
         """
 
         resource = Resource(self, entity, resource_type)
+
+        if not repository:
+            repository = self.cfg.default_repository
         resource.repository = repository
 
         # if a source resource is given keep its uri to db
@@ -1028,43 +984,48 @@ class Connection:
     def __init__(self, adapter, **settings):
         self.db = import_adapter("database", adapter).Database(settings)
         self.user_name = self.db.get_user_name()
+        self.repositories = self.get_repositories()
+
+    def get_repositories(self):
+        repositories = {}
+        db_repositories = self.db.get_repositories()
+        for name in db_repositories:
+            db_repo = db_repositories[name]
+            repositories[name] = import_adapter("repository", db_repo['adapter']).Repository(
+                db_repo['login'],
+                db_repo['password'],
+                db_repo['settings'])
+        return repositories
 
     def create_project(self,
                        project_name,
                        work_user_root,
-                       repository_settings,
+                       default_repository,
                        product_user_root=None,
                        version_padding=DEFAULT_VERSION_PADDING,
                        version_prefix=DEFAULT_VERSION_PREFIX,
-                       repository_adapter="file_storage",
-                       repository_login="",
-                       repository_password=""
                        ):
         """
         create a new project in the connexion database
 
         :param project_name:
         :param work_user_root: user work space path
-        :param repository_settings: default repository connection settings
+        :param default_repository: repository name use by default when a resource is created
         :param product_user_root: product work space path
         :param version_padding: optional, set ehe number of digits used to number version. 3 by default
         :param version_prefix: optional, set the prefix used before version number. "V" by default
-        :param repository_adapter: default repository adapter (should be an existng module in repository_adapters)
-        :param repository_login: default repository login
-        :param repository_password: default repository password
         :return: the new pulse Project
         """
         project = Project(self, project_name)
         if not product_user_root:
             product_user_root = work_user_root
         self.db.create_project(project_name)
+        project.cfg.default_repository = default_repository
         project.cfg.work_user_root = work_user_root
         project.cfg.product_user_root = product_user_root
         project.cfg.version_padding = version_padding
         project.cfg.version_prefix = version_prefix
         project.cfg.db_create()
-        project.cfg.add_repository(
-            "default", repository_adapter, repository_settings, repository_login, repository_password)
         project.load_config()
         return project
 
@@ -1081,6 +1042,37 @@ class Connection:
 
     def delete_project(self, project_name):
         self.db.delete_project(project_name)
+
+    def add_repository(self, name, adapter, login="", password="", **settings):
+        """
+        add a new repository to the project.
+
+        :param name: the new repository name
+        :param adapter: must be an existing module from repository adapters.
+        :param settings: dict containing the connection parameters passed to the module
+        :param login: the repository login
+        :param password: the repository password
+        """
+        if name in self.repositories:
+            raise PulseError("Repository already exists : " + name)
+        # write repo settings to db config
+        self.db.create_repository(name, adapter, login, password, settings)
+        self.repositories[name] = import_adapter("repository", adapter).Repository(
+                settings=settings, login=login, password=password)
+
+    def edit_repository(self, name, adapter, login="", password="", **settings):
+        """
+        edit the repository property
+        raise a PulseError if the repository is not found
+        """
+        if name not in self.repositories:
+            raise PulseError("Repository does not exists : " + name)
+        self.db.update(
+            "_Config",
+            "Repository",
+            name,
+            {"adapter": adapter, "settings": settings, "login": login, "password": password}
+        )
 
 
 def import_adapter(adapter_type, adapter_name):

@@ -83,8 +83,8 @@ def ftp_download(source, destination, ftp_connection):
 
 
 class Repository(PulseRepository):
-    def __init__(self, settings, login, password):
-        PulseRepository.__init__(self, settings, login, password)
+    def __init__(self, login, password, settings):
+        PulseRepository.__init__(self, login, password, settings)
         self.root = self.settings["root"]
         if not self.root.endswith('/'):
             self.root += '/'

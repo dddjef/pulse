@@ -27,11 +27,20 @@ class PulseDatabase:
     def __init__(self, settings):
         self.settings = settings
 
-    tables_definition = {
+    config_tables = {
+        'Repository': [
+            "adapter VARCHAR(255)",
+            "login VARCHAR(255)",
+            "password VARCHAR(255)",
+            "settings LONGTEXT"
+        ]
+    }
+
+    project_tables = {
         'Config': [
             "work_user_root VARCHAR(255)",
             "product_user_root VARCHAR(255)",
-            "repositories LONGTEXT",
+            "default_repository VARCHAR(255)",
             "version_padding SMALLINT",
             "version_prefix VARCHAR(255)"
         ],
@@ -56,6 +65,12 @@ class PulseDatabase:
         ]
     }
     adapter_version = '0.0.1'
+
+    def create_repository(self, name, adapter, login, password, settings):
+        pass
+
+    def get_repositories(self):
+        pass
 
     def create_project(self, project_name):
         pass

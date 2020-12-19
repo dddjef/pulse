@@ -9,7 +9,7 @@ test_data_output_path = os.path.join(os.path.dirname(__file__), "data\\out")
 json_db_path = os.path.join(test_data_output_path, "DB")
 sandbox_work_path = os.path.join(test_data_output_path, "works")
 sandbox_products_path = os.path.join(test_data_output_path, "products")
-file_repository_path = os.path.join(test_data_output_path, "repos")
+file_storage_path = os.path.join(test_data_output_path, "repos")
 
 
 ini = ConfigParser()
@@ -46,6 +46,7 @@ def reset_sql_db(project_name):
                         user=ini.get('mysql', 'username'), password=ini.get('mysql', 'password'))
 
     cnx.cursor().execute("DROP DATABASE IF EXISTS " + project_name)
+    cnx.cursor().execute("DROP DATABASE IF EXISTS _Config")
     cnx.close()
 
 

@@ -30,23 +30,31 @@ class TestFTP(unittest.TestCase):
         cfg.reset_test_data()
         cfg.reset_ftp(test_project_name)
         self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
+        self.cnx.add_repository(
+            name="ftp_storage",
+            adapter="ftp",
+            login=cfg.ftp_login,
+            password=cfg.ftp_password,
+            host=cfg.ftp_settings["host"],
+            port=cfg.ftp_settings["port"],
+            root=cfg.ftp_settings["root"]
+            )
         self.prj = self.cnx.create_project(
             test_project_name,
             cfg.sandbox_work_path,
-            repository_adapter="ftp",
-            repository_settings=cfg.ftp_settings,
-            repository_login=cfg.ftp_login,
-            repository_password=cfg.ftp_password,
+            default_repository="ftp_storage",
             product_user_root=cfg.sandbox_products_path
         )
 
     def test_multiple_repository_types(self):
-        self.prj.cfg.add_repository(
-            "serverB",
-            "file_storage",
-            settings={"path": os.path.join(cfg.file_repository_path, "default").replace("\\", "/")})
+        local_repo_name = "local_test_storage"
+        self.cnx.add_repository(
+            name=local_repo_name,
+            adapter="file_storage",
+            path=os.path.join(cfg.file_storage_path, local_repo_name)
+        )
 
-        template_resource = self.prj.create_resource("_template", "rig", repository="serverB")
+        template_resource = self.prj.create_resource("_template", "rig", repository="local_test_storage")
         template_work = template_resource.checkout()
         open(template_work.directory + "\\template_work.txt", 'a').close()
         template_work.commit()
@@ -58,13 +66,13 @@ class TestFTP(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(cfg.sandbox_work_path, test_project_name, "rig\\_template")))
 
         # test moving resource between repo
-        self.assertTrue(os.path.exists(os.path.join(cfg.file_repository_path, "default",
+        self.assertTrue(os.path.exists(os.path.join(cfg.file_storage_path, local_repo_name,
                                                     test_project_name, "work\\rig\\_template")))
 
-        template_resource.set_repository("default")
+        template_resource.set_repository(self.prj.cfg.default_repository)
 
-        self.assertFalse(os.path.exists(os.path.join(cfg.file_repository_path,
-                                                     "default", test_project_name, "work\\rig\\_template")))
+        self.assertFalse(os.path.exists(os.path.join(cfg.file_storage_path, local_repo_name,
+                                                     test_project_name, "work\\rig\\_template")))
 
         # test commit the resource
         template_work.commit()
@@ -103,10 +111,18 @@ class TestSQL(unittest.TestCase):
             password=cfg.mysql_settings['password'],
             port=cfg.mysql_settings['port']
         )
+
+        local_repo_name = "local_test_storage"
+        self.cnx.add_repository(
+            name=local_repo_name,
+            adapter="file_storage",
+            path=os.path.join(cfg.file_storage_path, local_repo_name)
+        )
+
         self.prj = self.cnx.create_project(
             test_project_name,
             cfg.sandbox_work_path,
-            repository_settings={"path": os.path.join(cfg.file_repository_path, "default")},
+            default_repository="local_test_storage",
             product_user_root=cfg.sandbox_products_path
         )
 

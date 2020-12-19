@@ -8,6 +8,7 @@ class Database(PulseDatabase):
     def __init__(self, settings):
         PulseDatabase.__init__(self, settings)
         self.connection = None
+        self.config_name = "_Config"
         self.cursor = None
         self.update_connection()
 
@@ -20,7 +21,54 @@ class Database(PulseDatabase):
         )
         self.cursor = self.connection.cursor()
 
+    def create_repository(self, name, adapter, login, password, settings):
+        data = {
+            "name": name,
+            "adapter": adapter,
+            "login": login,
+            "password": password,
+            "settings": json.dumps(settings)
+        }
+        self.cursor.execute("USE " + self.config_name)
+        placeholders = ', '.join(['%s'] * len(data))
+        columns = ', '.join(data.keys())
+        cmd = "INSERT INTO %s ( %s ) VALUES ( %s )" % ("Repository", columns, placeholders)
+
+        try:
+            self.cursor.execute(cmd, data.values())
+        except mariadb.IntegrityError:
+            raise PulseDatabaseError("node already exists:" + name)
+        self.connection.commit()
+
+    def get_repositories(self):
+        # set config db if does not exists yet
+        try:
+            self.cursor.execute("USE " + self.config_name)
+        except mariadb.errors.DatabaseError:
+            self.cursor.execute("CREATE DATABASE " + self.config_name)
+            self.cursor.execute("USE " + self.config_name)
+            for table in self.config_tables:
+                cmd = "CREATE TABLE " + table + " (name VARCHAR(255) PRIMARY KEY"
+                for field in self.config_tables[table]:
+                    cmd += ", " + field
+                cmd += ")"
+                self.cursor.execute(cmd)
+            self.connection.commit()
+            return {}
+        self.cursor.execute("SELECT * FROM Repository")
+        table = [self.cursor.fetchall()][0]
+        repositories_dict = {}
+        for row in table:
+            repositories_dict[row[0]] = {}
+            repositories_dict[row[0]]["adapter"] = row[1]
+            repositories_dict[row[0]]["login"] = row[2]
+            repositories_dict[row[0]]["password"] = row[3]
+            repositories_dict[row[0]]["settings"] = json.loads(row[4])
+        return repositories_dict
+
     def create_project(self, project_name):
+        if project_name == self.config_name:
+            raise PulseDatabaseError("project name reserved by config : " + project_name)
         # test if the projects table exists
         try:
             self.cursor.execute("CREATE DATABASE " + project_name)
@@ -34,10 +82,10 @@ class Database(PulseDatabase):
         self.cursor.execute(cmd)
         self.cursor.execute("INSERT into version (number) VALUE ('" + self.adapter_version + "')")
         self.connection.commit()
-        for table in self.tables_definition:
+        for table in self.project_tables:
             # id int(11) NOT NULL AUTO_INCREMENT,
             cmd = "CREATE TABLE " + table + " (uri VARCHAR(255) PRIMARY KEY"
-            for field in self.tables_definition[table]:
+            for field in self.project_tables[table]:
                 cmd += ", " + field
             cmd += ")"
             self.cursor.execute(cmd)
@@ -97,7 +145,7 @@ class Database(PulseDatabase):
             raise PulseDatabaseMissingObject("no data for : " + project_name + ", " + entity_type + ", " + uri)
 
         for k in data:
-            for attr in self.tables_definition[entity_type]:
+            for attr in self.project_tables[entity_type]:
                 if attr == k + " LONGTEXT":
                     data[k] = json.loads(data[k])
         return data

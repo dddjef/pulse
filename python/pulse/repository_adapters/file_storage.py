@@ -17,8 +17,8 @@ def copy_folder_tree(source_folder, destination_folder):
 
 
 class Repository(PulseRepository):
-    def __init__(self, settings, login="", password=""):
-        PulseRepository.__init__(self, settings, login="", password="")
+    def __init__(self, login="", password="", settings=None):
+        PulseRepository.__init__(self, login, password, settings)
         self.root = self.settings["path"]
 
         self.version_prefix = "V"

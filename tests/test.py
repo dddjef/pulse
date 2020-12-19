@@ -10,10 +10,11 @@ class TestBasic(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
         self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
+        self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=cfg.file_storage_path)
         self.prj = self.cnx.create_project(
             test_project_name,
             cfg.sandbox_work_path,
-            repository_settings={"path": os.path.join(cfg.file_repository_path, "default").replace("\\", "/")},
+            default_repository="local_test_storage",
             product_user_root=cfg.sandbox_products_path
         )
 
@@ -51,7 +52,7 @@ class TestBasic(unittest.TestCase):
         prj = cnx.create_project(
             "project_simple_sandbox",
             cfg.sandbox_work_path,
-            repository_settings={"path": os.path.join(cfg.file_repository_path, "default")}
+            default_repository="local_test_storage"
         )
         mdl_res = prj.create_resource("anna", "mdl")
         mdl_work = mdl_res.checkout()

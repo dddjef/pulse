@@ -14,7 +14,7 @@ class PulseRepositoryError(Exception):
 
 
 class PulseRepository:
-    def __init__(self, settings, login="", password=""):
+    def __init__(self, login="", password="", settings=None):
         self.settings = settings
         self.login = login
         self.password = password
