@@ -28,17 +28,17 @@ ftp_settings = {
     "root": ini.get('ftp', 'root')}
 
 
-def reset_test_data():
-    if os.path.exists(test_data_output_path):
+def reset_test_data(root=test_data_output_path):
+    if os.path.exists(root):
         # first remove all read only mode from files attributes
-        for path, subdirs, files in os.walk(test_data_output_path):
+        for path, subdirs, files in os.walk(root):
             for name in files:
                 filepath = os.path.join(path, name)
                 if filepath.endswith(".pipe"):
                     os.chmod(filepath, 0o777)
 
-        shutil.rmtree(test_data_output_path)
-    os.mkdir(test_data_output_path)
+        shutil.rmtree(root)
+    os.mkdir(root)
 
 
 def reset_sql_db(project_name):

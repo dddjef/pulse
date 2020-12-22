@@ -4,6 +4,7 @@ from ConfigParser import ConfigParser
 import os
 import json
 import sys
+import urlparse
 
 project_data_filename = "project.pipe"
 work_data_filename = "work.pipe"
@@ -25,6 +26,17 @@ def get_work(path, project=None):
     return project.get_resource(work_data['entity'], work_data['resource_type']).get_work()
 
 
+def get_mysql_connection(adapter, url):
+    db_settings = urlparse.urlparse(url)
+    return pulse.Connection(
+        adapter,
+        username=db_settings.username,
+        password=db_settings.password,
+        host=db_settings.hostname,
+        port=db_settings.port
+    )
+
+
 def get_pulse_project(path):
     connection_data = None
 
@@ -35,11 +47,14 @@ def get_pulse_project(path):
                 connection_data = json.load(read_file)
                 break
         path = os.path.dirname(path)
-
     if not connection_data:
         raise Exception("can't connect to project : " + path)
 
-    cnx = pulse.Connection(url=connection_data["url"], database_adapter=connection_data["db_adapter"])
+    cnx = None
+    if connection_data["adapter"] == "json_db":
+        cnx = pulse.Connection(connection_data["adapter"], path=connection_data["settings"])
+    elif connection_data["adapter"] == "mysql":
+        cnx = get_mysql_connection(connection_data["adapter"], connection_data["settings"])
     return cnx.get_project(os.path.basename(path))
 
 
@@ -47,67 +62,28 @@ def get_project(args):
     cli_filepath = os.path.dirname(os.path.realpath(__file__))
     config = ConfigParser()
     config.read(os.path.join(cli_filepath, "config.ini"))
-    project_path = os.getcwd()
-    project_name = os.path.basename(project_path)
 
-    if not args.database_type:
-        database_type = config.get('database', 'default_adapter')
+    if not args.adapter:
+        adapter = config.get('database', 'default_adapter')
     else:
-        database_type = args.database_type
+        adapter = args.adapter
 
-    pulse.Connection(url=args.url, database_adapter=database_type)
+    if adapter == "json_db":
+        pulse.Connection(adapter, path=args.settings)
+    elif adapter == "mysql":
+        get_mysql_connection(adapter, args.settings)
+    else:
+        print "database adapter not supported by CLI"
+        return
 
     connexion_data = {
-        'url': args.url,
-        'db_adapter': database_type
+        'settings': args.settings,
+        'adapter': args.adapter
     }
 
     with open(os.path.join(os.getcwd(), project_data_filename), "w") as write_file:
         json.dump(connexion_data, write_file, indent=4, sort_keys=True)
-
-    print 'project "' + project_name + '" connected on "' + args.url + '"'
-
-
-def create_project(args):
-    cli_filepath = os.path.dirname(os.path.realpath(__file__))
-    config = ConfigParser()
-    config.read(os.path.join(cli_filepath, "config.ini"))
-
-    project_path = os.getcwd()
-    project_name = os.path.basename(project_path)
-    sandbox_path = os.path.dirname(project_path)
-    if not args.user_products:
-        args.user_products = sandbox_path
-
-    if not args.silent_mode:
-        confirmation = raw_input('Are you sure to create the project ' + project_name + '?')
-        if confirmation.lower() != 'y':
-            return
-
-    if not args.database_type:
-        args.database_type = config.get('database', 'default_adapter')
-
-    if not args.repository_url:
-        args.repository_url = config.get('repository', 'default_parameters')
-
-    if not args.repository_type:
-        args.repository_type = config.get('repository', 'default_adapter')
-
-    version_prefix = config.get('version', 'prefix')
-    version_padding = int(config.get('version', 'padding'))
-
-    cnx = pulse.Connection(url=args.url, database_adapter=args.database_type)
-    cnx.create_project(
-        project_name,
-        sandbox_path,
-        repository_url=args.repository_url,
-        product_user_root=args.user_products,
-        version_padding=version_padding,
-        version_prefix=version_prefix,
-        repository_adapter=args.repository_type,
-    )
-
-    print 'project "' + project_name + '" created on "' + args.url + '"'
+    print "project settings saved to ", os.path.join(os.getcwd(), project_data_filename)
 
 
 def create_template(args):
@@ -179,22 +155,10 @@ def unlock(args):
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers()
 
-# create project subparser
-parser_create_project = subparsers.add_parser('create_project')
-parser_create_project.add_argument('url', type=str)
-parser_create_project.add_argument('--database_type', type=str)
-parser_create_project.add_argument('--user_products', type=str)
-parser_create_project.add_argument('--repository_url', type=str)
-parser_create_project.add_argument('--repository_type', type=str)
-parser_create_project.add_argument('--silent_mode', '-s', action='store_true')
-
-parser_create_project.set_defaults(func=create_project)
-
-
 # get project subparser
 parser_get_project = subparsers.add_parser('get_project')
-parser_get_project.add_argument('url', type=str)
-parser_get_project.add_argument('--database_type', type=str)
+parser_get_project.add_argument('--settings', type=str)
+parser_get_project.add_argument('--adapter', type=str)
 parser_get_project.set_defaults(func=get_project)
 
 # create_resource subparser

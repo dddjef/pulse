@@ -41,6 +41,7 @@ class Database(PulseDatabase):
         self.connection.commit()
 
     def get_repositories(self):
+        self.connection.commit()
         # set config db if does not exists yet
         try:
             self.cursor.execute("USE " + self.config_name)
@@ -133,6 +134,7 @@ class Database(PulseDatabase):
         self.connection.commit()
 
     def read(self, project_name, entity_type, uri):
+        self.connection.commit()
         cursor = self.connection.cursor(dictionary=True)
         try:
             cursor.execute("USE " + project_name)

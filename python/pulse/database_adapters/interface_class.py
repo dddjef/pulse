@@ -24,7 +24,7 @@ class PulseDatabaseMissingObject(Exception):
 
 
 class PulseDatabase:
-    def __init__(self, settings):
+    def __init__(self, settings=None):
         self.settings = settings
 
     config_tables = {
