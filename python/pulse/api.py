@@ -11,6 +11,7 @@ import time
 import imp
 from pulse.database_adapters.interface_class import *
 from pulse.exception import *
+import pulse.uri_standards as uri_standards
 import tempfile
 from datetime import datetime
 import re
@@ -77,7 +78,7 @@ class Product:
         abstract class for all products
     """
     def __init__(self, parent, product_type):
-        self.uri = dict_to_uri({
+        self.uri = uri_standards.convert_from_dict({
             "entity": parent.resource.entity,
             "resource_type": parent.resource.resource_type,
             "product_type": product_type,
@@ -231,7 +232,7 @@ class Commit(PulseDbObject):
         """
         return the commit's products list
         """
-        uri = dict_to_uri({
+        uri = uri_standards.convert_from_dict({
             "resource_type": self.resource.resource_type,
             "entity": self.resource.entity,
             "version": self.version,
@@ -638,7 +639,7 @@ class Resource(PulseDbObject):
         PulseDbObject.__init__(
             self,
             project,
-            dict_to_uri({"entity": entity, "resource_type": resource_type})
+            uri_standards.convert_from_dict({"entity": entity, "resource_type": resource_type})
         )
         self.sandbox_path = os.path.join(
             project.cfg.get_work_user_root(), project.name, resource_type, entity.replace(":", "\\")
@@ -741,7 +742,7 @@ class Resource(PulseDbObject):
             source_resource = None
             # if a source resource is given, get its template
             if self.resource_template != '':
-                template_dict = uri_to_dict(self.resource_template)
+                template_dict = uri_standards.convert_to_dict(self.resource_template)
                 source_resource = self.project.get_resource(template_dict['entity'], template_dict['resource_type'])
             else:
                 # try to find a template
@@ -892,7 +893,7 @@ class Project:
         :param uri_string: a pulse product uri
         :return: Product
         """
-        uri_dict = uri_to_dict(uri_string)
+        uri_dict = uri_standards.convert_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         resource.db_read()
         if not uri_dict['version']:
@@ -1094,41 +1095,3 @@ def import_adapter(adapter_type, adapter_name):
     """
     pulse_filepath = os.path.dirname(os.path.realpath(__file__))
     return imp.load_source(adapter_type, os.path.join(pulse_filepath, adapter_type + "_adapters", adapter_name + ".py"))
-
-
-def uri_to_dict(uri_string):
-    """
-    transform a string uri in a dict uri
-
-    :param uri_string:
-    :return uri dict:
-    """
-    uri_split_main = uri_string.split("@")
-    uri_split = uri_split_main[0].split("-")
-    entity = uri_split[0]
-    resource_type = uri_split[1]
-    product_type = ""
-    version = None
-
-    if len(uri_split) > 2:
-        product_type = uri_split[2]
-
-    if len(uri_split_main) > 1:
-        version = uri_split_main[1]
-
-    return {"entity": entity, "resource_type": resource_type, "version": version, "product_type": product_type}
-
-
-def dict_to_uri(uri_dict):
-    """
-    transform a dictionary to an uri.
-
-    :param uri_dict: dictionary with minimum keys "entity" and "resource_type", optionally "product type" and "version"
-    :return: uri string
-    """
-    uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
-    if 'product_type' in uri_dict:
-        uri += "-" + uri_dict['product_type']
-    if 'version' in uri_dict:
-        uri += "@" + (str(int(uri_dict['version'])))
-    return uri
