@@ -2,7 +2,6 @@ from pulse.api import *
 import unittest
 import os
 import config as cfg
-
 test_project_name = "test"
 
 
@@ -250,6 +249,40 @@ class TestBasic(unittest.TestCase):
         # test get an unknown tag raise a pulseError
         with self.assertRaises(PulseError):
             template_mdl.get_index("anytag")
+
+    def test_environment_variables_in_project_path(self):
+        # set up env var
+        os.environ['PULSE_TEST'] = cfg.test_data_output_path
+        # create a project which use this variables in its work and product path
+        prj = self.cnx.create_project(
+            "env_var",
+            "$PULSE_TEST/works",
+            default_repository="local_test_storage"
+        )
+        # create a resource
+        resource = prj.create_resource("ch_anna", "model")
+        # check out the resource
+        work = resource.checkout()
+        # test its location
+        self.assertTrue(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna")))
+        # add an output product
+        abc_product = work.create_product("abc")
+        # test the product folder location
+        self.assertTrue(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna/V001/abc")))
+        # commit
+        work.commit()
+        # trash
+        work.trash(no_backup=True)
+        prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna/V001/abc")))
+        # create another resource
+        surf_resource = prj.create_resource("ch_anna", "surfacing")
+        surf_work = surf_resource.checkout()
+        # require this product
+        surf_work.add_input(abc_product)
+        # test the product location
+        self.assertTrue(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna/V001/abc")))
+
 
 
 if __name__ == '__main__':

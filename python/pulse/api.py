@@ -196,7 +196,7 @@ class CommitProduct(PulseDbObject, Product):
                     os.chmod(filepath, 0o777)
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
-        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.product_user_root])
+        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.get_product_user_root()])
         self.unregister_to_user_products()
 
 
@@ -314,7 +314,7 @@ class Work(WorkNode):
     def _get_trash_directory(self):
 
         date_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        path = self.project.cfg.work_user_root + "\\" + self.project.name + "\\" + "TRASH" + "\\"
+        path = self.project.cfg.get_work_user_root() + "\\" + self.project.name + "\\" + "TRASH" + "\\"
         path += self.resource.resource_type + "-" + self.resource.entity.replace(":", "_") + "-" + date_time
         return path
 
@@ -562,10 +562,13 @@ class Work(WorkNode):
             shutil.rmtree(trash_directory)
 
         # recursively remove works directories if they are empty
-        fu.remove_empty_parents_directory(self.directory, [self.project.cfg.work_user_root])
+        fu.remove_empty_parents_directory(self.directory, [self.project.cfg.get_work_user_root()])
 
         # recursively remove products directories if they are empty
-        fu.remove_empty_parents_directory(os.path.dirname(products_directory), [self.project.cfg.product_user_root])
+        fu.remove_empty_parents_directory(
+            os.path.dirname(products_directory),
+            [self.project.cfg.get_product_user_root()]
+        )
 
         return True
 
@@ -638,7 +641,7 @@ class Resource(PulseDbObject):
             dict_to_uri({"entity": entity, "resource_type": resource_type})
         )
         self.sandbox_path = os.path.join(
-            project.cfg.work_user_root, project.name, resource_type, entity.replace(":", "\\")
+            project.cfg.get_work_user_root(), project.name, resource_type, entity.replace(":", "\\")
         )
         self._storage_vars = [
             'lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
@@ -652,7 +655,7 @@ class Resource(PulseDbObject):
         """
         version = str(version_index).zfill(self.project.cfg.version_padding)
         path = os.path.join(
-            self.project.cfg.product_user_root,
+            self.project.cfg.get_product_user_root(),
             self.project.name,
             self.resource_type,
             self.entity.replace(":", "\\"),
@@ -851,13 +854,19 @@ class Config(PulseDbObject):
             "version_prefix"
         ]
 
+    def get_work_user_root(self):
+        return os.path.expandvars(self.work_user_root)
+
+    def get_product_user_root(self):
+        return os.path.expandvars(self.product_user_root)
+
     def get_user_products_list_filepath(self):
         """
         get the user products list filepath
 
         :return: string
         """
-        return os.path.join(self.product_user_root, "products_list.pipe")
+        return os.path.join(self.get_product_user_root(), "products_list.pipe")
 
     def save(self):
         """
