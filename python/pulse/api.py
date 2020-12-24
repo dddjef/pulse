@@ -232,13 +232,10 @@ class Commit(PulseDbObject):
         """
         return the commit's products list
         """
-        uri = uri_standards.convert_from_dict({
-            "resource_type": self.resource.resource_type,
-            "entity": self.resource.entity,
-            "version": self.version,
-            "product_type": "*"
-        })
-        return self.project.list_products(uri)
+        products = []
+        for product_name in self.products:
+            products.append(CommitProduct(self, product_name))
+        return products
 
     def get_products_directory(self):
         """
