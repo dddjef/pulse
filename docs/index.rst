@@ -61,7 +61,6 @@ Then you will have to create a tests/custom_adapters_config.ini according to you
 The mysql adapter has been test with mariaDB 10 server. The mysql account you will mention needs to have permission to
 create or remove a database. The ftp account needs to write and delete in the root folder you will mention.
 
-This credentials are converted to URL, so you should avoid special characters like "@ :" into login or password.
 
 .. code-block:: ini
 
