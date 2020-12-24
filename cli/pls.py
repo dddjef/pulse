@@ -1,5 +1,6 @@
 import argparse
 import pulse.api as pulse
+import pulse.uri_standards as uri_standards
 from ConfigParser import ConfigParser
 import os
 import json
@@ -112,16 +113,15 @@ def add_input(args):
 
 def create_resource(args):
     project = get_pulse_project(os.getcwd())
-    resource_name = args.uri.split("-")[0]
-    resource_type = args.uri.split("-")[1]
-    resource = project.create_resource(resource_name, resource_type)
+    uri_dict = uri_standards.convert_to_dict(args.uri)
+    resource = project.create_resource(uri_dict['entity'], uri_dict['resource_type'])
     work = resource.checkout()
     print 'resource check out in "' + work.directory + '"'
 
 
 def checkout(args):
     project = get_pulse_project(os.getcwd())
-    dict_uri = pulse.uri_to_dict(args.uri)
+    dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.checkout()
     print 'resource check out in "' + work.directory + '"'
@@ -129,7 +129,7 @@ def checkout(args):
 
 def trash_resource(args):
     project = get_pulse_project(os.getcwd())
-    dict_uri = pulse.uri_to_dict(args.uri)
+    dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     resource.get_work().trash()
     project.purge_unused_user_products(resource_filter=resource)

@@ -59,7 +59,7 @@ class TestDefaultAdapters(unittest.TestCase):
         cli_cmd_list(['get_project', "--adapter json_db", '--settings "' + cfg.json_db_path + '"'])
         
         # create a modeling resource
-        cli_cmd_list(['create_resource', 'ch_anna-mdl'])
+        cli_cmd_list(['create_resource', 'ch_anna:mdl'])
 
         anna_mdl_path = os.path.join(cfg.sandbox_work_path, test_project_name, 'mdl', 'ch_anna')
         self.assertTrue(os.path.exists(anna_mdl_path))
@@ -73,24 +73,24 @@ class TestDefaultAdapters(unittest.TestCase):
         cli_cmd_list(['commit'])
 
         # create a surface resource
-        cli_cmd_list(['create_resource', 'ch_anna-surfacing'])
+        cli_cmd_list(['create_resource', 'ch_anna:surfacing'])
         anna_surfacing_path = os.path.join(cfg.sandbox_work_path, test_project_name, 'surfacing', 'ch_anna')
         os.chdir(anna_surfacing_path)
 
         # add mdl as input and commit
-        cli_cmd_list(['add_input', 'ch_anna-mdl-abc@1'])
+        cli_cmd_list(['add_input', 'ch_anna:mdl-abc@1'])
         cli_cmd_list(['commit'])
 
         # trash works
         # but first move out from the work directory, unless the directory won't move
         os.chdir(cli_project_path)
-        cli_cmd_list(['trash', 'ch_anna-surfacing'])
+        cli_cmd_list(['trash', 'ch_anna:surfacing'])
         self.assertFalse(os.path.exists(anna_surfacing_path))
-        cli_cmd_list(['trash', 'ch_anna-mdl'])
+        cli_cmd_list(['trash', 'ch_anna:mdl'])
         self.assertFalse(os.path.exists(anna_mdl_path))
 
         # now try to check out the surface and check the mdl is restored too
-        cli_cmd_list(['checkout', 'ch_anna-surfacing'])
+        cli_cmd_list(['checkout', 'ch_anna:surfacing'])
         self.assertTrue(os.path.exists(anna_abc_path))
 
         # lock surfacing by another user (easier to simulate with with API)
@@ -146,7 +146,7 @@ class TestCustomAdapters(unittest.TestCase):
         cli_cmd_list(['get_project', "--adapter mysql", '--settings "' + self.db_url + '"'])
 
         # create a modeling resource
-        cli_cmd_list(['create_resource', 'ch_anna-mdl'])
+        cli_cmd_list(['create_resource', 'ch_anna:mdl'])
 
         anna_mdl_path = os.path.join(cfg.sandbox_work_path, test_project_name, 'mdl', 'ch_anna')
         self.assertTrue(os.path.exists(anna_mdl_path))
@@ -160,24 +160,24 @@ class TestCustomAdapters(unittest.TestCase):
         cli_cmd_list(['commit'])
 
         # create a surface resource
-        cli_cmd_list(['create_resource', 'ch_anna-surfacing'])
+        cli_cmd_list(['create_resource', 'ch_anna:surfacing'])
         anna_surfacing_path = os.path.join(cfg.sandbox_work_path, test_project_name, 'surfacing', 'ch_anna')
         os.chdir(anna_surfacing_path)
 
         # add mdl as input and commit
-        cli_cmd_list(['add_input', 'ch_anna-mdl-abc@1'])
+        cli_cmd_list(['add_input', 'ch_anna:mdl-abc@1'])
         cli_cmd_list(['commit'])
 
         # trash works
         # but first move out from the work directory, unless the directory won't move
         os.chdir(cli_project_path)
-        cli_cmd_list(['trash', 'ch_anna-surfacing'])
+        cli_cmd_list(['trash', 'ch_anna:surfacing'])
         self.assertFalse(os.path.exists(anna_surfacing_path))
-        cli_cmd_list(['trash', 'ch_anna-mdl'])
+        cli_cmd_list(['trash', 'ch_anna:mdl'])
         self.assertFalse(os.path.exists(anna_mdl_path))
 
         # now try to check out the surface and check the mdl is restored too
-        cli_cmd_list(['checkout', 'ch_anna-surfacing'])
+        cli_cmd_list(['checkout', 'ch_anna:surfacing'])
         self.assertTrue(os.path.exists(anna_abc_path))
 
 
