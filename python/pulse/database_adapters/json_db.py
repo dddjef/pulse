@@ -52,7 +52,7 @@ class Database(PulseDatabase):
     def find_uris(self, project_name, entity_type, uri_pattern):
         uris = []
         for path in glob.glob(self._get_json_filepath(project_name, entity_type, uri_pattern)):
-            uris.append(os.path.splitext(os.path.basename(path))[0])
+            uris.append((os.path.splitext(os.path.basename(path))[0]).replace("%", ":"))
         return uris
 
     def get_user_name(self):
@@ -94,4 +94,4 @@ class Database(PulseDatabase):
         return os.path.join(self._root, "Project", project_name)
 
     def _get_json_filepath(self, project_name, entity_type, uri):
-        return os.path.join(self._get_project_filepath(project_name), entity_type,  uri + ".json")
+        return os.path.join(self._get_project_filepath(project_name), entity_type,  uri.replace(":", "%") + ".json")

@@ -107,14 +107,14 @@ class TestBasic(unittest.TestCase):
     def test_check_out_from_another_resource(self):
         shader_work_file = "shader_work_file.ma"
         shader_product_file = "shader_product_file.ma"
-        template_resource = self.prj.create_resource("template", "surface")
-        template_work = template_resource.checkout()
-        cfg.add_file_to_directory(template_work.directory, shader_work_file)
-        shader_product = template_work.create_product("shader")
-        cfg.add_file_to_directory(shader_product.directory, shader_product_file)
-        template_work.commit()
+        source_resource = self.prj.create_resource("source", "surface")
+        source_work = source_resource.checkout()
+        cfg.add_file_to_directory(source_work.directory, shader_work_file)
+        source_product = source_work.create_product("shader")
+        cfg.add_file_to_directory(source_product.directory, shader_product_file)
+        source_work.commit()
 
-        anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=template_resource)
+        anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=source_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.get_product("shader").directory,
@@ -200,7 +200,7 @@ class TestBasic(unittest.TestCase):
 
         hat_mdl_work.add_input(anna_mdl_v2_abc)
         # test the product registration
-        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna-modeling-ABC@2")
+        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna:modeling-ABC@2")
         # check the work registration to product
 
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
