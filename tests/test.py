@@ -5,7 +5,39 @@ import config as cfg
 test_project_name = "test"
 
 
-class TestBasic(unittest.TestCase):
+class TestDefaultProject(unittest.TestCase):
+    def setUp(self):
+        cfg.reset_test_data()
+        self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
+        self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=cfg.file_storage_path)
+        self.prj = self.cnx.create_project(
+            test_project_name,
+            cfg.sandbox_work_path,
+            default_repository="local_test_storage"
+        )
+
+    def test_check_out_to_present_product(self):
+        shader_work_file = "shader_work_file.ma"
+        shader_product_file = "shader_product_file.ma"
+        source_resource = self.prj.create_resource("source", "surface")
+        source_work = source_resource.checkout()
+        cfg.add_file_to_directory(source_work.directory, shader_work_file)
+        source_product = source_work.create_product("shader")
+        cfg.add_file_to_directory(source_product.directory, shader_product_file)
+        source_work.commit()
+        source_work.trash(no_backup=True)
+
+        # test the work file has been trashed
+        self.assertFalse(os.path.exists(os.path.join(source_work.directory, shader_work_file)))
+        # test the work directory is still there
+        self.assertTrue(os.path.exists(source_work.directory))
+
+        source_work = source_resource.checkout()
+        # test the work file has been restored
+        self.assertTrue(os.path.exists(os.path.join(source_work.directory, shader_work_file)))
+
+
+class TestProjectWithProductRoot(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
         self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
@@ -274,15 +306,20 @@ class TestBasic(unittest.TestCase):
         # trash
         work.trash(no_backup=True)
         prj.purge_unused_user_products()
-        self.assertFalse(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna/V001/abc")))
+        self.assertFalse(os.path.exists(os.path.join(
+            cfg.test_data_output_path,
+            "works/env_var/model/ch_anna/V001/abc"
+        )))
         # create another resource
         surf_resource = prj.create_resource("ch_anna", "surfacing")
         surf_work = surf_resource.checkout()
         # require this product
         surf_work.add_input(abc_product)
         # test the product location
-        self.assertTrue(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna/V001/abc")))
-
+        self.assertTrue(os.path.exists(os.path.join(
+            cfg.test_data_output_path,
+            "works/env_var/model/ch_anna/V001/abc"
+        )))
 
 
 if __name__ == '__main__':

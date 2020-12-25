@@ -726,8 +726,8 @@ class Resource(PulseDbObject):
         if not destination_folder:
             destination_folder = self.sandbox_path
 
-        # abort if the resource is already in user sandbox
-        if os.path.exists(destination_folder):
+        # abort if the work pipe file is already in user sandbox, just rebuild it
+        if os.path.exists(os.path.join(destination_folder, "work.pipe")):
             return Work(self).read()
 
         # create the work object
@@ -769,8 +769,8 @@ class Resource(PulseDbObject):
         else:
             commit = self.get_commit(index)
             self.project.cnx.repositories[self.repository].download_work(commit, destination_folder)
-
-            # create the products from the last commit
+            work.write()
+            # create the empty products directory from the last commit
             for product in commit.get_products():
                 work.create_product(product.product_type)
 
