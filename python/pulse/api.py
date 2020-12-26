@@ -894,7 +894,7 @@ class Project:
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         resource.db_read()
         if not uri_dict['version']:
-            return None
+            uri_dict['version'] = "last"
         index = resource.get_index(uri_dict['version'])
         try:
             product_parent = resource.get_commit(index)
