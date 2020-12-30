@@ -224,7 +224,7 @@ class TestResources(unittest.TestCase):
         # by default products should not exists
         self.assertFalse(os.path.exists(anna_mdl_work.get_products_directory()))
 
-        # commit should file if nothing is change in work
+        # commit should fail if nothing is change in work
         with self.assertRaises(PulseError):
             anna_mdl_work.commit("very first time")
 
