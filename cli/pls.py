@@ -60,31 +60,46 @@ def get_pulse_project(path):
 
 
 def get_project(args):
+    # get config settings
     cli_filepath = os.path.dirname(os.path.realpath(__file__))
     config = ConfigParser()
     config.read(os.path.join(cli_filepath, "config.ini"))
 
+    # if no adapter specified, get setting from config
     if not args.adapter:
         adapter = config.get('database', 'default_adapter')
     else:
         adapter = args.adapter
 
+    # create a connexion to database
     if adapter == "json_db":
-        pulse.Connection(adapter, path=args.settings)
+        cnx = pulse.Connection(adapter, path=args.settings)
     elif adapter == "mysql":
-        get_mysql_connection(adapter, args.settings)
+        cnx = get_mysql_connection(adapter, args.settings)
     else:
         print "database adapter not supported by CLI"
         return
 
+    # create work and product path
+    prj = cnx.get_project(args.name)
+    project_work_root = os.path.join(prj.cfg.work_user_root, args.name)
+    project_product_root = os.path.join(prj.cfg.product_user_root, args.name)
+
+    if not os.path.exists(project_work_root):
+        os.makedirs(project_work_root)
+    if prj.cfg.product_user_root and not os.path.exists(project_product_root):
+        os.makedirs(project_product_root)
+
+    # save settings to json pipe file
     connexion_data = {
         'settings': args.settings,
         'adapter': args.adapter
     }
 
-    with open(os.path.join(os.getcwd(), project_data_filename), "w") as write_file:
+    with open(os.path.join(project_work_root, project_data_filename), "w") as write_file:
         json.dump(connexion_data, write_file, indent=4, sort_keys=True)
-    print "project settings saved to ", os.path.join(os.getcwd(), project_data_filename)
+
+    print "project registered to ", project_work_root
 
 
 def create_template(args):
@@ -139,10 +154,20 @@ def trash_resource(args):
 def commit(args):
     work = get_work(os.getcwd())
     try:
-        commit_obj = work.commit()
+        commit_obj = work.commit(comment=args.comment)
         print('work commit in version "' + str(commit_obj.version) + '"')
     except pulse.PulseError, e:
         print('work commit failed :' + str(e))
+
+
+def diff(args):
+    work = get_work(os.getcwd())
+    diffs = work.get_files_changes()
+    if not diffs:
+        print 'no difference since checkout'
+    else :
+        for elem in diffs:
+            print elem[0] + ":" + elem[1]
 
 
 def unlock(args):
@@ -157,6 +182,7 @@ subparsers = parser.add_subparsers()
 
 # get project subparser
 parser_get_project = subparsers.add_parser('get_project')
+parser_get_project.add_argument('name', type=str)
 parser_get_project.add_argument('--settings', type=str)
 parser_get_project.add_argument('--adapter', type=str)
 parser_get_project.set_defaults(func=get_project)
@@ -189,6 +215,7 @@ parser_trash_resource.set_defaults(func=trash_resource)
 
 # commit subparser
 parser_commit = subparsers.add_parser('commit')
+parser_commit.add_argument('--comment', type=str)
 parser_commit.set_defaults(func=commit)
 
 # unlock subparser
@@ -199,6 +226,11 @@ parser_unlock.set_defaults(func=unlock)
 parser_add_input = subparsers.add_parser('add_input')
 parser_add_input.add_argument('uri', type=str)
 parser_add_input.set_defaults(func=add_input)
+
+# diff subparser
+parser_diff = subparsers.add_parser('diff')
+parser_diff.set_defaults(func=diff)
+
 
 cmd_args = parser.parse_args()
 if cmd_args.func:

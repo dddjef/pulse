@@ -19,7 +19,7 @@ class PulseRepository:
         self.login = login
         self.password = password
 
-    def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
+    def upload_resource_commit(self, commit, work_folder, products_folder=None):
         """upload a commit content to repository
         """
         pass

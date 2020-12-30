@@ -170,6 +170,7 @@ class TestSQL(unittest.TestCase):
         anna_mdl = self.prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         anna_mdl_work.create_product("abc")
+        cfg.add_file_to_directory(anna_mdl_work.directory)
         anna_mdl_work.commit()
         self.cnx.delete_project(test_project_name)
         with self.assertRaises(PulseDatabaseMissingObject):

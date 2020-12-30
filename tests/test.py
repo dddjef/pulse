@@ -5,39 +5,71 @@ import config as cfg
 test_project_name = "test"
 
 
-class TestDefaultProject(unittest.TestCase):
+class TestProjectSettings(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
         self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
         self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=cfg.file_storage_path)
-        self.prj = self.cnx.create_project(
-            test_project_name,
-            cfg.sandbox_work_path,
+
+    def test_same_user_work_and_product_directory(self):
+        with self.assertRaises(PulseError):
+            self.cnx.create_project(
+                project_name=test_project_name,
+                work_user_root=cfg.sandbox_work_path,
+                product_user_root=cfg.sandbox_work_path,
+                default_repository="local_test_storage"
+            )
+
+    def test_environment_variables_in_project_path(self):
+        # set up env var
+        os.environ['PULSE_TEST'] = cfg.test_data_output_path
+        # create a project which use this variables in its work and product path
+        prj = self.cnx.create_project(
+            "env_var",
+            "$PULSE_TEST/works",
+            "$PULSE_TEST/products",
             default_repository="local_test_storage"
         )
+        # create a resource
+        resource = prj.create_resource("ch_anna", "model")
+        # check out the resource
+        work = resource.checkout()
+        # test its location
+        self.assertTrue(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna")))
+        # add an output product
+        abc_product = work.create_product("abc")
+        # test the product folder location
+        self.assertTrue(
+            os.path.exists(os.path.join(cfg.test_data_output_path, "products/env_var/model/ch_anna/V001/abc")))
+        # commit
+        cfg.add_file_to_directory(work.directory)
+        work.commit()
+        # trash
+        work.trash(no_backup=True)
+        prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(os.path.join(
+            cfg.test_data_output_path,
+            "works/env_var/model/ch_anna/V001/abc"
+        )))
+        # create another resource
+        surf_resource = prj.create_resource("ch_anna", "surfacing")
+        surf_work = surf_resource.checkout()
+        # require this product
+        surf_work.add_input(abc_product)
+        # test the product location
+        self.assertTrue(os.path.exists(os.path.join(
+            cfg.test_data_output_path,
+            "products/env_var/model/ch_anna/V001/abc"
+        )))
 
-    def test_check_out_to_present_product(self):
-        shader_work_file = "shader_work_file.ma"
-        shader_product_file = "shader_product_file.ma"
-        source_resource = self.prj.create_resource("source", "surface")
-        source_work = source_resource.checkout()
-        cfg.add_file_to_directory(source_work.directory, shader_work_file)
-        source_product = source_work.create_product("shader")
-        cfg.add_file_to_directory(source_product.directory, shader_product_file)
-        source_work.commit()
-        source_work.trash(no_backup=True)
-
-        # test the work file has been trashed
-        self.assertFalse(os.path.exists(os.path.join(source_work.directory, shader_work_file)))
-        # test the work directory is still there
-        self.assertTrue(os.path.exists(source_work.directory))
-
-        source_work = source_resource.checkout()
-        # test the work file has been restored
-        self.assertTrue(os.path.exists(os.path.join(source_work.directory, shader_work_file)))
+    # issue #46
+    def test_delete_project(self):
+        self.cnx.delete_project(test_project_name)
+        with self.assertRaises(PulseDatabaseMissingObject):
+            self.cnx.get_project(test_project_name)
 
 
-class TestProjectWithProductRoot(unittest.TestCase):
+class TestResources(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
         self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
@@ -48,75 +80,54 @@ class TestProjectWithProductRoot(unittest.TestCase):
             default_repository="local_test_storage",
             product_user_root=cfg.sandbox_products_path
         )
-
-    def test_delete_project(self):
-        anna_mdl = self.prj.create_resource("anna", "mdl")
-        anna_mdl_work = anna_mdl.checkout()
-        anna_mdl_work.create_product("abc")
-        anna_mdl_work.commit()
-        self.cnx.delete_project(test_project_name)
-        with self.assertRaises(PulseDatabaseMissingObject):
-            self.cnx.get_project(test_project_name)
+        self.anna_mdl = self.prj.create_resource("anna", "mdl")
+        self.anna_mdl_work = self.anna_mdl.checkout()
+        cfg.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
+        self.anna_abc_product = self.anna_mdl_work.create_product("abc")
+        cfg.add_file_to_directory(self.anna_abc_product.directory, "anna.abc")
+        self.anna_mdl_commit = self.anna_mdl_work.commit()
 
     def test_template_resource(self):
         template_mdl = self.prj.create_template("mdl")
         template_mdl_work = template_mdl.checkout()
         template_mdl_work.create_product("abc")
+        cfg.add_file_to_directory(template_mdl_work.directory)
         template_mdl_work.commit()
         template_mdl_work.trash()
-        anna_mdl = self.prj.create_resource("anna", "mdl")
-        anna_mdl_work = anna_mdl.checkout()
-        self.assertTrue(os.path.exists(os.path.join(anna_mdl_work.get_products_directory(), "abc")))
+        froga_mdl = self.prj.create_resource("froga", "mdl")
+        froga_mdl_work = froga_mdl.checkout()
+        self.assertTrue(os.path.exists(os.path.join(froga_mdl_work.get_products_directory(), "abc")))
 
     def test_unused_time_on_purged_product(self):
-        anna_mdl = self.prj.create_resource("anna", "mdl")
-        anna_mdl_work = anna_mdl.checkout()
-        anna_mdl_work.create_product("abc")
-        anna_mdl_v1 = anna_mdl_work.commit()
-        anna_mdl_work.trash()
+        self.anna_mdl_work.trash()
         self.prj.purge_unused_user_products()
-        product = anna_mdl_v1.get_product("abc")
+        product = self.anna_mdl_commit.get_product("abc")
         self.assertTrue(product.get_unused_time(), -1)
 
-    def test_same_work_and_product_user_path(self):
-        cnx = Connection(adapter="json_db", path=cfg.json_db_path)
-        prj = cnx.create_project(
-            "project_simple_sandbox",
-            cfg.sandbox_work_path,
-            default_repository="local_test_storage"
-        )
-        mdl_res = prj.create_resource("anna", "mdl")
-        mdl_work = mdl_res.checkout()
-        mdl_work.create_product("abc")
-        mdl_v1 = mdl_work.commit()
-        abc = mdl_v1.get_product("abc")
-        surf_work = prj.create_resource("anna", "surf").checkout()
-        surf_work.add_input(abc)
-        mdl_work.trash()
-
     def test_manipulating_trashed_work(self):
-        anna_mdl = self.prj.create_resource("anna", "mdl")
-        anna_mdl_work = anna_mdl.checkout()
-        anna_mdl_v1_abc = anna_mdl_work.create_product("abc")
-        anna_mdl_work.trash()
+        wip_product = self.anna_mdl_work.create_product("wip")
+        self.anna_mdl_work.trash()
         self.prj.purge_unused_user_products()
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
         # add a trashed product
         with self.assertRaises(PulseMissingNode):
-            anna_surf_work.add_input(anna_mdl_v1_abc)
+            anna_surf_work.add_input(wip_product)
         # create product on a trashed work
         with self.assertRaises(PulseMissingNode):
-            anna_mdl_work.create_product("abc")
+            self.anna_mdl_work.create_product("abc")
         # commit a trashed work
         with self.assertRaises(PulseMissingNode):
-            anna_mdl_work.commit()
+            self.anna_mdl_work.commit()
 
     def test_trash_product(self):
-        anna_mdl = self.prj.create_resource("anna", "mdl")
-        anna_mdl_work = anna_mdl.checkout()
-        abc_product = anna_mdl_work.create_product("abc")
-        anna_mdl_work.trash_product("abc")
-        self.assertFalse(os.path.exists(abc_product.directory))
+        wip_product = self.anna_mdl_work.create_product("wip")
+        self.anna_mdl_work.trash_product("wip")
+        self.assertFalse(os.path.exists(wip_product.directory))
+        self.anna_mdl_work.trash_product("abc")
+        # V1 abc should stay it's commit.
+        self.assertTrue(os.path.exists(self.anna_abc_product.directory))
+        # V2 abc should go, it was wip
+        self.assertFalse(os.path.exists(os.path.join(self.anna_mdl_work.get_products_directory(), "abc")))
 
     def test_metadata(self):
         pass
@@ -130,9 +141,8 @@ class TestProjectWithProductRoot(unittest.TestCase):
         # self.assertTrue(res.metas["site"] == "Paris")
 
     def test_lock_resource(self):
-        res_mdl = self.prj.create_resource("res", "mdl")
-        res_mdl.set_lock(True, "another_user")
-        res_work = res_mdl.checkout()
+        self.anna_mdl.set_lock(True, "another_user")
+        res_work = self.anna_mdl.checkout()
         with self.assertRaises(PulseError):
             res_work.commit()
 
@@ -153,14 +163,24 @@ class TestProjectWithProductRoot(unittest.TestCase):
                                                     shader_product_file)))
 
     def test_trashing_work_errors(self):
-        anna_mdl_work = self.prj.create_resource("anna", "mdl").checkout()
-        anna_mdl_abc = anna_mdl_work.create_product("abc")
+        froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
+        froga_mdl_abc = froga_mdl_work.create_product("abc")
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
-        anna_surf_work.add_input(anna_mdl_abc)
+        anna_surf_work.add_input(froga_mdl_abc)
+        # trashing a wip work with a product used by another resource is forbidden
         with self.assertRaises(PulseError):
-            anna_mdl_work.trash()
+            froga_mdl_work.trash()
+        # trashing a wip product used by another resource is forbidden
+        with self.assertRaises(PulseError):
+            froga_mdl_work.trash_product("abc")
+
+        # trashing a commit work with a product used by another resource is allowed
+        anna_surf_work.add_input(self.anna_abc_product)
+        self.anna_mdl_work.trash()
+
+        # trashing first the product user, then the product is allowed
         anna_surf_work.trash()
-        anna_mdl_work.trash()
+        froga_mdl_work.trash()
 
     def test_recursive_dependencies_download(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
@@ -257,69 +277,19 @@ class TestProjectWithProductRoot(unittest.TestCase):
 
     def test_work_subdirectories_are_commit(self):
         subdirectory_name = "subdirtest"
-        # create a resource based on this template
-        anna_mdl_resource = self.prj.create_resource("ch_anna", "modeling")
-        self.assertEqual(anna_mdl_resource.last_version, 0)
-
-        # checkout, and check directories are created
-        anna_mdl_work = anna_mdl_resource.checkout()
-        work_subdir_path = os.path.join(anna_mdl_work.directory, subdirectory_name)
+        work_subdir_path = os.path.join(self.anna_mdl_work.directory, subdirectory_name)
         os.makedirs(work_subdir_path)
         open(work_subdir_path + "\\subdir_file.txt", 'a').close()
-        anna_mdl_work.commit()
-        anna_mdl_work.trash()
-        self.assertFalse(os.path.exists(anna_mdl_work.directory))
-        anna_mdl_resource.checkout()
+        self.anna_mdl_work.commit()
+        self.anna_mdl_work.trash()
+        self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
+        self.anna_mdl.checkout()
         self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
 
     def test_get_unknown_resource_index(self):
-        template_mdl = self.prj.create_template("mdl")
-        template_mdl_work = template_mdl.checkout()
-        template_mdl_work.create_product("abc")
-        template_mdl_work.commit()
-        template_mdl_work.trash()
         # test get an unknown tag raise a pulseError
         with self.assertRaises(PulseError):
-            template_mdl.get_index("anytag")
-
-    def test_environment_variables_in_project_path(self):
-        # set up env var
-        os.environ['PULSE_TEST'] = cfg.test_data_output_path
-        # create a project which use this variables in its work and product path
-        prj = self.cnx.create_project(
-            "env_var",
-            "$PULSE_TEST/works",
-            default_repository="local_test_storage"
-        )
-        # create a resource
-        resource = prj.create_resource("ch_anna", "model")
-        # check out the resource
-        work = resource.checkout()
-        # test its location
-        self.assertTrue(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna")))
-        # add an output product
-        abc_product = work.create_product("abc")
-        # test the product folder location
-        self.assertTrue(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna/V001/abc")))
-        # commit
-        work.commit()
-        # trash
-        work.trash(no_backup=True)
-        prj.purge_unused_user_products()
-        self.assertFalse(os.path.exists(os.path.join(
-            cfg.test_data_output_path,
-            "works/env_var/model/ch_anna/V001/abc"
-        )))
-        # create another resource
-        surf_resource = prj.create_resource("ch_anna", "surfacing")
-        surf_work = surf_resource.checkout()
-        # require this product
-        surf_work.add_input(abc_product)
-        # test the product location
-        self.assertTrue(os.path.exists(os.path.join(
-            cfg.test_data_output_path,
-            "works/env_var/model/ch_anna/V001/abc"
-        )))
+            self.anna_mdl.get_index("anytag")
 
 
 if __name__ == '__main__':

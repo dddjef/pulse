@@ -87,6 +87,8 @@ def reset_ftp(project_name):
     connection.quit()
 
 
-def add_file_to_directory(directory, filename, source_filepath=None):
+def add_file_to_directory(directory, filename="any_file.txt", source_filepath=None):
     if not source_filepath:
         open(os.path.join(directory, filename), 'a').close()
+    else:
+        shutil.copy(source_filepath, os.path.join(directory, os.path.basename(source_filepath)))
