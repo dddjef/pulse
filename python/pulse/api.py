@@ -14,7 +14,7 @@ from pulse.exception import *
 import pulse.uri_standards as uri_standards
 import tempfile
 from datetime import datetime
-import re
+
 
 DEFAULT_VERSION_PADDING = 3
 DEFAULT_VERSION_PREFIX = "V"
@@ -554,26 +554,12 @@ class Work(WorkNode):
             os.makedirs(trash_directory)
 
         # move folders
-        # TODO  : this could be simplify due to no product in work folder
-
         if os.path.exists(products_directory):
             shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
-        trashed_work = os.path.join(trash_directory, "WORK")
-        os.makedirs(trashed_work)
-        work_files = []
-        version_directory_regex = re.compile(DEFAULT_VERSION_PREFIX + "\\d{" + str(DEFAULT_VERSION_PADDING) + "}$")
-        for f in os.listdir(self.directory):
-            if not version_directory_regex.match(f):
-                work_files.append(os.path.join(self.directory, f))
-        for f in work_files:
-            destination = f.replace(self.directory, trashed_work)
-            shutil.move(f, destination)
+        shutil.move(self.directory, os.path.join(trash_directory, "WORK"))
 
         if no_backup:
             shutil.rmtree(trash_directory)
-
-        # recursively remove works directories if they are empty
-        fu.remove_empty_parents_directory(self.directory, [self.project.cfg.get_work_user_root()])
 
         # recursively remove products directories if they are empty
         fu.remove_empty_parents_directory(
