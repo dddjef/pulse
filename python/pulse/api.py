@@ -605,11 +605,7 @@ class Work(WorkNode):
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
         self._check_exists_in_user_workspace()
-        current_files = {}
-        for f, v in self._get_current_files().iteritems():
-            if not f.endswith(".pipe"):
-                current_files[f] = v
-        diff = fu.compare_directory_content(current_files, self._get_last_commit_files())
+        diff = fu.compare_directory_content(self._get_current_files(), self._get_last_commit_files())
 
         return diff
 

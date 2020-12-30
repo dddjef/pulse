@@ -1,20 +1,32 @@
 import os
 import json
 import ctypes
+import hashlib
+
+
+def md5(filepath):
+    hash_md5 = hashlib.md5()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 
 def compare_directory_content(current_work_data, past_work_data):
     file_changes = []
     for filepath in current_work_data:
+        if filepath.endswith(".pipe"):
+            continue
         if filepath in past_work_data:
-            if round(current_work_data[filepath]['date'], 4) != round(past_work_data[filepath]['date'], 4):
+            if current_work_data[filepath]['checksum'] != past_work_data[filepath]['checksum']:
                 file_changes.append((filepath, "edited"))
             past_work_data.pop(filepath)
         else:
             file_changes.append((filepath, "added"))
 
     for filepath in past_work_data:
-        file_changes.append((filepath, "removed"))
+        if not filepath.endswith(".pipe"):
+            file_changes.append((filepath, "removed"))
     return file_changes
 
 
@@ -24,7 +36,7 @@ def get_directory_content(directory):
         for f in files:
             filepath = os.path.join(root, f)
             relative_path = filepath[len(directory):]
-            files_dict[relative_path] = {"date": os.path.getmtime(filepath)}
+            files_dict[relative_path] = {"checksum": md5(filepath)}
     return files_dict
 
 

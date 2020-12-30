@@ -75,6 +75,7 @@ class TestFTP(unittest.TestCase):
                                                      test_project_name, "work\\rig\\_template")))
 
         # test commit the resource
+        cfg.add_file_to_directory(template_work.directory)
         template_work.commit()
 
         # test moving resource between repo when the resource is locked
