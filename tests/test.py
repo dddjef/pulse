@@ -62,12 +62,6 @@ class TestProjectSettings(unittest.TestCase):
             "products/env_var/model/ch_anna/V001/abc"
         )))
 
-    # issue #46
-    def test_delete_project(self):
-        self.cnx.delete_project(test_project_name)
-        with self.assertRaises(PulseDatabaseMissingObject):
-            self.cnx.get_project(test_project_name)
-
 
 class TestResources(unittest.TestCase):
     def setUp(self):
@@ -86,6 +80,11 @@ class TestResources(unittest.TestCase):
         self.anna_abc_product = self.anna_mdl_work.create_product("abc")
         cfg.add_file_to_directory(self.anna_abc_product.directory, "anna.abc")
         self.anna_mdl_commit = self.anna_mdl_work.commit()
+
+    def test_delete_project(self):
+        self.cnx.delete_project(test_project_name)
+        with self.assertRaises(PulseDatabaseMissingObject):
+            self.cnx.get_project(test_project_name)
 
     def test_template_resource(self):
         template_mdl = self.prj.create_template("mdl")
