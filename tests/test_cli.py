@@ -56,7 +56,12 @@ class TestDefaultAdapters(unittest.TestCase):
 
     def test_scenario(self):
         # register to project with user login
-        cli_cmd_list(['get_project', "--adapter json_db", '--settings "' + cfg.json_db_path + '"'])
+        cli_cmd_list([
+            'get_project',
+            test_project_name,
+            "--adapter json_db",
+            '--settings "' + cfg.json_db_path + '"'
+        ])
         
         # create a modeling resource
         cli_cmd_list(['create_resource', 'ch_anna:mdl'])
@@ -70,6 +75,7 @@ class TestDefaultAdapters(unittest.TestCase):
         self.assertTrue(os.path.exists(anna_abc_path))
 
         # commit work
+        cfg.add_file_to_directory(anna_mdl_path)
         cli_cmd_list(['commit'])
 
         # create a surface resource
@@ -79,6 +85,7 @@ class TestDefaultAdapters(unittest.TestCase):
 
         # add mdl as input and commit
         cli_cmd_list(['add_input', 'ch_anna:mdl-abc@1'])
+        cfg.add_file_to_directory(anna_surfacing_path)
         cli_cmd_list(['commit'])
 
         # trash works
@@ -143,7 +150,7 @@ class TestCustomAdapters(unittest.TestCase):
 
     def test_scenario(self):
         # register to project with user login
-        cli_cmd_list(['get_project', "--adapter mysql", '--settings "' + self.db_url + '"'])
+        cli_cmd_list(['get_project', test_project_name, "--adapter mysql", '--settings "' + self.db_url + '"'])
 
         # create a modeling resource
         cli_cmd_list(['create_resource', 'ch_anna:mdl'])
@@ -157,6 +164,7 @@ class TestCustomAdapters(unittest.TestCase):
         self.assertTrue(os.path.exists(anna_abc_path))
 
         # commit work
+        cfg.add_file_to_directory(anna_abc_path)
         cli_cmd_list(['commit'])
 
         # create a surface resource
@@ -166,6 +174,7 @@ class TestCustomAdapters(unittest.TestCase):
 
         # add mdl as input and commit
         cli_cmd_list(['add_input', 'ch_anna:mdl-abc@1'])
+        cfg.add_file_to_directory(anna_surfacing_path)
         cli_cmd_list(['commit'])
 
         # trash works
