@@ -316,13 +316,6 @@ class Work(WorkNode):
         path += self.resource.resource_type + "-" + self.resource.entity.replace(":", "_") + "-" + date_time
         return path
 
-    def _get_work_files(self):
-        work_files = []
-        for root, subdirectories, files in os.walk(self.directory):
-            for f in files:
-                work_files.append(os.path.join(root, f))
-        return work_files
-
     def get_product(self, product_type):
         """
         return the resource's work product based on the given type
@@ -602,8 +595,14 @@ class Work(WorkNode):
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
         self._check_exists_in_user_workspace()
-        diff = fu.compare_directory_content(self._get_current_files(), self._get_last_commit_files())
-
+        diff = fu.compare_directory_content(fu.get_directory_content(self.directory), self._get_last_commit_files())
+        for product_name in self.list_products():
+            product_directory = os.path.join(self.get_products_directory(), product_name)
+            for root, subdirectories, files in os.walk(product_directory):
+                for f in files:
+                    filepath = os.path.join(root, f)
+                    relative_path = filepath[len(product_directory):]
+                    diff.append(("product-" + product_name + relative_path, "added"))
         return diff
 
     def get_products_directory(self):
