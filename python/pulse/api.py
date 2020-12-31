@@ -422,19 +422,21 @@ class Work(WorkNode):
         with open(new_version_file, "w") as write_file:
             json.dump({"created_by": self.resource.project.cnx.user_name}, write_file, indent=4, sort_keys=True)
 
-        # write data to json
-        fu.write_data(self.data_file, {
-            "version": self.version,
-            "entity": self.resource.entity,
-            "resource_type": self.resource.resource_type,
-            "outputs": [x.product_type for x in products]
-            })
-
         # create products directories
         for product in products:
             product_path = os.path.join(self.get_products_directory(), product.product_type)
             if not os.path.exists(product_path):
                 os.makedirs(product_path)
+
+        # write data to json
+        fu.write_data(self.data_file, {
+            "version": self.version,
+            "entity": self.resource.entity,
+            "resource_type": self.resource.resource_type,
+            "outputs": [x.product_type for x in products],
+            "work_files":fu.get_directory_content(self.directory)
+            })
+
 
     def read(self):
         """
@@ -486,7 +488,6 @@ class Work(WorkNode):
 
         # copy work files to a new version in repository
         commit = Commit(self.resource, self.version)
-        commit.files = fu.get_directory_content(self.directory)
         commit.project.cnx.repositories[self.resource.repository].upload_resource_commit(
             commit, self.directory, products_directory)
 
@@ -591,12 +592,8 @@ class Work(WorkNode):
         return current_files
 
     def _get_last_commit_files(self):
-        last_commit = Commit(self.resource, self.resource.last_version)
-        try:
-            last_commit.db_read()
-            return last_commit.files
-        except PulseDatabaseMissingObject:
-            return []
+        work_data = fu.read_data(self.data_file)
+        return work_data["work_files"]
 
     def get_files_changes(self):
         """
