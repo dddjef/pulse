@@ -290,6 +290,15 @@ class TestResources(unittest.TestCase):
         with self.assertRaises(PulseError):
             self.anna_mdl.get_index("anytag")
 
+    def test_work_get_file_changes(self):
+        # test nothing is returned if nothing change
+        self.assertTrue(self.anna_mdl_work.get_files_changes() == [])
+        # test nothing is returned if only the modification date change
+        # test nothing is returned if only a empty directory is added
+        # test edited file is returned when a work file is changed
+        # test edited file is returned when a product file is changed
+        # test added is returned when a new file is added
+        # test removed is returned when a file is deleted
 
 if __name__ == '__main__':
     unittest.main()

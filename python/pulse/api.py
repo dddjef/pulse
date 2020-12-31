@@ -587,7 +587,7 @@ class Work(WorkNode):
         for product_name in self.list_products():
             product_files = fu.get_directory_content(os.path.join(self.get_products_directory(), product_name))
             for f in product_files:
-                current_files[(os.path.join(product_name, f))] = product_files[f]
+                current_files["product:" + product_name + f] = product_files[f]
         return current_files
 
     def _get_last_commit_files(self):
