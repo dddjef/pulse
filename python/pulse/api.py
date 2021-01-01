@@ -576,18 +576,6 @@ class Work(WorkNode):
             self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
         )
 
-    def _get_current_files(self):
-        current_files = fu.get_directory_content(self.directory)
-        for product_name in self.list_products():
-            product_files = fu.get_directory_content(os.path.join(self.get_products_directory(), product_name))
-            for f in product_files:
-                current_files["product:" + product_name + f] = product_files[f]
-        return current_files
-
-    def _get_last_commit_files(self):
-        work_data = fu.read_data(self.data_file)
-        return work_data["work_files"]
-
     def get_files_changes(self):
         """
         return the work files changes since last commit. Based on the files modification date time
@@ -595,7 +583,10 @@ class Work(WorkNode):
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
         self._check_exists_in_user_workspace()
-        diff = fu.compare_directory_content(fu.get_directory_content(self.directory), self._get_last_commit_files())
+        diff = fu.compare_directory_content(
+            fu.get_directory_content(self.directory),
+            fu.read_data(self.data_file)["work_files"]
+        )
         for product_name in self.list_products():
             product_directory = os.path.join(self.get_products_directory(), product_name)
             for root, subdirectories, files in os.walk(product_directory):
