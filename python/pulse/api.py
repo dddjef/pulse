@@ -427,9 +427,8 @@ class Work(WorkNode):
             "entity": self.resource.entity,
             "resource_type": self.resource.resource_type,
             "outputs": [x.product_type for x in products],
-            "work_files":fu.get_directory_content(self.directory)
+            "work_files": fu.get_directory_content(self.directory)
             })
-
 
     def read(self):
         """
