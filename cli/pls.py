@@ -162,7 +162,7 @@ def commit(args):
 
 def diff(args):
     work = get_work(os.getcwd())
-    diffs = work.get_files_changes()
+    diffs = work.status()
     if not diffs:
         print 'no difference since checkout'
     else :

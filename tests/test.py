@@ -231,7 +231,7 @@ class TestResources(unittest.TestCase):
         # create a new file in work directory and try to commit again
         new_file = "\\test_complete.txt"
         open(anna_mdl_work.directory + new_file, 'a').close()
-        self.assertEqual(anna_mdl_work.get_files_changes(), [(new_file, 'added')])
+        self.assertEqual(anna_mdl_work.status(), [(new_file, 'added')])
 
         anna_mdl_work.commit("add a file")
         self.assertEqual(anna_mdl_resource.last_version, 1)
@@ -292,7 +292,7 @@ class TestResources(unittest.TestCase):
 
     def test_work_get_file_changes(self):
         # test nothing is returned if nothing change
-        self.assertTrue(self.anna_mdl_work.get_files_changes() == [])
+        self.assertTrue(self.anna_mdl_work.status() == [])
         # test nothing is returned if only the modification date change
         # test nothing is returned if only a empty directory is added
         # test edited file is returned when a work file is changed
@@ -306,10 +306,10 @@ class TestResources(unittest.TestCase):
         with open(os.path.join(self.anna_mdl_work.directory, "work.blend"), "a") as work_file:
             work_file.write("something")
         # test there's changes
-        self.assertTrue(len(self.anna_mdl_work.get_files_changes()) == 2)
+        self.assertTrue(len(self.anna_mdl_work.status()) == 2)
         self.anna_mdl_work.revert()
         # test there's no more changes
-        self.assertTrue(len(self.anna_mdl_work.get_files_changes()) == 0)
+        self.assertTrue(len(self.anna_mdl_work.status()) == 0)
 
     def test_work_update(self):
         # commit a new version (2), and trash it

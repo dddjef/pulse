@@ -463,7 +463,7 @@ class Work(WorkNode):
             raise PulseError("Your version is deprecated, it should be " + str(expected_version))
 
         # check the work status
-        if not self.get_files_changes():
+        if not self.status():
             raise PulseError("no file change to commit")
 
         # check all inputs are registered
@@ -536,7 +536,7 @@ class Work(WorkNode):
         :return: True on success
         """
         # test there's no changes that could be lost
-        if self.get_files_changes():
+        if self.status():
             raise PulseError("local changes detected, you should commit or revert your work first")
         # delete the work
         self.trash(no_backup=True)
@@ -603,7 +603,7 @@ class Work(WorkNode):
             self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
         )
 
-    def get_files_changes(self):
+    def status(self):
         """
         return the work files changes since last commit. Based on the files modification date time
 
