@@ -160,7 +160,7 @@ def commit(args):
         print('work commit failed :' + str(e))
 
 
-def diff(args):
+def status(args):
     work = get_work(os.getcwd())
     diffs = work.status()
     if not diffs:
@@ -227,9 +227,9 @@ parser_add_input = subparsers.add_parser('add_input')
 parser_add_input.add_argument('uri', type=str)
 parser_add_input.set_defaults(func=add_input)
 
-# diff subparser
-parser_diff = subparsers.add_parser('diff')
-parser_diff.set_defaults(func=diff)
+# status subparser
+parser_status = subparsers.add_parser('status')
+parser_status.set_defaults(func=status)
 
 
 cmd_args = parser.parse_args()
