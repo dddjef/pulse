@@ -520,9 +520,8 @@ class Work(WorkNode):
 
         :return: True on success
         """
-        # delete the work and product content
-        fu.clean_directory(self.directory)
-        fu.clean_directory(self.get_products_directory())
+        # trash the current content
+        self.trash(no_backup=True)
         # checkout the last work commit version
         self.resource.checkout(index=self.version - 1)
         return True
@@ -537,9 +536,8 @@ class Work(WorkNode):
         # test there's no changes that could be lost
         if self.status():
             raise PulseError("local changes detected, you should commit or revert your work first")
-        # delete the work and product content
-        fu.clean_directory(self.directory)
-        fu.clean_directory(self.get_products_directory())
+        # delete the work
+        self.trash(no_backup=True)
         # checkout the last resource commit version
         self.resource.checkout()
         return True
