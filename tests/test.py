@@ -300,5 +300,29 @@ class TestResources(unittest.TestCase):
         # test added is returned when a new file is added
         # test removed is returned when a file is deleted
 
+    def test_work_revert(self):
+        # make some change in the work folder
+        cfg.add_file_to_directory(self.anna_mdl_work.directory)
+        with open(os.path.join(self.anna_mdl_work.directory, "work.blend"), "a") as work_file:
+            work_file.write("something")
+        # test there's changes
+        self.assertTrue(len(self.anna_mdl_work.get_files_changes()) == 2)
+        self.anna_mdl_work.revert()
+        # test there's no more changes
+        self.assertTrue(len(self.anna_mdl_work.get_files_changes()) == 0)
+
+    def test_work_update(self):
+        # commit a new version (2), and trash it
+        cfg.add_file_to_directory(self.anna_mdl_work.directory, "new_file.txt")
+        self.anna_mdl_work.commit()
+        self.anna_mdl_work.trash()
+        # checkout to version 1, and test the new file is not there
+        work = self.anna_mdl.checkout(index=1)
+        self.assertFalse(os.path.exists(os.path.join(self.anna_mdl_work.directory, "new_file.txt")))
+        # update the work, check the new file is there
+        work.update()
+        self.assertTrue(os.path.exists(os.path.join(self.anna_mdl_work.directory, "new_file.txt")))
+
+
 if __name__ == '__main__':
     unittest.main()

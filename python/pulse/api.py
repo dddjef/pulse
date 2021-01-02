@@ -516,6 +516,34 @@ class Work(WorkNode):
 
         return commit
 
+    def revert(self):
+        """
+        revert local changes to the work and its product directory
+
+        :return: True on success
+        """
+        # trash the current content
+        self.trash(no_backup=True)
+        # checkout the last work commit version
+        self.resource.checkout(index=self.version - 1)
+        return True
+
+    def update(self):
+        """
+        update local work copy to the last resource commit
+        fails if there's some local changes
+
+        :return: True on success
+        """
+        # test there's no changes that could be lost
+        if self.get_files_changes():
+            raise PulseError("local changes detected, you should commit or revert your work first")
+        # delete the work
+        self.trash(no_backup=True)
+        # checkout the last resource commit version
+        self.resource.checkout()
+        return True
+
     def trash(self, no_backup=False):
         """
         remove the work from user workspace
