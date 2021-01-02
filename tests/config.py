@@ -29,6 +29,7 @@ ftp_settings = {
 
 
 def reset_test_data(root=test_data_output_path):
+    root = os.path.expandvars(root)
     if os.path.exists(root):
         # first remove all read only mode from files attributes
         for path, subdirs, files in os.walk(root):
