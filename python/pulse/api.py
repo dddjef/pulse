@@ -323,7 +323,6 @@ class Work(WorkNode):
         :param product_type:
         :return: a work product
         """
-        self._check_exists_in_user_workspace()
         return WorkProduct(self, product_type)
 
     def list_products(self):
@@ -332,7 +331,6 @@ class Work(WorkNode):
 
         :return: a string list
         """
-        self._check_exists_in_user_workspace()
         return fu.read_data(self.data_file)["outputs"]
 
     def create_product(self, product_type):
@@ -371,8 +369,9 @@ class Work(WorkNode):
         if not fu.test_path_write_access(product.directory):
             raise PulseError("can't move folder " + product.directory)
 
-        if product.get_product_users():
-            raise PulseError("work can't be trashed if its product is used : " + product_type)
+        users = product.get_product_users()
+        if users:
+            raise PulseError("work can't be trashed if its product is used : " + users[0])
 
         # unregister from products
         for input_product in product.get_inputs():
@@ -437,7 +436,6 @@ class Work(WorkNode):
 
         :return: the updated work
         """
-        self._check_exists_in_user_workspace()
         if not os.path.exists(self.directory):
             raise PulseError("work does not exists : " + self.directory)
         work_data = fu.read_data(self.data_file)
@@ -597,7 +595,6 @@ class Work(WorkNode):
         :param index:
         :return: filepath
         """
-        self._check_exists_in_user_workspace()
         return os.path.join(
             self.directory,
             self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
@@ -609,7 +606,6 @@ class Work(WorkNode):
 
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
-        self._check_exists_in_user_workspace()
         diff = fu.compare_directory_content(
             fu.get_directory_content(self.directory),
             fu.read_data(self.data_file)["work_files"]

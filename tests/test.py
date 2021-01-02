@@ -109,7 +109,7 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_user_products()
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
         # add a trashed product
-        with self.assertRaises(PulseMissingNode):
+        with self.assertRaises(PulseError):
             anna_surf_work.add_input(wip_product)
         # create product on a trashed work
         with self.assertRaises(PulseMissingNode):
