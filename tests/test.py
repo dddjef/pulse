@@ -1,28 +1,28 @@
 from pulse.api import *
 import unittest
 import os
-import config as cfg
+import utils
 test_project_name = "test"
 
 
 class TestProjectSettings(unittest.TestCase):
     def setUp(self):
-        cfg.reset_test_data()
-        self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
-        self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=cfg.file_storage_path)
+        utils.reset_test_data()
+        self.cnx = Connection(adapter="json_db", path=utils.json_db_path)
+        self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=utils.file_storage_path)
 
     def test_same_user_work_and_product_directory(self):
         with self.assertRaises(PulseError):
             self.cnx.create_project(
                 project_name=test_project_name,
-                work_user_root=cfg.sandbox_work_path,
-                product_user_root=cfg.sandbox_work_path,
+                work_user_root=utils.sandbox_work_path,
+                product_user_root=utils.sandbox_work_path,
                 default_repository="local_test_storage"
             )
 
     def test_environment_variables_in_project_path(self):
         # set up env var
-        os.environ['PULSE_TEST'] = cfg.test_data_output_path
+        os.environ['PULSE_TEST'] = utils.test_data_output_path
         # create a project which use this variables in its work and product path
         prj = self.cnx.create_project(
             "env_var",
@@ -35,20 +35,20 @@ class TestProjectSettings(unittest.TestCase):
         # check out the resource
         work = resource.checkout()
         # test its location
-        self.assertTrue(os.path.exists(os.path.join(cfg.test_data_output_path, "works/env_var/model/ch_anna")))
+        self.assertTrue(os.path.exists(os.path.join(utils.test_data_output_path, "works/env_var/model/ch_anna")))
         # add an output product
         abc_product = work.create_product("abc")
         # test the product folder location
         self.assertTrue(
-            os.path.exists(os.path.join(cfg.test_data_output_path, "products/env_var/model/ch_anna/V001/abc")))
+            os.path.exists(os.path.join(utils.test_data_output_path, "products/env_var/model/ch_anna/V001/abc")))
         # commit
-        cfg.add_file_to_directory(work.directory)
+        utils.add_file_to_directory(work.directory)
         work.commit()
         # trash
         work.trash(no_backup=True)
         prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(os.path.join(
-            cfg.test_data_output_path,
+            utils.test_data_output_path,
             "works/env_var/model/ch_anna/V001/abc"
         )))
         # create another resource
@@ -58,27 +58,27 @@ class TestProjectSettings(unittest.TestCase):
         surf_work.add_input(abc_product)
         # test the product location
         self.assertTrue(os.path.exists(os.path.join(
-            cfg.test_data_output_path,
+            utils.test_data_output_path,
             "products/env_var/model/ch_anna/V001/abc"
         )))
 
 
 class TestResources(unittest.TestCase):
     def setUp(self):
-        cfg.reset_test_data()
-        self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
-        self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=cfg.file_storage_path)
+        utils.reset_test_data()
+        self.cnx = Connection(adapter="json_db", path=utils.json_db_path)
+        self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=utils.file_storage_path)
         self.prj = self.cnx.create_project(
             test_project_name,
-            cfg.sandbox_work_path,
+            utils.sandbox_work_path,
             default_repository="local_test_storage",
-            product_user_root=cfg.sandbox_products_path
+            product_user_root=utils.sandbox_products_path
         )
         self.anna_mdl = self.prj.create_resource("anna", "mdl")
         self.anna_mdl_work = self.anna_mdl.checkout()
-        cfg.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
+        utils.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
         self.anna_abc_product = self.anna_mdl_work.create_product("abc")
-        cfg.add_file_to_directory(self.anna_abc_product.directory, "anna.abc")
+        utils.add_file_to_directory(self.anna_abc_product.directory, "anna.abc")
         self.anna_mdl_commit = self.anna_mdl_work.commit()
 
     def test_delete_project(self):
@@ -90,7 +90,7 @@ class TestResources(unittest.TestCase):
         template_mdl = self.prj.create_template("mdl")
         template_mdl_work = template_mdl.checkout()
         template_mdl_work.create_product("abc")
-        cfg.add_file_to_directory(template_mdl_work.directory)
+        utils.add_file_to_directory(template_mdl_work.directory)
         template_mdl_work.commit()
         template_mdl_work.trash()
         froga_mdl = self.prj.create_resource("froga", "mdl")
@@ -150,9 +150,9 @@ class TestResources(unittest.TestCase):
         shader_product_file = "shader_product_file.ma"
         source_resource = self.prj.create_resource("source", "surface")
         source_work = source_resource.checkout()
-        cfg.add_file_to_directory(source_work.directory, shader_work_file)
+        utils.add_file_to_directory(source_work.directory, shader_work_file)
         source_product = source_work.create_product("shader")
-        cfg.add_file_to_directory(source_product.directory, shader_product_file)
+        utils.add_file_to_directory(source_product.directory, shader_product_file)
         source_work.commit()
 
         anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=source_resource)
@@ -185,7 +185,7 @@ class TestResources(unittest.TestCase):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         anna_surf_textures = anna_surf_work.create_product("textures")
-        open(anna_surf_textures.directory + "\\product_file.txt", 'a').close()
+        utils.add_file_to_directory(anna_surf_textures.directory, "product_file.txt")
         anna_surf_work.commit(comment="test generated product")
         anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
@@ -229,9 +229,9 @@ class TestResources(unittest.TestCase):
             anna_mdl_work.commit("very first time")
 
         # create a new file in work directory and try to commit again
-        new_file = "\\test_complete.txt"
-        open(anna_mdl_work.directory + new_file, 'a').close()
-        self.assertEqual(anna_mdl_work.status(), [(new_file, 'added')])
+        new_file = "test_complete.txt"
+        utils.add_file_to_directory(anna_mdl_work.directory, new_file)
+        self.assertEqual(anna_mdl_work.status(), [(os.sep + new_file, 'added')])
 
         anna_mdl_work.commit("add a file")
         self.assertEqual(anna_mdl_resource.last_version, 1)
@@ -240,7 +240,7 @@ class TestResources(unittest.TestCase):
         anna_mdl_v2_abc = anna_mdl_work.create_product("ABC")
         # now products directory should exists
         self.assertTrue(os.path.exists(anna_mdl_work.get_products_directory()))
-        open(anna_mdl_v2_abc.directory + "\\test.abc", 'a').close()
+        utils.add_file_to_directory(anna_mdl_v2_abc.directory, "test.abc")
         # create a new commit
         anna_mdl_work.commit("some abc produced")
         self.assertEqual(anna_mdl_resource.last_version, 2)
@@ -302,7 +302,7 @@ class TestResources(unittest.TestCase):
 
     def test_work_revert(self):
         # make some change in the work folder
-        cfg.add_file_to_directory(self.anna_mdl_work.directory)
+        utils.add_file_to_directory(self.anna_mdl_work.directory)
         with open(os.path.join(self.anna_mdl_work.directory, "work.blend"), "a") as work_file:
             work_file.write("something")
         # test there's changes
@@ -313,7 +313,7 @@ class TestResources(unittest.TestCase):
 
     def test_work_update(self):
         # commit a new version (2), and trash it
-        cfg.add_file_to_directory(self.anna_mdl_work.directory, "new_file.txt")
+        utils.add_file_to_directory(self.anna_mdl_work.directory, "new_file.txt")
         self.anna_mdl_work.commit()
         self.anna_mdl_work.trash()
         # checkout to version 1, and test the new file is not there

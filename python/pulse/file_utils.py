@@ -2,8 +2,7 @@ import os
 import json
 import ctypes
 import hashlib
-import shutil
-
+from sys import platform
 
 def md5(filepath):
     hash_md5 = hashlib.md5()
@@ -60,7 +59,8 @@ def write_data(filepath, data):
         os.remove(filepath)
     with open(filepath, "w") as write_file:
         json.dump(data, write_file, indent=4, sort_keys=True)
-    ctypes.windll.kernel32.SetFileAttributesW(filepath, 2)
+    if platform == "win32":
+        ctypes.windll.kernel32.SetFileAttributesW(filepath, 2)
 
 
 def json_list_remove(json_path, item):
@@ -94,15 +94,3 @@ def remove_empty_parents_directory(directory, root_dirs):
         directory = os.path.dirname(directory)
         if directory.endswith(":") or directory in root_dirs:
             break
-
-
-def clean_directory(directory):
-    for filename in os.listdir(directory):
-        file_path = os.path.join(directory, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))

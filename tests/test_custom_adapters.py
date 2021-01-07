@@ -1,8 +1,8 @@
 from pulse.api import *
 import unittest
 import os
-import config as cfg
-
+import utils
+import utils_custom_adapters as utils_ca
 test_project_name = "testProject"
 
 
@@ -27,23 +27,23 @@ root = pulseTest/
 
 class TestFTP(unittest.TestCase):
     def setUp(self):
-        cfg.reset_test_data()
-        cfg.reset_ftp(test_project_name)
-        self.cnx = Connection(adapter="json_db", path=cfg.json_db_path)
+        utils.reset_test_data()
+        utils_ca.reset_ftp(test_project_name)
+        self.cnx = Connection(adapter="json_db", path=utils.json_db_path)
         self.cnx.add_repository(
             name="ftp_storage",
             adapter="ftp",
-            login=cfg.ftp_login,
-            password=cfg.ftp_password,
-            host=cfg.ftp_settings["host"],
-            port=cfg.ftp_settings["port"],
-            root=cfg.ftp_settings["root"]
+            login=utils_ca.ftp_login,
+            password=utils_ca.ftp_password,
+            host=utils_ca.ftp_settings["host"],
+            port=utils_ca.ftp_settings["port"],
+            root=utils_ca.ftp_settings["root"]
             )
         self.prj = self.cnx.create_project(
             test_project_name,
-            cfg.sandbox_work_path,
+            utils.sandbox_work_path,
             default_repository="ftp_storage",
-            product_user_root=cfg.sandbox_products_path
+            product_user_root=utils.sandbox_products_path
         )
 
     def test_multiple_repository_types(self):
@@ -51,31 +51,31 @@ class TestFTP(unittest.TestCase):
         self.cnx.add_repository(
             name=local_repo_name,
             adapter="file_storage",
-            path=os.path.join(cfg.file_storage_path, local_repo_name)
+            path=os.path.join(utils.file_storage_path, local_repo_name)
         )
 
         template_resource = self.prj.create_resource("_template", "rig", repository="local_test_storage")
         template_work = template_resource.checkout()
-        open(template_work.directory + "\\template_work.txt", 'a').close()
+        utils.add_file_to_directory(template_work.directory, "template_work.txt")
         template_work.commit()
         # self.assertTrue(os.path.exists(os.path.join(user_works, "test\\rig\\_template")))
         template_work.trash()
         self.prj.purge_unused_user_products()
-        self.assertFalse(os.path.exists(os.path.join(cfg.sandbox_work_path, test_project_name, "rig\\_template")))
+        self.assertFalse(os.path.exists( os.path.join(utils.sandbox_work_path, test_project_name, "rig", "_template")))
         template_resource.checkout()
-        self.assertTrue(os.path.exists(os.path.join(cfg.sandbox_work_path, test_project_name, "rig\\_template")))
+        self.assertTrue(os.path.exists(os.path.join(utils.sandbox_work_path, test_project_name, "rig", "_template")))
 
         # test moving resource between repo
-        self.assertTrue(os.path.exists(os.path.join(cfg.file_storage_path, local_repo_name,
-                                                    test_project_name, "work\\rig\\_template")))
+        self.assertTrue(os.path.exists(os.path.join(utils.file_storage_path, local_repo_name,
+                                                    test_project_name, "work", "rig", "_template")))
 
         template_resource.set_repository(self.prj.cfg.default_repository)
 
-        self.assertFalse(os.path.exists(os.path.join(cfg.file_storage_path, local_repo_name,
-                                                     test_project_name, "work\\rig\\_template")))
+        self.assertFalse(os.path.exists(os.path.join(utils.file_storage_path, local_repo_name,
+                                                     test_project_name, "work", "rig","_template")))
 
         # test commit the resource
-        cfg.add_file_to_directory(template_work.directory)
+        utils.add_file_to_directory(template_work.directory)
         template_work.commit()
 
         # test moving resource between repo when the resource is locked
@@ -93,45 +93,45 @@ class TestFTP(unittest.TestCase):
         anna_mdl_work = anna_mdl_resource.checkout()
         work_subdir_path = os.path.join(anna_mdl_work.directory, subdirectory_name)
         os.makedirs(work_subdir_path)
-        open(work_subdir_path + "\\subdir_file.txt", 'a').close()
+        utils.add_file_to_directory(work_subdir_path, "subdir_file.txt")
         anna_mdl_work.commit()
         anna_mdl_work.trash()
         self.assertFalse(os.path.exists(anna_mdl_work.directory))
         anna_mdl_resource.checkout()
-        self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
+        self.assertTrue(os.path.exists(os.path.join(work_subdir_path, "subdir_file.txt")))
 
 
 class TestSQL(unittest.TestCase):
     def setUp(self):
-        cfg.reset_test_data()
-        cfg.reset_sql_db(test_project_name)
+        utils.reset_test_data()
+        utils_ca.reset_sql_db(test_project_name)
         self.cnx = Connection(
             adapter="mysql",
-            host=cfg.mysql_settings['host'],
-            username=cfg.mysql_settings['username'],
-            password=cfg.mysql_settings['password'],
-            port=cfg.mysql_settings['port']
+            host=utils_ca.mysql_settings['host'],
+            username=utils_ca.mysql_settings['username'],
+            password=utils_ca.mysql_settings['password'],
+            port=utils_ca.mysql_settings['port']
         )
 
         local_repo_name = "local_test_storage"
         self.cnx.add_repository(
             name=local_repo_name,
             adapter="file_storage",
-            path=os.path.join(cfg.file_storage_path, local_repo_name)
+            path=os.path.join(utils.file_storage_path, local_repo_name)
         )
 
         self.prj = self.cnx.create_project(
             test_project_name,
-            cfg.sandbox_work_path,
+            utils.sandbox_work_path,
             default_repository="local_test_storage",
-            product_user_root=cfg.sandbox_products_path
+            product_user_root=utils.sandbox_products_path
         )
 
     def test_sql_db(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         anna_surf_textures = anna_surf_work.create_product("textures")
-        open(anna_surf_textures.directory + "\\product_file.txt", 'a').close()
+        utils.add_file_to_directory(anna_surf_textures.directory, "product_file.txt")
         anna_surf_work.commit(comment="test generated product")
         anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
@@ -155,10 +155,10 @@ class TestSQL(unittest.TestCase):
 
         cnx2 = Connection(
             adapter="mysql",
-            host=cfg.mysql_settings['host'],
-            username=cfg.mysql_settings['username'],
-            password=cfg.mysql_settings['password'],
-            port=cfg.mysql_settings['port']
+            host=utils_ca.mysql_settings['host'],
+            username=utils_ca.mysql_settings['username'],
+            password=utils_ca.mysql_settings['password'],
+            port=utils_ca.mysql_settings['port']
         )
         prj = cnx2.get_project(test_project_name)
         rig2 = prj.get_resource("ch_anna", "rigging")
@@ -171,7 +171,7 @@ class TestSQL(unittest.TestCase):
         anna_mdl = self.prj.create_resource("anna", "mdl")
         anna_mdl_work = anna_mdl.checkout()
         anna_mdl_work.create_product("abc")
-        cfg.add_file_to_directory(anna_mdl_work.directory)
+        utils.add_file_to_directory(anna_mdl_work.directory)
         anna_mdl_work.commit()
         self.cnx.delete_project(test_project_name)
         with self.assertRaises(PulseDatabaseMissingObject):
