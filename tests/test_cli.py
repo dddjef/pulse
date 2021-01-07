@@ -1,6 +1,6 @@
 import unittest
 import subprocess
-import config as cfg
+import utils as cfg
 from pulse.api import *
 
 """

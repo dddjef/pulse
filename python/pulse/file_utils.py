@@ -2,7 +2,7 @@ import os
 import json
 import ctypes
 import hashlib
-
+from sys import platform
 
 def md5(filepath):
     hash_md5 = hashlib.md5()
@@ -59,7 +59,8 @@ def write_data(filepath, data):
         os.remove(filepath)
     with open(filepath, "w") as write_file:
         json.dump(data, write_file, indent=4, sort_keys=True)
-    ctypes.windll.kernel32.SetFileAttributesW(filepath, 2)
+    if platform == "win32":
+        ctypes.windll.kernel32.SetFileAttributesW(filepath, 2)
 
 
 def json_list_remove(json_path, item):
