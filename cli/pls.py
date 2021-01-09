@@ -82,8 +82,8 @@ def get_project(args):
 
     # create work and product path
     prj = cnx.get_project(args.name)
-    project_work_root = os.path.join(prj.cfg.work_user_root, args.name)
-    project_product_root = os.path.join(prj.cfg.product_user_root, args.name)
+    project_work_root = os.path.expandvars(os.path.join(prj.cfg.work_user_root, args.name))
+    project_product_root = os.path.expandvars(os.path.join(prj.cfg.product_user_root, args.name))
 
     if not os.path.exists(project_work_root):
         os.makedirs(project_work_root)
@@ -157,23 +157,47 @@ def commit(args):
         commit_obj = work.commit(comment=args.comment)
         print('work commit in version "' + str(commit_obj.version) + '"')
     except pulse.PulseError, e:
-        print('work commit failed :' + str(e))
+        print('work commit failed: ' + str(e))
 
 
 def status(args):
     work = get_work(os.getcwd())
     diffs = work.status()
     if not diffs:
-        print 'no difference since checkout'
+        print 'no local changes detected'
     else :
         for elem in diffs:
             print elem[0] + ":" + elem[1]
+
+
+def lock(args):
+    resource = get_work(os.getcwd()).resource
+    resource.set_lock(state=True, steal=True)
+    print 'resource locked "' + str(resource.uri) + '"'
 
 
 def unlock(args):
     resource = get_work(os.getcwd()).resource
     resource.set_lock(state=False, steal=True)
     print 'resource unlocked "' + str(resource.uri) + '"'
+
+
+def revert(args):
+    project = get_pulse_project(os.getcwd())
+    dict_uri = uri_standards.convert_to_dict(args.uri)
+    resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
+    work = resource.get_work()
+    work.revert()
+    print "work reverted"
+
+
+def update(args):
+    project = get_pulse_project(os.getcwd())
+    dict_uri = uri_standards.convert_to_dict(args.uri)
+    resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
+    work = resource.get_work()
+    work.update()
+    print "work updated to version: " + str(work.version)
 
 
 # create the top-level parser
@@ -222,6 +246,10 @@ parser_commit.set_defaults(func=commit)
 parser_unlock = subparsers.add_parser('unlock')
 parser_unlock.set_defaults(func=unlock)
 
+# lock subparser
+parser_lock = subparsers.add_parser('lock')
+parser_lock.set_defaults(func=lock)
+
 # add_input subparser
 parser_add_input = subparsers.add_parser('add_input')
 parser_add_input.add_argument('uri', type=str)
@@ -231,6 +259,15 @@ parser_add_input.set_defaults(func=add_input)
 parser_status = subparsers.add_parser('status')
 parser_status.set_defaults(func=status)
 
+# revert subparser
+parser_revert = subparsers.add_parser('revert')
+parser_revert.add_argument('uri', type=str)
+parser_revert.set_defaults(func=revert)
+
+# update subparser
+parser_update = subparsers.add_parser('update')
+parser_update.add_argument('uri', type=str)
+parser_update.set_defaults(func=update)
 
 cmd_args = parser.parse_args()
 if cmd_args.func:
