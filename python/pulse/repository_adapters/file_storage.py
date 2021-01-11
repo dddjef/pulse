@@ -1,6 +1,7 @@
 import os
 import shutil
 from pulse.repository_adapters.interface_class import *
+import pulse.file_utils as fu
 
 
 def copy_folder_content(source_folder, destination_folder):
@@ -13,11 +14,14 @@ def copy_folder_content(source_folder, destination_folder):
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
     for node in os.listdir(source_folder):
-        destination_node = os.path.join(source_folder, node)
-        if os.path.isdir(destination_node):
-            shutil.copytree(destination_node, os.path.join(destination_folder, node))
+        source_filepath = os.path.join(source_folder, node)
+        destination_filepath = os.path.join(destination_folder, node)
+        if os.path.isdir(source_filepath):
+            if os.path.exists(destination_filepath):
+                shutil.rmtree(destination_filepath)
+            fu.copytree(source_filepath, destination_filepath)
         else:
-            shutil.copy(destination_node, os.path.join(destination_folder, node))
+            shutil.copyfile(source_filepath, destination_filepath)
 
 
 class Repository(PulseRepository):

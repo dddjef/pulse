@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 import argparse
 import pulse.api as pulse
 import pulse.uri_standards as uri_standards
@@ -98,7 +99,6 @@ def get_project(args):
 
     with open(os.path.join(project_work_root, project_data_filename), "w") as write_file:
         json.dump(connexion_data, write_file, indent=4, sort_keys=True)
-
     print "project registered to ", project_work_root
 
 

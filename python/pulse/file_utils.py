@@ -2,7 +2,9 @@ import os
 import json
 import ctypes
 import hashlib
+import shutil
 from sys import platform
+
 
 def md5(filepath):
     hash_md5 = hashlib.md5()
@@ -94,3 +96,27 @@ def remove_empty_parents_directory(directory, root_dirs):
         directory = os.path.dirname(directory)
         if directory.endswith(":") or directory in root_dirs:
             break
+
+
+def copytree(src, dst, ignore=None):
+    """
+    based on shutil.copytree but using the copyfile function to avoid permission error on linux
+    could be removed on python 3 since there's the coopy_function argument with shutil.copytree
+    """
+    names = os.listdir(src)
+    if ignore is not None:
+        ignored_names = ignore(src, names)
+    else:
+        ignored_names = set()
+
+    os.makedirs(dst)
+    for name in names:
+        if name in ignored_names:
+            continue
+        srcname = os.path.join(src, name)
+        dstname = os.path.join(dst, name)
+
+        if os.path.isdir(srcname):
+            copytree(srcname, dstname, ignore)
+        else:
+            shutil.copyfile(srcname, dstname)

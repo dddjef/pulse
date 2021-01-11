@@ -1,6 +1,6 @@
 import os
 import shutil
-
+from sys import platform
 
 test_data_output_path = os.path.join(os.path.dirname(__file__), "data", "out")
 json_db_path = os.path.join(test_data_output_path, "DB")
@@ -16,7 +16,8 @@ def reset_test_data(root=test_data_output_path):
             for name in files:
                 filepath = os.path.join(path, name)
                 if filepath.endswith(".pipe"):
-                    os.chmod(filepath, 0o777)
+                    if platform == "win32":
+                        os.chmod(filepath, 0o777)
 
         shutil.rmtree(root)
     os.mkdir(root)
