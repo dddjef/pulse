@@ -99,20 +99,20 @@ def get_project(args):
 
     with open(os.path.join(project_work_root, project_data_filename), "w") as write_file:
         json.dump(connexion_data, write_file, indent=4, sort_keys=True)
-    print "project registered to ", project_work_root
+    print "project registered to ", os.path.expandvars(project_work_root)
 
 
 def create_template(args):
     project = get_pulse_project(os.getcwd())
     resource = project.create_template(args.type)
     work = resource.checkout()
-    print 'template check out in "' + work.directory + '"'
+    print 'template check out in "' + os.path.expandvars(work.directory) + '"'
 
 
 def create_output(args):
     work = get_work(os.getcwd())
     product = work.create_product(args.type)
-    print 'product created in "' + product.directory + '"'
+    print 'product created in "' + os.path.expandvars(product.directory) + '"'
 
 
 def add_input(args):
@@ -131,7 +131,7 @@ def create_resource(args):
     uri_dict = uri_standards.convert_to_dict(args.uri)
     resource = project.create_resource(uri_dict['entity'], uri_dict['resource_type'])
     work = resource.checkout()
-    print 'resource check out in "' + work.directory + '"'
+    print 'resource check out in "' + os.path.expandvars(work.directory) + '"'
 
 
 def checkout(args):
@@ -139,7 +139,7 @@ def checkout(args):
     dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.checkout()
-    print 'resource check out in "' + work.directory + '"'
+    print 'resource check out in "' + os.path.expandvars(work.directory) + '"'
 
 
 def trash_resource(args):
