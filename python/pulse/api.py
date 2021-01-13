@@ -586,6 +586,12 @@ class Work(WorkNode):
             [self.project.cfg.get_product_user_root()]
         )
 
+        # recursively remove work directory if it's empty
+        fu.remove_empty_parents_directory(
+            os.path.dirname(self.directory),
+            [self.project.cfg.get_work_user_root()]
+        )
+
         return True
 
     def version_pipe_filepath(self, index):
