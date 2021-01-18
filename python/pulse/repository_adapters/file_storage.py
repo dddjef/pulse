@@ -9,9 +9,6 @@ def copy_folder_content(source_folder, destination_folder):
     """
     destination_folder = os.path.normpath(destination_folder)
     source_folder = os.path.normpath(source_folder)
-    print "copy tree"
-    print source_folder
-    print destination_folder
     if not os.path.exists(source_folder):
         return
     if not os.path.exists(destination_folder):
