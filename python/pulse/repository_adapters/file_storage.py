@@ -9,6 +9,9 @@ def copy_folder_content(source_folder, destination_folder):
     """
     destination_folder = os.path.normpath(destination_folder)
     source_folder = os.path.normpath(source_folder)
+    print "copy tree"
+    print source_folder
+    print destination_folder
     if not os.path.exists(source_folder):
         return
     if not os.path.exists(destination_folder):
@@ -46,7 +49,7 @@ class Repository(PulseRepository):
             resource.project.name,
             path_type,
             resource.resource_type,
-            resource.entity.replace(":", "\\")
+            resource.entity.replace(":", os.sep)
         )
         
     def upload_resource_commit(self, commit, work_folder, products_folder=None):
