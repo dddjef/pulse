@@ -312,7 +312,7 @@ class Work(WorkNode):
     def _get_trash_directory(self):
 
         date_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        path = self.project.cfg.get_work_user_root() + "\\" + self.project.name + "\\" + "TRASH" + "\\"
+        path = os.path.join(self.project.cfg.get_work_user_root(), self.project.name + "TRASH") + os.sep
         path += self.resource.resource_type + "-" + self.resource.entity.replace(":", "_") + "-" + date_time
         return path
 
@@ -1036,6 +1036,8 @@ class Connection:
         :param version_prefix: optional, set the prefix used before version number. "V" by default
         :return: the new pulse Project
         """
+        product_user_root = product_user_root.replace("\\", "/")
+        work_user_root = work_user_root.replace("\\", "/")
         project = Project(self, project_name)
         if product_user_root == work_user_root:
             raise PulseError("work user root and product user root should be different")
