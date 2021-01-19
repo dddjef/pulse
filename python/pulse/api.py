@@ -312,7 +312,7 @@ class Work(WorkNode):
     def _get_trash_directory(self):
 
         date_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        path = os.path.join(self.project.cfg.get_work_user_root(), self.project.name + "TRASH") + os.sep
+        path = os.path.join(self.project.cfg.get_work_user_root(), self.project.name, "TRASH") + os.sep
         path += self.resource.resource_type + "-" + self.resource.entity.replace(":", "_") + "-" + date_time
         return path
 
