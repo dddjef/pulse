@@ -49,7 +49,7 @@ class Repository(PulseRepository):
 
     def _build_resource_path(self, path_type, resource):
         return os.path.join(
-            self.root,
+            os.path.expandvars(self.root),
             resource.project.name,
             path_type,
             resource.resource_type,
