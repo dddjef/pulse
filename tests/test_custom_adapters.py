@@ -51,7 +51,7 @@ class TestFTP(unittest.TestCase):
         self.cnx.add_repository(
             name=local_repo_name,
             adapter="file_storage",
-            path=os.path.join(utils.file_storage_path, local_repo_name)
+            path=os.path.join(utils.file_storage_path, local_repo_name).replace("\\", "/")
         )
 
         template_resource = self.prj.create_resource("_template", "rig", repository="local_test_storage")
@@ -117,7 +117,7 @@ class TestSQL(unittest.TestCase):
         self.cnx.add_repository(
             name=local_repo_name,
             adapter="file_storage",
-            path=os.path.join(utils.file_storage_path, local_repo_name)
+            path=os.path.join(utils.file_storage_path, local_repo_name).replace("\\", "/")
         )
 
         self.prj = self.cnx.create_project(

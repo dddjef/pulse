@@ -32,6 +32,13 @@ class Repository(PulseRepository):
         self.version_prefix = "V"
         self.version_padding = 3
 
+    def test_settings(self):
+        if "\\" in self.root:
+            raise PulseRepositoryError("the root path should use slash separator only")
+        if not os.path.exists(self.root):
+            os.makedirs(self.root)
+        return True
+
     def _build_commit_path(self, path_type, commit):
         """custom function to build a repository path
         """

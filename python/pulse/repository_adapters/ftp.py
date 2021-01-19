@@ -93,6 +93,10 @@ class Repository(PulseRepository):
         self.connection = None
         self._refresh_connection()
 
+    def test_settings(self):
+        self._refresh_connection()
+        return True
+
     def _refresh_connection(self):
         try:
             self.connection.voidcmd("NOOP")

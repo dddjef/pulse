@@ -1077,10 +1077,13 @@ class Connection:
         """
         if name in self.repositories:
             raise PulseError("Repository already exists : " + name)
+        # test valid settings
+        repository = import_adapter("repository", adapter).Repository(settings=settings, login=login, password=password)
+        repository.test_settings()
         # write repo settings to db config
+        self.repositories[name] = repository
         self.db.create_repository(name, adapter, login, password, settings)
-        self.repositories[name] = import_adapter("repository", adapter).Repository(
-                settings=settings, login=login, password=password)
+
 
     def edit_repository(self, name, adapter, login="", password="", **settings):
         """

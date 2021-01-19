@@ -1,4 +1,5 @@
 from pulse.api import *
+from pulse.repository_adapters.interface_class import *
 import unittest
 import os
 import utils
@@ -61,6 +62,14 @@ class TestProjectSettings(unittest.TestCase):
             utils.test_data_output_path,
             "products/env_var/model/ch_anna/V001/abc"
         )))
+
+    def test_bad_repository_settings(self):
+        # use backslash as path separator
+        repo_path = utils.file_storage_path.replace("/", "\\")
+        with self.assertRaises(PulseRepositoryError):
+            self.cnx.add_repository(name="bad_path", adapter="file_storage", path=repo_path)
+        with self.assertRaises(WindowsError):
+            self.cnx.add_repository(name="bad_path", adapter="file_storage", path="its:/invalid/path")
 
 
 class TestResources(unittest.TestCase):

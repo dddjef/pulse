@@ -19,6 +19,13 @@ class PulseRepository:
         self.login = login
         self.password = password
 
+    def test_settings(self):
+        """
+        test the adaptor settings
+        :return: True on success
+        """
+        pass
+
     def upload_resource_commit(self, commit, work_folder, products_folder=None):
         """upload a commit content to repository
         """
