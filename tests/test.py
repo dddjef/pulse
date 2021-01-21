@@ -131,11 +131,6 @@ class TestResources(unittest.TestCase):
         wip_product = self.anna_mdl_work.create_product("wip")
         self.anna_mdl_work.trash_product("wip")
         self.assertFalse(os.path.exists(wip_product.directory))
-        self.anna_mdl_work.trash_product("abc")
-        # V1 abc should stay it's commit.
-        self.assertTrue(os.path.exists(self.anna_abc_product.directory))
-        # V2 abc should go, it was wip
-        self.assertFalse(os.path.exists(os.path.join(self.anna_mdl_work.get_products_directory(), "abc")))
 
     def test_metadata(self):
         pass

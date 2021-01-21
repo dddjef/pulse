@@ -396,7 +396,7 @@ class Work(WorkNode):
         if not os.listdir(products_directory):
             shutil.rmtree(products_directory)
 
-    def write(self, products):
+    def write(self):
         """
         write the work object to user workspace
         """
@@ -414,18 +414,12 @@ class Work(WorkNode):
         with open(new_version_file, "w") as write_file:
             json.dump({"created_by": self.resource.project.cnx.user_name}, write_file, indent=4, sort_keys=True)
 
-        # create products directories
-        for product in products:
-            product_path = os.path.join(self.get_products_directory(), product.product_type)
-            if not os.path.exists(product_path):
-                os.makedirs(product_path)
-
         # write data to json
         fu.write_data(self.data_file, {
             "version": self.version,
             "entity": self.resource.entity,
             "resource_type": self.resource.resource_type,
-            "outputs": [x.product_type for x in products],
+            "outputs": [],
             "work_files": fu.get_directory_content(self.directory)
             })
 
@@ -507,7 +501,7 @@ class Work(WorkNode):
 
         # increment the work and the products files
         self.version += 1
-        self.write(products)
+        self.write()
 
         # restore the resource lock state
         self.resource.set_lock(lock_state, lock_user, steal=True)
@@ -791,7 +785,7 @@ class Resource(PulseDbObject):
             product.download()
             product.add_product_user(self.sandbox_path)
 
-        work.write(products)
+        work.write()
         return work
 
     def set_lock(self, state, user=None, steal=False):
