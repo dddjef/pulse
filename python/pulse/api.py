@@ -740,7 +740,6 @@ class Resource(PulseDbObject):
         # create the work object
         work = Work(self)
         work.version = self.last_version + 1
-        products = []
 
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
         if self.last_version == 0:
@@ -778,7 +777,6 @@ class Resource(PulseDbObject):
         else:
             commit = self.get_commit(index)
             self.project.cnx.repositories[self.repository].download_work(commit, destination_folder)
-            products = commit.get_products()
 
         # download requested input products if needed
         for product in work.get_inputs():
@@ -1077,7 +1075,6 @@ class Connection:
         # write repo settings to db config
         self.repositories[name] = repository
         self.db.create_repository(name, adapter, login, password, settings)
-
 
     def edit_repository(self, name, adapter, login="", password="", **settings):
         """

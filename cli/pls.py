@@ -139,6 +139,12 @@ def checkout(args):
     dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.checkout()
+    try:
+        last_commit = resource.get_commit("last")
+        for product in last_commit.get_products():
+            work.create_product(product.product_type)
+    except pulse.PulseError:
+        pass
     print 'resource check out in "' + os.path.expandvars(work.directory) + '"'
 
 
@@ -155,6 +161,8 @@ def commit(args):
     work = get_work(os.getcwd())
     try:
         commit_obj = work.commit(comment=args.comment)
+        for product in commit_obj.get_products():
+            work.create_product(product.product_type)
         print('work commit in version "' + str(commit_obj.version) + '"')
     except pulse.PulseError, e:
         print('work commit failed: ' + str(e))
