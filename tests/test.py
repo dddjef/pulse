@@ -13,13 +13,31 @@ class TestProjectSettings(unittest.TestCase):
         self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=utils.file_storage_path)
 
     def test_same_user_work_and_product_directory(self):
-        with self.assertRaises(PulseError):
-            self.cnx.create_project(
-                project_name=test_project_name,
-                work_user_root=utils.sandbox_work_path,
-                product_user_root=utils.sandbox_work_path,
-                default_repository="local_test_storage"
-            )
+        prj = self.cnx.create_project(
+            project_name=test_project_name,
+            work_user_root=utils.sandbox_work_path,
+            default_repository="local_test_storage"
+        )
+        resource = prj.create_resource("ch_anna", "model")
+        work = resource.checkout()
+        abc_product = work.create_product("abc")
+        utils.add_file_to_directory(abc_product.directory, filename="model.abc")
+        # check the work status don't list the product twice
+        self.assertTrue(len(work.status()) == 1)
+        # check when the work is trashed and there's a commit product, the commit product stay
+        work.commit()
+        utils.add_file_to_directory(work.directory, filename="change.blend")
+        work_subfolder = os.path.join(work.directory, "subfolder")
+        os.makedirs(work_subfolder)
+        work.commit()
+        work.trash()
+        self.assertTrue(os.path.exists(abc_product.directory))
+        self.assertFalse(os.path.exists(work_subfolder))
+        # check the previous commit product are not uploaded again when the work is commit
+        work = resource.checkout()
+        utils.add_file_to_directory(work.directory, filename="change_two.blend")
+        print work.status()
+        self.assertTrue(len(work.status()) == 1)
 
     def test_environment_variables_in_project_path(self):
         # set up env var
@@ -28,7 +46,7 @@ class TestProjectSettings(unittest.TestCase):
         prj = self.cnx.create_project(
             "env_var",
             "$PULSE_TEST/works",
-            "$PULSE_TEST/products",
+            product_user_root="$PULSE_TEST/products",
             default_repository="local_test_storage"
         )
         # create a resource
@@ -235,7 +253,7 @@ class TestResources(unittest.TestCase):
         # create a new file in work directory and try to commit again
         new_file = "test_complete.txt"
         utils.add_file_to_directory(anna_mdl_work.directory, new_file)
-        self.assertEqual(anna_mdl_work.status(), [(os.sep + new_file, 'added')])
+        self.assertEqual(anna_mdl_work.status(), {"/" + new_file: 'added'})
 
         anna_mdl_work.commit("add a file")
         self.assertEqual(anna_mdl_resource.last_version, 1)
@@ -296,7 +314,7 @@ class TestResources(unittest.TestCase):
 
     def test_work_get_file_changes(self):
         # test nothing is returned if nothing change
-        self.assertTrue(self.anna_mdl_work.status() == [])
+        self.assertTrue(self.anna_mdl_work.status() == {})
         # test nothing is returned if only the modification date change
         # test nothing is returned if only a empty directory is added
         # test edited file is returned when a work file is changed
@@ -324,8 +342,32 @@ class TestResources(unittest.TestCase):
         work = self.anna_mdl.checkout(index=1)
         self.assertFalse(os.path.exists(os.path.join(self.anna_mdl_work.directory, "new_file.txt")))
         # update the work, check the new file is there
+        time.sleep(1)
         work.update()
         self.assertTrue(os.path.exists(os.path.join(self.anna_mdl_work.directory, "new_file.txt")))
+
+    def test_work_status(self):
+        # test new work file is reported, even in subdirectory
+        utils.add_file_to_directory(self.anna_mdl_work.directory, "new_file.txt")
+        # test new product files are reported, even in subdirectory
+        subdir_path = os.path.join(self.anna_mdl_work.directory, "subdir")
+        os.makedirs(subdir_path)
+        utils.add_file_to_directory(subdir_path, "subfile.txt")
+        # test work file edit are reported
+        with open(os.path.join(self.anna_mdl_work.directory, "work.blend"), 'a') as f:
+            f.write("another_line")
+        self.assertEqual(self.anna_mdl_work.status(), {
+            '/new_file.txt': 'added',
+            '/subdir/subfile.txt': 'added',
+            '/work.blend': 'edited'
+        })
+        # test work file deletion is reported
+        os.remove(os.path.join(self.anna_mdl_work.directory, "work.blend"))
+        self.assertEqual(self.anna_mdl_work.status(), {
+            '/new_file.txt': 'added',
+            '/subdir/subfile.txt': 'added',
+            '/work.blend': 'removed'
+        })
 
 
 if __name__ == '__main__':

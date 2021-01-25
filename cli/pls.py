@@ -173,9 +173,9 @@ def status(args):
     diffs = work.status()
     if not diffs:
         print 'no local changes detected'
-    else :
+    else:
         for elem in diffs:
-            print elem[0] + ":" + elem[1]
+            print elem + ":" + diffs[elem]
 
 
 def lock(args):

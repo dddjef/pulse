@@ -56,11 +56,16 @@ class Repository(PulseRepository):
             resource.entity.replace(":", os.sep)
         )
         
-    def upload_resource_commit(self, commit, work_folder, products_folder=None):
+    def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
         version_directory = self._build_commit_path("work", commit)
         os.makedirs(version_directory)
         # Copy work files to repo
-        copy_folder_content(work_folder, version_directory)
+        for filepath_rel in work_files:
+            dest = version_directory + filepath_rel
+            dest_dir = os.path.split(dest)[0]
+            if not os.path.isdir(dest_dir):
+                os.makedirs(dest_dir)
+            shutil.copyfile(work_folder + filepath_rel, dest)
 
         # Copy products folder to repo
         if not products_folder or not os.path.exists(products_folder):

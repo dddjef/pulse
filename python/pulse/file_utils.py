@@ -15,26 +15,31 @@ def md5(filepath):
 
 
 def compare_directory_content(current_work_data, past_work_data):
-    file_changes = []
+    file_changes = {}
     for filepath in current_work_data:
         if filepath.endswith(".pipe"):
             continue
         if filepath in past_work_data:
             if current_work_data[filepath]['checksum'] != past_work_data[filepath]['checksum']:
-                file_changes.append((filepath, "edited"))
+                file_changes[filepath] = "edited"
             past_work_data.pop(filepath)
         else:
-            file_changes.append((filepath, "added"))
+            file_changes[filepath] = "added"
 
     for filepath in past_work_data:
         if not filepath.endswith(".pipe"):
-            file_changes.append((filepath, "removed"))
+            file_changes[filepath] = "removed"
     return file_changes
 
 
-def get_directory_content(directory):
+def get_directory_content(directory, ignore_list=None):
     files_dict = {}
-    for root, subdirectories, files in os.walk(directory):
+    if ignore_list:
+        ignore_list = [p.replace(os.sep, '/') for p in ignore_list]
+    else:
+        ignore_list = []
+    for root, dirs, files in os.walk(directory, topdown=True):
+        dirs[:] = [d for d in dirs if os.path.join(root, d).replace(os.sep, '/') not in ignore_list]
         for f in files:
             filepath = os.path.join(root, f)
             relative_path = filepath[len(directory):]
@@ -101,7 +106,7 @@ def remove_empty_parents_directory(directory, root_dirs):
 def copytree(src, dst, ignore=None):
     """
     based on shutil.copytree but using the copyfile function to avoid permission error on linux
-    could be removed on python 3 since there's the coopy_function argument with shutil.copytree
+    could be removed on python 3 since there's the copy_function argument with shutil.copytree
     """
     names = os.listdir(src)
     if ignore is not None:
@@ -120,3 +125,11 @@ def copytree(src, dst, ignore=None):
             copytree(srcname, dstname, ignore)
         else:
             shutil.copyfile(srcname, dstname)
+
+
+def move_file(src_path, dst_path):
+    dst_path = dst_path.replace("\\", "/")
+    new_dir = os.path.split(dst_path)[0]
+    if not os.path.isdir(new_dir):
+        os.makedirs(new_dir)
+    shutil.move(src_path, dst_path)

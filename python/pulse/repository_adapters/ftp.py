@@ -18,7 +18,14 @@ def ftp_copytree(source, ftp_connection):
     ftp_connection.cwd('..')
 
 
-def ftp_makedirs(directory, ftp_connection):
+def ftp_cwd_makedirs(directory, ftp_connection):
+    """
+    change current ftp path to directory
+    creates subsequent directories if needed
+    :param directory:
+    :param ftp_connection:
+    :return:
+    """
     ftp_connection.cwd('/')
     try:
         ftp_connection.cwd(directory)
@@ -112,7 +119,7 @@ class Repository(PulseRepository):
         source = source.replace("\\", "/")
         destination = destination.replace("\\", "/")
         self._refresh_connection()
-        ftp_makedirs(self.root + destination, self.connection)
+        ftp_cwd_makedirs(self.root + destination, self.connection)
         self.connection.cwd(self.root + destination)
         ftp_copytree(source, self.connection)
 
@@ -142,7 +149,7 @@ class Repository(PulseRepository):
             resource.entity.replace(":", "/")
         ).replace("\\", "/")
 
-    def upload_resource_commit(self, commit, work_folder, products_folder=None):
+    def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
         """create a new resource default folders and file from a resource template
         """
 
@@ -150,11 +157,21 @@ class Repository(PulseRepository):
         work_destination = self._build_commit_path("work", commit)
         self._refresh_connection()
         version_folder = self.root + work_destination
-        ftp_makedirs(version_folder, self.connection)
+        ftp_cwd_makedirs(version_folder, self.connection)
         self.connection.cwd(version_folder)
 
         # Copy work files to repo
-        self._upload_folder(work_folder, work_destination)
+        current_directory = version_folder
+        for rel_filepath in work_files:
+            file_dir = os.path.dirname(version_folder + rel_filepath)
+            if file_dir != current_directory:
+                ftp_cwd_makedirs(file_dir, self.connection)
+                current_directory = file_dir
+            filename = os.path.basename(rel_filepath)
+            fp = work_folder + rel_filepath
+            fh = open(fp, 'rb')
+            self.connection.storbinary('STOR %s' % filename, fh)
+            fh.close()
 
         # Copy products folder to repo
         if not products_folder or not os.path.exists(products_folder):

@@ -2,6 +2,7 @@ import unittest
 import subprocess
 import utils as cfg
 from pulse.api import *
+import utils_custom_adapters as utils_ca
 
 """
 associate .py with the python interpreter.
@@ -113,8 +114,8 @@ class TestDefaultAdapters(unittest.TestCase):
 class TestCustomAdapters(unittest.TestCase):
     def setUp(self):
         cfg.reset_test_data()
-        cfg.reset_sql_db(test_project_name)
-        cfg.reset_ftp(test_project_name)
+        utils_ca.reset_sql_db(test_project_name)
+        utils_ca.reset_ftp(test_project_name)
 
         if not os.path.exists(cli_project_path):
             os.makedirs(cli_project_path)
@@ -122,20 +123,20 @@ class TestCustomAdapters(unittest.TestCase):
 
         self.cnx = Connection(
             adapter="mysql",
-            host=cfg.mysql_settings['host'],
-            username=cfg.mysql_settings['username'],
-            password=cfg.mysql_settings['password'],
-            port=cfg.mysql_settings['port']
+            host=utils_ca.mysql_settings['host'],
+            username=utils_ca.mysql_settings['username'],
+            password=utils_ca.mysql_settings['password'],
+            port=utils_ca.mysql_settings['port']
         )
 
         self.cnx.add_repository(
             name="ftp_storage",
             adapter="ftp",
-            login=cfg.ftp_login,
-            password=cfg.ftp_password,
-            host=cfg.ftp_settings["host"],
-            port=cfg.ftp_settings["port"],
-            root=cfg.ftp_settings["root"]
+            login=utils_ca.ftp_login,
+            password=utils_ca.ftp_password,
+            host=utils_ca.ftp_settings["host"],
+            port=utils_ca.ftp_settings["port"],
+            root=utils_ca.ftp_settings["root"]
             )
 
         self.prj = self.cnx.create_project(
@@ -145,8 +146,8 @@ class TestCustomAdapters(unittest.TestCase):
             product_user_root=cfg.sandbox_products_path
         )
 
-        self.db_url = "mysql://" + cfg.mysql_settings["username"] + ':' + cfg.mysql_settings["password"] +\
-                      '@' + cfg.mysql_settings["host"] + ':' + cfg.mysql_settings["port"]
+        self.db_url = "mysql://" + utils_ca.mysql_settings["username"] + ':' + utils_ca.mysql_settings["password"] +\
+                      '@' + utils_ca.mysql_settings["host"] + ':' + utils_ca.mysql_settings["port"]
 
     def test_scenario(self):
         # register to project with user login
@@ -188,8 +189,6 @@ class TestCustomAdapters(unittest.TestCase):
         # now try to check out the surface and check the mdl is restored too
         cli_cmd_list(['checkout', 'ch_anna:surfacing'])
         self.assertTrue(os.path.exists(anna_abc_path))
-
-
 
 
 if __name__ == '__main__':
