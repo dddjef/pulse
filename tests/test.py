@@ -3,6 +3,7 @@ from pulse.repository_adapters.interface_class import *
 import unittest
 import os
 import utils
+import sys
 test_project_name = "test"
 
 
@@ -86,8 +87,9 @@ class TestProjectSettings(unittest.TestCase):
         repo_path = utils.file_storage_path.replace("/", "\\")
         with self.assertRaises(PulseRepositoryError):
             self.cnx.add_repository(name="bad_path", adapter="file_storage", path=repo_path)
-        with self.assertRaises(WindowsError):
-            self.cnx.add_repository(name="bad_path", adapter="file_storage", path="its:/invalid/path")
+        if sys.platform == "win32":
+            with self.assertRaises(WindowsError):
+                self.cnx.add_repository(name="bad_path", adapter="file_storage", path="its:/invalid/path")
 
 
 class TestResources(unittest.TestCase):
