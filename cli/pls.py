@@ -204,8 +204,11 @@ def update(args):
     dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.get_work()
-    work.update()
-    print "work updated to version: " + str(work.version)
+    try:
+        work.update()
+        print "work updated to version: " + str(work.version)
+    except pulse.PulseError, msg:
+        print msg
 
 
 # create the top-level parser

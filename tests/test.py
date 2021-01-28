@@ -347,6 +347,11 @@ class TestResources(unittest.TestCase):
         time.sleep(1)
         work.update()
         self.assertTrue(os.path.exists(os.path.join(self.anna_mdl_work.directory, "new_file.txt")))
+        # change the work file, test the update will raise an error
+        utils.add_file_to_directory(self.anna_mdl_work.directory, "new_file2.txt")
+        with self.assertRaises(PulseError):
+            work.update()
+
 
     def test_work_status(self):
         # test new work file is reported, even in subdirectory
