@@ -201,7 +201,12 @@ class CommitProduct(PulseDbObject, Product):
                     os.chmod(filepath, 0o777)
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
-        fu.remove_empty_parents_directory(os.path.dirname(self.directory), [self.project.cfg.get_product_user_root()])
+        version_dir = os.path.dirname(self.directory)
+        if os.listdir(version_dir) == [pulse_filename]:
+            shutil.rmtree(version_dir)
+            parent_dir = os.path.dirname(version_dir)
+            if not os.listdir(parent_dir):
+                shutil.rmtree(parent_dir)
         self.unregister_to_user_products()
 
 

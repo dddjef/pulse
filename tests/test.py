@@ -34,11 +34,15 @@ class TestProjectSettings(unittest.TestCase):
         work.trash()
         self.assertTrue(os.path.exists(abc_product.directory))
         self.assertFalse(os.path.exists(work_subfolder))
+        # check the purge_unused_product delete the work directory
+        prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(work.directory))
         # check the previous commit product are not uploaded again when the work is commit
         work = resource.checkout()
         utils.add_file_to_directory(work.directory, filename="change_two.blend")
         print work.status()
         self.assertTrue(len(work.status()) == 1)
+
 
     def test_environment_variables_in_project_path(self):
         # set up env var
