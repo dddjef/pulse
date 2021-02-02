@@ -1,8 +1,10 @@
 Pulse
 =====
 
-Pulse is a file manager and version control system for animation film, it is designed to support projects produced at
-multiple locations.
+Pulse is a file manager and version control system for animation film,
+it is designed to produce a project at multiple locations and give
+the artist the ability to work locally.
+
 
 Why would you need Pulse?
 
@@ -58,7 +60,8 @@ Path consistency
 The best way to ensure that artists respect the project path and naming convention is to do it for them.
 Every files registered by Pulse must be located into a resource folder, and those folder are created and managed by Pulse.
 
-Unlike other VCS, the user doesn't chose the resource path, it is built by Pulse based on the project configuration. The user just check out the resource by its name, and the files will be downloaded at the very same path for everyone else working on the project.
+Unlike other VCS, the user doesn't chose the resource path, it is built by Pulse based on the project configuration.
+The user just check out the resource by its name, and the files will be downloaded at the very same path for everyone else working on the project.
 
 
 Tracking Dependencies
