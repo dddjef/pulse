@@ -356,7 +356,6 @@ class TestResources(unittest.TestCase):
         with self.assertRaises(PulseError):
             work.update()
 
-
     def test_work_status(self):
         # test new work file is reported, even in subdirectory
         utils.add_file_to_directory(self.anna_mdl_work.directory, "new_file.txt")
@@ -379,6 +378,14 @@ class TestResources(unittest.TestCase):
             '/subdir/subfile.txt': 'added',
             '/work.blend': 'removed'
         })
+
+    def test_work_trash(self):
+        product = self.anna_mdl_work.create_product("abc")
+        utils.add_file_to_directory(product.directory, "product_file.txt")
+        # test trash work and its wip product
+        self.anna_mdl_work.trash()
+        self.assertFalse(os.path.exists(product.directory))
+        self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
 
 
 if __name__ == '__main__':
