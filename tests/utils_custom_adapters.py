@@ -29,30 +29,34 @@ def reset_sql_db(project_name):
     cnx.close()
 
 
-def ftp_rmtree(ftp, path):
+def ftp_rm_tree_directory(ftp, path):
     """Recursively delete a directory tree on a remote server."""
     try:
-        names = ftp.nlst(path)
+        names = ftp_list_all_files(ftp, path)
     except ftplib.all_errors as e:
         print ('FtpRmTree: Could not list {0}: {1}'.format(path, e))
         return
 
     for name in names:
-        # some ftp return the full path on nlst command,ensure you get only the file or folder name here
-        name = name.split("/")[-1]
-
-        if os.path.split(name)[1] in ('.', '..'):
-            continue
-
         try:
             ftp.delete(path + "/" + name)
         except ftplib.all_errors:
-            ftp_rmtree(ftp, path + "/" + name)
+            ftp_rm_tree_directory(ftp, path + "/" + name)
 
     try:
         ftp.rmd(path)
     except ftplib.all_errors as e:
         raise e
+
+
+def ftp_list_all_files(ftp, path=""):
+    lines = []
+    filenames = []
+    ftp.retrlines("LIST -a " + path, lines.append)
+    for filename in [line.split(' ')[-1] for line in lines]:
+        if filename not in ['.', '..']:
+            filenames.append(filename)
+    return filenames
 
 
 def reset_ftp(project_name):
@@ -62,5 +66,5 @@ def reset_ftp(project_name):
     connection.cwd(ini.get('ftp', 'root'))
     for project in connection.nlst():
         if project.startswith(project_name):
-            ftp_rmtree(connection, project)
+            ftp_rm_tree_directory(connection, project)
     connection.quit()
