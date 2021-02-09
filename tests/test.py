@@ -43,7 +43,6 @@ class TestProjectSettings(unittest.TestCase):
         print work.status()
         self.assertTrue(len(work.status()) == 1)
 
-
     def test_environment_variables_in_project_path(self):
         # set up env var
         os.environ['PULSE_TEST'] = utils.test_data_output_path
@@ -100,13 +99,16 @@ class TestResources(unittest.TestCase):
     def setUp(self):
         utils.reset_test_data()
         self.cnx = Connection(adapter="json_db", path=utils.json_db_path)
-        self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=utils.file_storage_path)
+        self.cnx.add_repository(name="main_storage", adapter="file_storage", path=utils.file_storage_path)
         self.prj = self.cnx.create_project(
             test_project_name,
             utils.sandbox_work_path,
-            default_repository="local_test_storage",
+            default_repository="main_storage",
             product_user_root=utils.sandbox_products_path
         )
+        self._initResource()
+
+    def _initResource(self):
         self.anna_mdl = self.prj.create_resource("anna", "mdl")
         self.anna_mdl_work = self.anna_mdl.checkout()
         utils.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
@@ -302,8 +304,9 @@ class TestResources(unittest.TestCase):
         hat_mdl_work.remove_input(anna_mdl_v2_abc)
         anna_mdl_work.trash()
 
-    def test_work_subdirectories_are_commit(self):
-        subdirectory_name = "subdirtest"
+    def test_work_commit(self):
+        # test subdirectories are commit
+        subdirectory_name = "subdirectory_test"
         work_subdir_path = os.path.join(self.anna_mdl_work.directory, subdirectory_name)
         os.makedirs(work_subdir_path)
         open(work_subdir_path + "\\subdir_file.txt", 'a').close()
@@ -316,7 +319,7 @@ class TestResources(unittest.TestCase):
     def test_get_unknown_resource_index(self):
         # test get an unknown tag raise a pulseError
         with self.assertRaises(PulseError):
-            self.anna_mdl.get_index("anytag")
+            self.anna_mdl.get_index("any_tag")
 
     def test_work_get_file_changes(self):
         # test nothing is returned if nothing change
@@ -386,6 +389,15 @@ class TestResources(unittest.TestCase):
         self.anna_mdl_work.trash()
         self.assertFalse(os.path.exists(product.directory))
         self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
+
+    def test_project_list_products(self):
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_actor = anna_rig_work.create_product("actor_anim")
+        anna_rig_actor.add_input(self.anna_abc_product)
+        anna_rig_work.commit()
+        self.assertTrue(len(self.prj.list_products("anna*")) == 2)
+        self.assertTrue(len(self.prj.list_products("an?a*")) == 2)
 
 
 if __name__ == '__main__':
