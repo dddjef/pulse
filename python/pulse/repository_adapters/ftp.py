@@ -41,22 +41,24 @@ def ftp_cwd_makedirs(directory, ftp_connection):
         except Exception, e:
             print e
 
+def ftp_list_all_files(ftp, path=""):
+    lines = []
+    filenames = []
+    ftp.retrlines("LIST -a " + path, lines.append)
+    for filename in [line.split(' ')[-1] for line in lines]:
+        if filename not in ['.', '..']:
+            filenames.append(filename)
+    return filenames
 
 def ftp_rmtree(path, ftp):
     """path should be the absolute path to the root FOLDER of the file tree to remove"""
     try:
-        names = ftp.nlst(path)
+        names = ftp_list_all_files(ftp, path)
     except ftplib.all_errors as e:
         print ('FtpRmTree: Could not list {0}: {1}'.format(path, e))
         return
 
     for name in names:
-        # some ftp return the full path on nlst command,ensure you get only the file or folder name here
-        name = name.split("/")[-1]
-
-        if os.path.split(name)[1] in ('.', '..'):
-            continue
-
         try:
             ftp.delete(path + "/" + name)
         except ftplib.all_errors:
@@ -74,7 +76,7 @@ def ftp_download(source, destination, ftp_connection):
     """
     source = source.replace("\\", "/")
     destination = destination.replace("\\", "/")
-    for filename in ftp_connection.nlst():
+    for filename in ftp_list_all_files(ftp_connection):
         if filename == "." or filename == "..":
             continue
         ftp_path = source + "/" + filename
