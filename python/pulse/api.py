@@ -213,7 +213,7 @@ class CommitProduct(PulseDbObject, Product):
 class Commit(PulseDbObject):
     """
         Object created when a resource has been published to database
-        The commit is a versionned resource
+        The commit is a versioned resource
     """
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
@@ -830,7 +830,7 @@ class Resource(PulseDbObject):
     def set_lock(self, state, user=None, steal=False):
         """
         change the lock state, and the lock user.
-        raise a pulse error if the resource is already locked by someonelse, except the steal argement is True.
+        raise a pulse error if the resource is already locked by someone else, except the steal argument is True.
 
         :param state: boolean
         :param user: string
@@ -1144,7 +1144,7 @@ def import_adapter(adapter_type, adapter_name):
 
     :param adapter_type: should be "database" or "repository"
     :param adapter_name:
-    :return: the adapater module
+    :return: the adapter module
     """
     pulse_filepath = os.path.dirname(os.path.realpath(__file__))
     return imp.load_source(adapter_type, os.path.join(pulse_filepath, adapter_type + "_adapters", adapter_name + ".py"))
