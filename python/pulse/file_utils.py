@@ -64,6 +64,9 @@ def read_data(filepath):
 def write_data(filepath, data):
     if os.path.exists(filepath):
         os.remove(filepath)
+    directory = os.path.dirname(filepath)
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
     with open(filepath, "w") as write_file:
         json.dump(data, write_file, indent=4, sort_keys=True)
     if platform == "win32":

@@ -313,7 +313,7 @@ class Work(WorkNode):
         WorkNode.__init__(self, resource.project, resource.sandbox_path)
         self.resource = resource
         self.version = None
-        self.data_file = os.path.join(self.project.work_data_filepath, self.resource.uri)
+        self.data_file = os.path.join(self.project.work_data_directory, self.resource.uri)
 
     def _check_exists_in_user_workspace(self):
         if not os.path.exists(self.directory):
@@ -452,7 +452,7 @@ class Work(WorkNode):
 
         :return: the updated work
         """
-        if not os.path.exists(self.directory):
+        if not os.path.exists(self.data_file):
             raise PulseError("work does not exists : " + self.directory)
         work_data = fu.read_data(self.data_file)
         self.version = work_data["version"]
@@ -617,6 +617,9 @@ class Work(WorkNode):
             self.directory,
             [self.project.cfg.get_work_user_root()]
         )
+
+        # remove work data file
+        os.remove(self.data_file)
 
         return True
 
@@ -923,8 +926,8 @@ class Project:
         self.cnx = connection
         self.name = project_name
         self.cfg = Config(self)
-        self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
-        self.work_data_filepath = os.path.join(self.work_directory, ".pulse_data", "works")
+        self.work_directory = None
+        self.work_data_directory = None
 
     def get_product(self, uri_string):
         """
@@ -982,6 +985,8 @@ class Project:
         load the project configuration from database
         """
         self.cfg.db_read()
+        self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
+        self.work_data_directory = os.path.join(self.work_directory, ".pulse_data", "works")
 
     def get_resource(self, entity, resource_type):
         """
