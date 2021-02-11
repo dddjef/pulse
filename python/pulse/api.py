@@ -426,16 +426,6 @@ class Work(WorkNode):
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
 
-        # remove old version file
-        old_version_file = self.version_pipe_filepath(self.resource.last_version)
-        if os.path.exists(old_version_file):
-            os.remove(os.path.join(self.directory, old_version_file))
-
-        # create the new version file
-        new_version_file = self.version_pipe_filepath(self.version)
-        with open(new_version_file, "w") as write_file:
-            json.dump({"created_by": self.resource.project.cnx.user_name}, write_file, indent=4, sort_keys=True)
-
         # write data to json
         fu.write_data(self.data_file, {
             "version": self.version,
