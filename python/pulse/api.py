@@ -313,7 +313,7 @@ class Work(WorkNode):
         WorkNode.__init__(self, resource.project, resource.sandbox_path)
         self.resource = resource
         self.version = None
-        self.data_file = os.path.join(self.project.work_data_directory, self.resource.uri.replace(":", "%"))
+        self.data_file = os.path.join(self.project.work_data_directory, self.resource.uri.replace(":", "%")) + ".json"
 
     def _check_exists_in_user_workspace(self):
         if not os.path.exists(self.directory):
