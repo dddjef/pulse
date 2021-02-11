@@ -313,8 +313,8 @@ class Work(WorkNode):
         WorkNode.__init__(self, resource.project, resource.sandbox_path)
         self.resource = resource
         self.version = None
-        self.data_file = os.path.join(self.directory, "work.pipe")
-        
+        self.data_file = os.path.join(self.project.work_data_filepath, self.resource.uri)
+
     def _check_exists_in_user_workspace(self):
         if not os.path.exists(self.directory):
             raise PulseMissingNode("Missing work space : " + self.directory)
@@ -766,15 +766,17 @@ class Resource(PulseDbObject):
         Download the resource work files in the user work space.
         Download related dependencies if they are not available in user products space
         """
+
+        work = Work(self)
+
+        # abort checkout if the work already exists in user sandbox, just rebuild its data
+        if os.path.exists(work.data_file):
+            return Work(self).read()
+
         if not destination_folder:
             destination_folder = self.sandbox_path
 
-        # abort if the work pipe file is already in user sandbox, just rebuild it
-        if os.path.exists(os.path.join(destination_folder, "work.pipe")):
-            return Work(self).read()
-
         # create the work object
-        work = Work(self)
         work.version = self.last_version + 1
 
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
@@ -921,6 +923,8 @@ class Project:
         self.cnx = connection
         self.name = project_name
         self.cfg = Config(self)
+        self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
+        self.work_data_filepath = os.path.join(self.work_directory, ".pulse_data", "works")
 
     def get_product(self, uri_string):
         """
