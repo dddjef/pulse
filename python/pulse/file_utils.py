@@ -1,9 +1,7 @@
 import os
 import json
-import ctypes
 import hashlib
 import shutil
-from sys import platform
 
 
 def md5(filepath):
@@ -69,8 +67,6 @@ def write_data(filepath, data):
         os.makedirs(directory)
     with open(filepath, "w") as write_file:
         json.dump(data, write_file, indent=4, sort_keys=True)
-    if platform == "win32":
-        ctypes.windll.kernel32.SetFileAttributesW(filepath, 2)
 
 
 def json_list_remove(json_path, item):
@@ -87,6 +83,18 @@ def json_list_append(json_path, item):
     if item not in json_list:
         json_list.append(item)
         write_data(json_path, json_list)
+
+
+def json_list_init(json_path):
+    write_data(json_path, [])
+
+
+def json_filename_to_uri(filename):
+    return os.path.basename(filename).replace("%", ":").replace(".json", "")
+
+
+def uri_to_json_filename(uri):
+    return uri.replace(":", "%") + ".json"
 
 
 def json_list_get(json_path):

@@ -3,7 +3,6 @@ Created on 07 September 2020
 @author: Jean Francois Sarazin
 """
 
-import json
 import os
 import file_utils as fu
 import shutil
@@ -88,7 +87,12 @@ class Product:
         self.parent = parent
         self.product_type = product_type
         self.directory = os.path.join(parent.get_products_directory(), product_type)
-        self.product_users_file = os.path.join(self.directory, "product_users.pipe")
+        self.product_users_file = os.path.join(
+            self.parent.project.product_data_directory,
+            fu.uri_to_json_filename(self.uri)
+        )
+        if not os.path.isfile(self.product_users_file):
+            fu.json_list_init(self.product_users_file)
 
     def add_product_user(self, user_directory):
         """
@@ -153,24 +157,17 @@ class CommitProduct(PulseDbObject, Product):
             open(self.parent.pulse_filepath, 'a').close()
 
         fu.write_data(self.product_users_file, [])
-        self.register_to_user_products()
         for uri in self.products_inputs:
             product = self.project.get_product(uri)
             product.download()
             product.add_product_user(self.directory)
         return self.directory
 
-    def register_to_user_products(self):
-        """
-        register the product to the user local products list
-        """
-        fu.json_list_append(self.project.cfg.get_user_products_list_filepath(), self.uri)
-
     def unregister_to_user_products(self):
         """
         unregister the product to the user local products list
         """
-        fu.json_list_remove(self.project.cfg.get_user_products_list_filepath(), self.uri)
+        os.remove(self.product_users_file)
 
     def remove_from_user_products(self, recursive_clean=False):
         """
@@ -313,7 +310,7 @@ class Work(WorkNode):
         WorkNode.__init__(self, resource.project, resource.sandbox_path)
         self.resource = resource
         self.version = None
-        self.data_file = os.path.join(self.project.work_data_directory, self.resource.uri.replace(":", "%")) + ".json"
+        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
 
     def _check_exists_in_user_workspace(self):
         if not os.path.exists(self.directory):
@@ -380,6 +377,7 @@ class Work(WorkNode):
     def trash_product(self, product_type):
         """
         move the specified product to the trash directory
+        raise an error if the product is used by a resource or another product
 
         :param product_type: string
         """
@@ -417,6 +415,9 @@ class Work(WorkNode):
         products_directory = self.get_products_directory()
         if not os.listdir(products_directory):
             shutil.rmtree(products_directory)
+
+        # remove the product from products local data
+        os.remove(product.product_users_file)
 
     def write(self):
         """
@@ -475,8 +476,6 @@ class Work(WorkNode):
             if isinstance(product, WorkProduct):
                 raise PulseError("Work can't be committed, it uses an unpublished product : " + product.uri)
 
-        products_directory = self.get_products_directory()
-
         # lock the resource to prevent concurrent commit
         lock_state = self.resource.lock_state
         lock_user = self.resource.lock_user
@@ -485,28 +484,25 @@ class Work(WorkNode):
         # copy work files to a new version in repository
         commit = Commit(self.resource, self.version)
         commit.project.cnx.repositories[self.resource.repository].upload_resource_commit(
-            commit, self.directory, self._get_work_files(), products_directory)
+            commit, self.directory, self._get_work_files(), self.get_products_directory())
 
         # register changes to database
         commit.comment = comment
-
         commit.products_inputs = self.get_inputs()
         commit.products = self.list_products()
-        products = []
-        # if there's no product, delete the products version directory
+
+        # convert work products to commit products
         if commit.products:
-            # register work products to user products list
+            # TODO : change the product data path to a commit product
             for product_type in commit.products:
                 work_product = self.get_product(product_type)
 
-                product = CommitProduct(commit, product_type)
-                products.append(product)
-                product.products_inputs = [x.uri for x in work_product.get_inputs()]
-                product.db_create()
-                product.register_to_user_products()
+                commit_product = CommitProduct(commit, product_type)
+                commit_product.products_inputs = [x.uri for x in work_product.get_inputs()]
+                commit_product.db_create()
 
-                if trash_unused_products and product.get_unused_time() > 0:
-                    product.remove_from_user_products()
+                if trash_unused_products and commit_product.get_unused_time() > 0:
+                    commit_product.remove_from_user_products()
 
         commit.db_create()
         self.resource.set_last_version(self.version)
@@ -564,9 +560,7 @@ class Work(WorkNode):
 
         # check workProducts are not in use
         for product_type in self.list_products():
-            product = self.get_product(product_type)
-            if product.get_product_users():
-                raise PulseError("work can't be trashed if its product is used : " + product_type)
+            self.trash_product(product_type)
 
         # unregister from products
         for input_product in self.get_inputs():
@@ -893,14 +887,6 @@ class Config(PulseDbObject):
     def get_product_user_root(self):
         return os.path.expandvars(self.product_user_root)
 
-    def get_user_products_list_filepath(self):
-        """
-        get the user products list filepath
-
-        :return: string
-        """
-        return os.path.join(self.get_product_user_root(), "products_list.pipe")
-
     def save(self):
         """
         save the project configuration to database
@@ -918,6 +904,7 @@ class Project:
         self.cfg = Config(self)
         self.work_directory = None
         self.work_data_directory = None
+        self.product_data_directory = None
 
     def get_product(self, uri_string):
         """
@@ -951,6 +938,16 @@ class Project:
         """
         return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
 
+    def get_local_commit_products(self):
+        """
+        return the list of products in user work space
+        :return: uri list
+        """
+        if not os.path.exists(self.product_data_directory):
+            return []
+        file_list = os.listdir(self.product_data_directory)
+        return [fu.json_filename_to_uri(filename) for filename in file_list]
+
     def purge_unused_user_products(self, unused_days=0, resource_filter=None):
         """
         remove unused products from the user product space, based on a unused time
@@ -958,10 +955,8 @@ class Project:
         :param unused_days: for how many days this products have not been used by the user
         :param resource_filter: affect only products with the uri starting by the given string
         """
-        if not os.path.exists(self.cfg.get_user_products_list_filepath()):
-            return
-        for uri in fu.read_data(self.cfg.get_user_products_list_filepath()):
 
+        for uri in self.get_local_commit_products():
             if resource_filter:
                 if not uri.startswith(resource_filter.uri):
                     continue
@@ -977,6 +972,14 @@ class Project:
         self.cfg.db_read()
         self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
         self.work_data_directory = os.path.join(self.work_directory, ".pulse_data", "works")
+        self.product_data_directory = os.path.join(
+            self.cfg.get_product_user_root(),
+            self.name,
+            ".pulse_data",
+            "products"
+        )
+        if not os.path.isdir(self.product_data_directory):
+            os.makedirs(self.product_data_directory)
 
     def get_resource(self, entity, resource_type):
         """
