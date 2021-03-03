@@ -40,7 +40,6 @@ class TestProjectSettings(unittest.TestCase):
         # check the previous commit product are not uploaded again when the work is commit
         work = resource.checkout()
         utils.add_file_to_directory(work.directory, filename="change_two.blend")
-        print work.status()
         self.assertTrue(len(work.status()) == 1)
 
     def test_environment_variables_in_project_path(self):
@@ -204,6 +203,8 @@ class TestResources(unittest.TestCase):
             froga_mdl_work.trash_product("abc")
 
         # trashing a commit work with a product used by another resource is allowed
+
+        # TODO : when this product is added, it's still a work product. Then its data path is wrong
         anna_surf_work.add_input(self.anna_abc_product)
         self.anna_mdl_work.trash()
 
