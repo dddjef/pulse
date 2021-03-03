@@ -1,3 +1,6 @@
+import os
+
+
 def convert_to_dict(uri_string):
     """
     transform a string uri in a dict uri
@@ -34,3 +37,10 @@ def convert_from_dict(uri_dict):
     if 'version' in uri_dict:
         uri += "@" + (str(int(uri_dict['version'])))
     return uri
+
+
+def path_to_uri(project_directory, path):
+    abspath = os.path.normpath(os.path.abspath(path))
+    project_relative_path = abspath.replace(os.path.normpath(project_directory), "").replace("\\", "/")
+    split_path = project_relative_path[1:].split("/")
+    return split_path[1] + ":" + split_path[0]

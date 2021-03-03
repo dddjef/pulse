@@ -2,6 +2,7 @@
 import argparse
 import pulse.api as pulse
 import pulse.uri_standards as uri_standards
+import pulse.file_utils as fu
 from ConfigParser import ConfigParser
 import os
 import json
@@ -20,7 +21,8 @@ def failure_message(message):
 def get_work(path, project=None):
     if not project:
         project = get_pulse_project(path)
-    work_data_filepath = os.path.join(path, work_data_filename)
+    uri = uri_standards.path_to_uri(project.work_directory, path)
+    work_data_filepath = os.path.join(project.work_data_directory, fu.uri_to_json_filename(uri))
     if not os.path.exists(work_data_filepath):
         failure_message("Not in a work folder. Can't find " + work_data_filepath)
     with open(work_data_filepath, "r") as read_file:
