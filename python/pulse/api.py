@@ -319,7 +319,7 @@ class Work(WorkNode):
     def _get_trash_directory(self):
         date_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
         path = os.path.join(self.project.cfg.get_work_user_root(), self.project.name, "TRASH") + os.sep
-        path += self.resource.resource_type + "-" + self.resource.entity.replace(":", "_") + "-" + date_time
+        path += self.resource.uri + "-" + date_time
         return path
 
     def _get_work_files(self):
@@ -669,8 +669,7 @@ class Resource(PulseDbObject):
             uri_standards.convert_from_dict({"entity": entity, "resource_type": resource_type})
         )
         self.sandbox_path = os.path.join(
-            project.cfg.get_work_user_root(), project.name, resource_type, entity.replace(":", "\\")
-        )
+            project.cfg.get_work_user_root(), project.name, self.uri)
         self._storage_vars = [
             'lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
@@ -685,8 +684,7 @@ class Resource(PulseDbObject):
         path = os.path.join(
             self.project.cfg.get_product_user_root(),
             self.project.name,
-            self.resource_type,
-            self.entity.replace(":", "\\"),
+            self.uri,
             self.project.cfg.version_prefix + version
         )
         return path

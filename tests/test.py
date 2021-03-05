@@ -57,12 +57,12 @@ class TestProjectSettings(unittest.TestCase):
         # check out the resource
         work = resource.checkout()
         # test its location
-        self.assertTrue(os.path.exists(os.path.join(utils.test_data_output_path, "works/env_var/model/ch_anna")))
+        self.assertTrue(os.path.exists(os.path.join(utils.test_data_output_path, "works/env_var/ch_anna-model")))
         # add an output product
         abc_product = work.create_product("abc")
         # test the product folder location
         self.assertTrue(
-            os.path.exists(os.path.join(utils.test_data_output_path, "products/env_var/model/ch_anna/V001/abc")))
+            os.path.exists(os.path.join(utils.test_data_output_path, "products/env_var/ch_anna-model/V001/abc")))
         # commit
         utils.add_file_to_directory(work.directory)
         work.commit()
@@ -71,7 +71,7 @@ class TestProjectSettings(unittest.TestCase):
         prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(os.path.join(
             utils.test_data_output_path,
-            "works/env_var/model/ch_anna/V001/abc"
+            "works/env_var/ch_anna/model/V001/abc"
         )))
         # create another resource
         surf_resource = prj.create_resource("ch_anna", "surfacing")
@@ -81,7 +81,7 @@ class TestProjectSettings(unittest.TestCase):
         # test the product location
         self.assertTrue(os.path.exists(os.path.join(
             utils.test_data_output_path,
-            "products/env_var/model/ch_anna/V001/abc"
+            "products/env_var/ch_anna-model/V001/abc"
         )))
 
     def test_bad_repository_settings(self):
@@ -282,7 +282,7 @@ class TestResources(unittest.TestCase):
 
         hat_mdl_work.add_input(anna_mdl_v2_abc)
         # test the product registration
-        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna:modeling-ABC@2")
+        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna-modeling.ABC@2")
         # check the work registration to product
 
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
