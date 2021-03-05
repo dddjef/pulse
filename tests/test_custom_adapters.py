@@ -108,9 +108,9 @@ class TestFTP(unittest.TestCase):
         # self.assertTrue(os.path.exists(os.path.join(user_works, "test\\rig\\_template")))
         template_work.trash()
         self.prj.purge_unused_user_products()
-        self.assertFalse(os.path.exists(os.path.join(utils.sandbox_work_path, test_project_name, "rig", "_template")))
+        self.assertFalse(os.path.exists(os.path.join(utils.sandbox_work_path, test_project_name, "_template", "rig")))
         template_resource.checkout()
-        self.assertTrue(os.path.exists(os.path.join(utils.sandbox_work_path, test_project_name, "rig", "_template")))
+        self.assertTrue(os.path.exists(os.path.join(utils.sandbox_work_path, test_project_name, "_template", "rig")))
 
         # test moving resource between repo
         self.assertTrue(os.path.exists(os.path.join(utils.file_storage_path, local_repo_name,
