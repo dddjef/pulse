@@ -90,11 +90,11 @@ def json_list_init(json_path):
 
 
 def json_filename_to_uri(filename):
-    return os.path.basename(filename).replace("%", ":").replace(".json", "")
+    return os.path.basename(filename).replace(".json", "")
 
 
 def uri_to_json_filename(uri):
-    return uri.replace(":", "%") + ".json"
+    return uri + ".json"
 
 
 def json_list_get(json_path):
