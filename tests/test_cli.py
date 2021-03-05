@@ -156,12 +156,12 @@ class TestCustomAdapters(unittest.TestCase):
         # create a modeling resource
         cli_cmd_list(['create_resource', 'ch_anna:mdl'])
 
-        anna_mdl_path = os.path.join(cfg.sandbox_work_path, test_project_name, 'mdl', 'ch_anna')
+        anna_mdl_path = os.path.join(cfg.sandbox_work_path, test_project_name, 'ch_anna', 'mdl')
         self.assertTrue(os.path.exists(anna_mdl_path))
         os.chdir(anna_mdl_path)
 
         cli_cmd_list(['create_output', 'abc'])
-        anna_abc_path = os.path.join(cfg.sandbox_products_path, test_project_name, 'mdl', 'ch_anna', 'v001', 'abc')
+        anna_abc_path = os.path.join(cfg.sandbox_products_path, test_project_name, 'ch_anna', 'mdl', 'v001', 'abc')
         self.assertTrue(os.path.exists(anna_abc_path))
 
         # commit work
@@ -170,7 +170,7 @@ class TestCustomAdapters(unittest.TestCase):
 
         # create a surface resource
         cli_cmd_list(['create_resource', 'ch_anna:surfacing'])
-        anna_surfacing_path = os.path.join(cfg.sandbox_work_path, test_project_name, 'surfacing', 'ch_anna')
+        anna_surfacing_path = os.path.join(cfg.sandbox_work_path, test_project_name, 'ch_anna', 'surfacing')
         os.chdir(anna_surfacing_path)
 
         # add mdl as input and commit

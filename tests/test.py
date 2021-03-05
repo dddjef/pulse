@@ -282,7 +282,7 @@ class TestResources(unittest.TestCase):
 
         hat_mdl_work.add_input(anna_mdl_v2_abc)
         # test the product registration
-        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna:modeling-ABC@2")
+        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna-modeling.ABC@2")
         # check the work registration to product
 
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())

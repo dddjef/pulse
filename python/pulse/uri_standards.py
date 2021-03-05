@@ -9,9 +9,9 @@ def convert_to_dict(uri_string):
     :return uri dict:
     """
     uri_split_main = uri_string.split("@")
-    uri_split = uri_split_main[0].split(":")
+    uri_split = uri_split_main[0].split("-")
     entity = uri_split[0]
-    category_split = uri_split[1].split("-")
+    category_split = uri_split[1].split(".")
     product_type = ""
     version = None
 
@@ -31,9 +31,9 @@ def convert_from_dict(uri_dict):
     :param uri_dict: dictionary with minimum keys "entity" and "resource_type", optionally "product type" and "version"
     :return: uri string
     """
-    uri = uri_dict["entity"] + ":" + uri_dict['resource_type']
+    uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
     if 'product_type' in uri_dict:
-        uri += "-" + uri_dict['product_type']
+        uri += "." + uri_dict['product_type']
     if 'version' in uri_dict:
         uri += "@" + (str(int(uri_dict['version'])))
     return uri
@@ -43,4 +43,4 @@ def path_to_uri(project_directory, path):
     abspath = os.path.normpath(os.path.abspath(path))
     project_relative_path = abspath.replace(os.path.normpath(project_directory), "").replace("\\", "/")
     split_path = project_relative_path[1:].split("/")
-    return split_path[1] + ":" + split_path[0]
+    return project_relative_path.replace("/", ".")
