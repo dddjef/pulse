@@ -44,7 +44,7 @@ def get_mysql_connection(adapter, url):
 def get_pulse_project(path):
     connection_data = None
 
-    while not path.endswith(":\\"):
+    while not len(path) < 4:
         project_data_filepath = os.path.join(path, project_data_filename)
         if os.path.exists(project_data_filepath):
             with open(project_data_filepath, "r") as read_file:
