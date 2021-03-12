@@ -13,7 +13,8 @@ from pulse.exception import *
 import pulse.uri_standards as uri_standards
 import tempfile
 from datetime import datetime
-
+import sys
+import ctypes
 
 DEFAULT_VERSION_PADDING = 3
 DEFAULT_VERSION_PREFIX = "V"
@@ -976,8 +977,14 @@ class Project:
             ".pulse_data",
             "products"
         )
-        if not os.path.isdir(self.product_data_directory):
-            os.makedirs(self.product_data_directory)
+
+        # create local data directories
+        for directory in [self.work_data_directory, self.product_data_directory]:
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
+            # if platform is windows, hide the directory with ctypes
+            if sys.platform == "win32":
+                ctypes.windll.kernel32.SetFileAttributesW(os.path.dirname(directory), 2)
 
     def get_resource(self, entity, resource_type):
         """
