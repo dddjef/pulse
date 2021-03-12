@@ -466,7 +466,7 @@ class Work(WorkNode):
         # check the work is up to date
         expected_version = self.resource.last_version + 1
         if not self.version == expected_version:
-            raise PulseError("Your version is deprecated, it should be " + str(expected_version))
+            raise PulseError("Your version is deprecated, it should be based on " + str(self.resource.last_version))
 
         # check the work status
         if not self.status():
