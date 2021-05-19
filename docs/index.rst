@@ -13,7 +13,7 @@ If you have already broken a project into smaller part for team working, you kno
 A resource can be a prop's modeling, a character's rigging, a shot's animation...
 A resource is versioned, and each version contains a work area and its products.
 
-Here are the concept manipulated by Pulse and their associated examples.
+Here are concepts manipulated by Pulse with some examples.
 
 
 .. image:: pulse_objects.png
