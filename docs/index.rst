@@ -9,11 +9,11 @@ Welcome to Pulse's documentation!
 Pulse is a resource version control system. I think you already know what a version control system is (GIT, SVN, etc..)
 but what the heck is a resource?
 
-When one need to break apart a project in little pieces for team working, for versionning, it's a resource.
+If you have already broken a project into smaller part for team working, you know what is a resource.
 A resource can be a prop's modeling, a character's rigging, a shot's animation...
+A resource is versioned, and each version contains a work area and its products.
 
-Pulse is written object oriented, and thus you will also meet other concepts than the resource. This is how
-they articulate.
+Here are the concept manipulated by Pulse and their associated examples.
 
 
 .. image:: pulse_objects.png
