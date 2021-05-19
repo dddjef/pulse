@@ -9,11 +9,12 @@ Welcome to Pulse's documentation!
 Pulse is a resource version control system. I think you already know what a version control system is (GIT, SVN, etc..)
 but what the heck is a resource?
 
-If you have already broken a project into smaller part for team working, you know what is a resource.
+If you have already broken a project into smaller parts for team working, you already know what a resource is.
 A resource can be a prop's modeling, a character's rigging, a shot's animation...
 A resource is versioned, and each version contains a work area and its products.
 
 Here are concepts manipulated by Pulse with some examples.
+
 
 
 .. image:: pulse_objects.png
@@ -26,7 +27,7 @@ Pulse APi is written in pure python, you don't need to install any external libr
 You'll need to add /python directory to you python path. Then you can use the launch the standard test :
 /tests/test.py
 
-By default, test data are generated under the tests directory, they are ignored by git
+Test data will be generated under the tests directory, and they are ignored by git.
 
 Adapters
 =================================
