@@ -33,9 +33,8 @@ class Database(PulseDatabase):
         placeholders = ', '.join(['%s'] * len(data))
         columns = ', '.join(data.keys())
         cmd = "INSERT INTO %s ( %s ) VALUES ( %s )" % ("Repository", columns, placeholders)
-
         try:
-            self.cursor.execute(cmd, data.values())
+            self.cursor.execute(cmd, list(data.values()))
         except mariadb.IntegrityError:
             raise PulseDatabaseError("node already exists:" + name)
         self.connection.commit()
@@ -115,9 +114,8 @@ class Database(PulseDatabase):
         placeholders = ', '.join(['%s'] * len(data))
         columns = ', '.join(data.keys())
         cmd = "INSERT INTO %s ( %s ) VALUES ( %s )" % (entity_type, columns, placeholders)
-        # valid in Python 2
         try:
-            self.cursor.execute(cmd, data.values())
+            self.cursor.execute(cmd, list(data.values()))
         except mariadb.IntegrityError:
             raise PulseDatabaseError("node already exists:" + uri)
         self.connection.commit()
@@ -130,7 +128,7 @@ class Database(PulseDatabase):
 
         cmd = 'UPDATE ' + entity_type + ' SET {}'.format(', '.join('{}=%s'.format(k) for k in data))
         cmd += " WHERE uri = '" + uri + "'"
-        self.cursor.execute(cmd, data.values())
+        self.cursor.execute(cmd, list(data.values()))
         self.connection.commit()
 
     def read(self, project_name, entity_type, uri):

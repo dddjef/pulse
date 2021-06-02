@@ -38,8 +38,8 @@ def ftp_cwd_makedirs(directory, ftp_connection):
                 except:
                     ftp_connection.mkd(item)
                     ftp_connection.cwd(item)
-        except Exception, e:
-            print e
+        except Exception as e:
+            print(e)
 
 def ftp_list_all_files(ftp, path=""):
     lines = []
@@ -88,7 +88,8 @@ def ftp_download(source, destination, ftp_connection):
             ftp_download(ftp_path, disk_path, ftp_connection)
             ftp_connection.cwd(source)
         except ftplib.error_perm:
-            ftp_connection.retrbinary("RETR " + filename, open(disk_path, "wb").write)
+            with open(disk_path, "wb") as dest_file:
+                ftp_connection.retrbinary("RETR " + filename, dest_file.write)
 
 
 class Repository(PulseRepository):

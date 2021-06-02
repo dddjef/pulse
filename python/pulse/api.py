@@ -4,10 +4,13 @@ Created on 07 September 2020
 """
 
 import os
-import file_utils as fu
+import pulse.file_utils as fu
 import shutil
 import time
-import imp
+try:
+    import importlib.util
+except ImportError:
+    import imp
 from pulse.database_adapters.interface_class import *
 from pulse.exception import *
 import pulse.uri_standards as uri_standards
@@ -719,7 +722,11 @@ class Resource(PulseDbObject):
         :param version_name: string or integer
         :return: integer
         """
-        if isinstance(version_name, basestring):
+        try:
+            instance_type = basestring
+        except NameError:
+            instance_type = str
+        if isinstance(version_name, instance_type):
             if version_name == "last":
                 return self.last_version
             else:
@@ -1145,4 +1152,14 @@ def import_adapter(adapter_type, adapter_name):
     :return: the adapter module
     """
     pulse_filepath = os.path.dirname(os.path.realpath(__file__))
-    return imp.load_source(adapter_type, os.path.join(pulse_filepath, adapter_type + "_adapters", adapter_name + ".py"))
+    path = os.path.join(pulse_filepath, adapter_type + "_adapters", adapter_name + ".py")
+
+    try:
+        # python 3 import
+        spec = importlib.util.spec_from_file_location(adapter_type, path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    except NameError:
+        # python 2 import
+        mod = imp.load_source(adapter_type, path)
+    return mod

@@ -1,7 +1,11 @@
 import mysql.connector as mysql
 import ftplib
 import os
-from ConfigParser import ConfigParser
+try:
+    from ConfigParser import ConfigParser
+except ModuleNotFoundError:
+    from configparser import ConfigParser as ConfigParser
+
 
 
 ini = ConfigParser()
