@@ -3,11 +3,19 @@ import argparse
 import pulse.api as pulse
 import pulse.uri_standards as uri_standards
 import pulse.file_utils as fu
-from ConfigParser import ConfigParser
+try:
+    # legacy python 2.7 module
+    from ConfigParser import ConfigParser
+except ModuleNotFoundError:
+    from configparser import ConfigParser as ConfigParser
 import os
 import json
 import sys
-import urlparse
+try:
+    # legacy python 2.7 module
+    import urlparse
+except ModuleNotFoundError:
+    import urllib.parse as urlparse
 
 project_data_filename = "project.pipe"
 work_data_filename = "work.pipe"
@@ -80,7 +88,7 @@ def get_project(args):
     elif adapter == "mysql":
         cnx = get_mysql_connection(adapter, args.settings)
     else:
-        print "database adapter not supported by CLI"
+        print("database adapter not supported by CLI")
         return
 
     # create work and product path
@@ -101,20 +109,20 @@ def get_project(args):
 
     with open(os.path.join(project_work_root, project_data_filename), "w") as write_file:
         json.dump(connexion_data, write_file, indent=4, sort_keys=True)
-    print "project registered to ", os.path.normpath(os.path.expandvars(project_work_root))
+    print("project registered to ", os.path.normpath(os.path.expandvars(project_work_root)))
 
 
 def create_template(args):
     project = get_pulse_project(os.getcwd())
     resource = project.create_template(args.type)
     work = resource.checkout()
-    print 'template check out in "' + os.path.normpath(os.path.expandvars(work.directory)) + '"'
+    print('template check out in "' + os.path.normpath(os.path.expandvars(work.directory)) + '"')
 
 
 def create_output(args):
     work = get_work(os.getcwd())
     product = work.create_product(args.type)
-    print 'product created in "' + os.path.normpath(os.path.expandvars(product.directory)) + '"'
+    print('product created in "' + os.path.normpath(os.path.expandvars(product.directory)) + '"')
 
 
 def add_input(args):
@@ -125,7 +133,7 @@ def add_input(args):
         return
     work = get_work(os.getcwd(), project)
     work.add_input(product)
-    print 'product registered "' + args.uri + '"'
+    print('product registered "' + args.uri + '"')
 
 
 def create_resource(args):
@@ -133,7 +141,7 @@ def create_resource(args):
     uri_dict = uri_standards.convert_to_dict(args.uri)
     resource = project.create_resource(uri_dict['entity'], uri_dict['resource_type'])
     work = resource.checkout()
-    print 'resource check out in "' + os.path.normpath(os.path.expandvars(work.directory)) + '"'
+    print('resource check out in "' + os.path.normpath(os.path.expandvars(work.directory)) + '"')
 
 
 def checkout(args):
@@ -147,7 +155,7 @@ def checkout(args):
             work.create_product(product.product_type)
     except pulse.PulseError:
         pass
-    print 'resource check out in "' + os.path.expandvars(work.directory) + '"'
+    print('resource check out in "' + os.path.expandvars(work.directory) + '"')
 
 
 def trash_resource(args):
@@ -156,7 +164,7 @@ def trash_resource(args):
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     resource.get_work().trash()
     project.purge_unused_user_products(resource_filter=resource)
-    print 'resource trashed "' + resource.uri + '"'
+    print('resource trashed "' + resource.uri + '"')
 
 
 def commit(args):
@@ -166,7 +174,7 @@ def commit(args):
         for product in commit_obj.get_products():
             work.create_product(product.product_type)
         print('work commit in version "' + str(commit_obj.version) + '"')
-    except pulse.PulseError, e:
+    except pulse.PulseError as e:
         print('work commit failed: ' + str(e))
 
 
@@ -174,22 +182,22 @@ def status(args):
     work = get_work(os.getcwd())
     diffs = work.status()
     if not diffs:
-        print 'no local changes detected'
+        print('no local changes detected')
     else:
         for elem in diffs:
-            print elem + ":" + diffs[elem]
+            print(elem + ":" + diffs[elem])
 
 
 def lock(args):
     resource = get_work(os.getcwd()).resource
     resource.set_lock(state=True, steal=True)
-    print 'resource locked "' + str(resource.uri) + '"'
+    print('resource locked "' + str(resource.uri) + '"')
 
 
 def unlock(args):
     resource = get_work(os.getcwd()).resource
     resource.set_lock(state=False, steal=True)
-    print 'resource unlocked "' + str(resource.uri) + '"'
+    print('resource unlocked "' + str(resource.uri) + '"')
 
 
 def revert(args):
@@ -198,7 +206,7 @@ def revert(args):
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.get_work()
     work.revert()
-    print "work reverted"
+    print("work reverted")
 
 
 def update(args):
@@ -208,9 +216,9 @@ def update(args):
     work = resource.get_work()
     try:
         work.update()
-        print "work updated to version: " + str(work.version)
-    except pulse.PulseError, msg:
-        print msg
+        print("work updated to version: " + str(work.version))
+    except pulse.PulseError as msg:
+        print(msg)
 
 
 # create the top-level parser
