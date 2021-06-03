@@ -167,10 +167,11 @@ def trash_resource(args):
     print('resource trashed "' + resource.uri + '"')
 
 
-def commit(args):
-    work = get_work(os.getcwd())
+def commit(args, path=os.getcwd()):
+    work = get_work(path)
     try:
         commit_obj = work.commit(comment=args.comment)
+        # cli creates creates empty products directory for the new version after the commit
         for product in commit_obj.get_products():
             work.create_product(product.product_type)
         print('work commit in version "' + str(commit_obj.version) + '"')
