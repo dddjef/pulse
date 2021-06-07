@@ -129,7 +129,7 @@ def add_input(args):
     project = get_pulse_project(os.getcwd())
     product = project.get_product(args.uri)
     if not product:
-        print ('no product found for ' + args.uri)
+        print('no product found for ' + args.uri)
         return
     work = get_work(os.getcwd(), project)
     work.add_input(product)
