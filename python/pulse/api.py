@@ -239,6 +239,7 @@ class Commit(PulseDbObject):
         """
         return CommitProduct(self, product_type).db_read()
 
+    #TODO: this function seems not use, and return empty list anyway
     def get_products(self):
         """
         return the commit's products list
@@ -665,6 +666,7 @@ class Resource(PulseDbObject):
         self.last_version = 0
         self.resource_type = resource_type
         self.entity = entity
+        #TODO : repository doesn't seem to be written at creation
         self.repository = None
         self.resource_template = ''
         PulseDbObject.__init__(
@@ -1046,6 +1048,8 @@ class Connection:
         self.db = import_adapter("database", adapter).Database(settings)
         self.user_name = self.db.get_user_name()
         self.repositories = self.get_repositories()
+        # TODO : add a get projects fn
+        # TODO : remove repositories var and keeep only the method (multi user friendly)
 
     def get_repositories(self):
         repositories = {}
@@ -1103,7 +1107,10 @@ class Connection:
         :return: Project
         """
         project = Project(self, project_name)
-        project.load_config()
+        try:
+            project.load_config()
+        except PulseDatabaseMissingObject:
+            raise PulseError("Missing Project : " + project_name)
         return project
 
     def delete_project(self, project_name):
