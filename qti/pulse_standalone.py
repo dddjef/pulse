@@ -7,6 +7,7 @@ from functools import partial
 import pulse.api as pulse
 import pulse.uri_standards as pulse_uri
 from PyQt5.QtCore import QSettings
+import traceback
 
 LOG = "interface"
 
@@ -20,14 +21,20 @@ class PulseItem(QTreeWidgetItem):
 def text_settings_to_dict(text):
     settings = {}
     for prm in text.split("\n"):
-        split_line = prm.split("=")
-        settings[split_line[0].strip()] = split_line[1].strip()
+        if "=" in prm:
+            split_line = prm.split("=")
+            settings[split_line[0].strip()] = split_line[1].strip()
     return settings
 
 
-def message(message_text, message_type = "ERROR"):
+def message_user(message_text, message_type=""):
+    mainwindow.message_label.setText(message_type + ": " + message_text)
+
+
+def print_exception(exception):
     if LOG == "interface":
-        mainwindow.message_label.setText(message_type + ": " + message_text)
+        message_user(str(exception), message_type=type(exception).__name__)
+        traceback.print_exc()
 
 
 class CreateResourceWindow(QDialog):
@@ -53,7 +60,7 @@ class CreateResourceWindow(QDialog):
         try:
             new_resource = self.mainWindow.project.create_resource(entity_name, entity_type)
         except Exception as e:
-            message(str(e))
+            print_exception(e)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
         self.mainWindow.treeWidget.addTopLevelItem(resource_item)
@@ -77,14 +84,24 @@ class ConnectWindow(QDialog):
         self.mainWindow = mainWindow
 
     def connect_button(self):
-        self.mainWindow.updateConnection(self.typeComboBox.currentText(), self.settings_textEdit.toPlainText())
-        #TODO : force a username password parameters to have a dedicated password field
-        #TODO : force a path parameter to database to inform the user the db path used
-        #TODO : test connection quality before going further
-        if self.saveConnectionSettingscheckBox.isChecked:
-            self.mainWindow.settings.setValue('db_type', self.typeComboBox.currentText())
-            self.mainWindow.settings.setValue('connection_settings', self.settings_textEdit.toPlainText())
-        self.close()
+        try:
+            self.mainWindow.updateConnection(
+                self.typeComboBox.currentText(),
+                self.path_lineEdit.text(),
+                self.username_lineEdit.text(),
+                self.password_lineEdit.text(),
+                self.settings_textEdit.toPlainText()
+            )
+            #TODO : test connection quality before going further
+            if self.saveConnectionSettingscheckBox.isChecked:
+                self.mainWindow.settings.setValue('db_type', self.typeComboBox.currentText())
+                self.mainWindow.settings.setValue('path', self.path_lineEdit.text())
+                self.mainWindow.settings.setValue('username', self.username_lineEdit.text())
+                self.mainWindow.settings.setValue('password', self.password_lineEdit.text())
+                self.mainWindow.settings.setValue('connection_settings', self.settings_textEdit.toPlainText())
+            self.close()
+        except Exception as ex:
+            print_exception(ex)
 
 
 class MainWindow(QMainWindow):
@@ -110,22 +127,28 @@ class MainWindow(QMainWindow):
         except:
             pass
         try:
-            self.updateConnection(self.settings.value('db_type'), self.settings.value('connection_settings'))
+            self.updateConnection(
+                self.settings.value('db_type'),
+                self.settings.value('path'),
+                self.settings.value('username'),
+                self.settings.value('password'),
+                self.settings.value('connection_settings')
+            )
             self.update_project()
         except:
             pass
         self.show()
 
-    def updateConnection(self, db_type, text_settings):
+    def updateConnection(self, db_type, path, username, password, text_settings):
         settings = text_settings_to_dict(text_settings)
         try:
-            self.connection = pulse.Connection(db_type, **settings)
+            self.connection = pulse.Connection(db_type, path, username, password, **settings)
         except Exception as e:
-            message(str(e))
+            print_exception(e)
             self.setWindowTitle("Disconnected")
             return False
-        self.setWindowTitle("Connected")
-        message("Successfull connection", "INFO")
+        self.setWindowTitle("Connected -- " + self.connection.path)
+        message_user("Successfull connection", "INFO")
         return True
 
     def update_project(self):
@@ -134,7 +157,7 @@ class MainWindow(QMainWindow):
             try:
                 self.project = self.connection.get_project(self.projectName_lineEdit.text())
             except Exception as e:
-                message(str(e))
+                print_exception(e)
                 return False
         return True
 
@@ -166,9 +189,9 @@ class MainWindow(QMainWindow):
                         product_item = PulseItem([product_type], product)
                         commit_item.addChild(product_item)
         except Exception as e:
-            message(str(e), "ERROR")
+            print_exception(e)
             return
-        message(str(len(resources)) + " Resource(s) listed", "INFO")
+        message_user(str(len(resources)) + " Resource(s) listed", "INFO")
 
     def showDetails(self, node, properties):
         self.tableWidget.setRowCount(len(properties))
@@ -200,6 +223,14 @@ class MainWindow(QMainWindow):
 
     def executeConnectPage(self, checked=None):
         connect_page = ConnectWindow(self)
+        try:
+            connect_page.path_lineEdit.setText(self.settings.value('path'))
+            connect_page.username_lineEdit.setText(self.settings.value('username'))
+            connect_page.password_lineEdit.setText(self.settings.value('password'))
+            connect_page.settings_textEdit.setPlainText(self.settings.value('connection_settings'))
+        except Exception as ex:
+            print(Exception)
+            pass
         connect_page.exec_()
 
     def tree_rc_menu(self, pos):
@@ -251,8 +282,12 @@ class MainWindow(QMainWindow):
         self.settings.setValue('window position', self.pos())
         self.settings.setValue('project_name', self.projectName_lineEdit.text())
 
+
 app = QApplication(sys.argv)
-mainwindow = MainWindow()
+try:
+    mainwindow = MainWindow()
+except Exception as e:
+    print_exception(e)
 
 try:
     sys.exit(app.exec_())

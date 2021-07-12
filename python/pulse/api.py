@@ -1044,8 +1044,9 @@ class Connection:
     """
         connection instance to a Pulse database
     """
-    def __init__(self, adapter, **settings):
-        self.db = import_adapter("database", adapter).Database(settings)
+    def __init__(self, adapter, path="", username="", password="", **settings):
+        self.db = import_adapter("database", adapter).Database(path, username, password, settings)
+        self.path = path
         self.user_name = self.db.get_user_name()
         self.repositories = self.get_repositories()
         # TODO : add a get projects fn

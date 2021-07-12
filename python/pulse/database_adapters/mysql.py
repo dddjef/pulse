@@ -5,6 +5,7 @@ import mysql.connector as mariadb
 
 
 class Database(PulseDatabase):
+#TODO : add the new path, username and password parameters
     def __init__(self, settings):
         PulseDatabase.__init__(self, settings)
         self.connection = None

@@ -6,14 +6,14 @@ from pulse.database_adapters.interface_class import *
 
 
 class Database(PulseDatabase):
-    def __init__(self, settings):
-        PulseDatabase.__init__(self, settings)
-        if not os.path.exists(self.settings["path"]):
+    def __init__(self, path="", username="", password="", settings=None):
+        PulseDatabase.__init__(self, path, username, password, settings)
+        if not os.path.exists(self.path):
             try:
-                os.makedirs(self.settings["path"])
+                os.makedirs(self.path)
             except OSError:
-                raise PulseDatabaseError("can't find json database :" + self.settings["path"])
-        self._root = self.settings["path"]
+                raise PulseDatabaseError("can't find json database :" + self.path)
+        self._root = self.path
         self.config_name = "_Config"
         self.repo_filepath = os.path.join(self._root, self.config_name, "Repository")
 
