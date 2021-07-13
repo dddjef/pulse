@@ -14,6 +14,7 @@ class Database(PulseDatabase):
             except OSError:
                 raise PulseDatabaseError("can't find json database :" + self.path)
         self._root = self.path
+        self._projects_path = os.path.join(self._root, "Project")
         self.config_name = "_Config"
         self.repo_filepath = os.path.join(self._root, self.config_name, "Repository")
 
@@ -27,6 +28,11 @@ class Database(PulseDatabase):
                 data = json.load(read_file)
             repositories[data["name"]] = data
         return repositories
+
+    def get_projects(self):
+        tt = [x for x in os.listdir(self._projects_path) if os.path.isdir(os.path.join(self._projects_path, x))]
+        print(tt)
+        return tt
 
     def create_repository(self, name, adapter, login, password, settings):
         json_filepath = os.path.join(self.repo_filepath, name + ".json")
@@ -91,7 +97,7 @@ class Database(PulseDatabase):
         return data
 
     def _get_project_filepath(self, project_name):
-        return os.path.join(self._root, "Project", project_name)
+        return os.path.join(self._projects_path, project_name)
 
     def _get_json_filepath(self, project_name, entity_type, uri):
         return os.path.join(self._get_project_filepath(project_name), entity_type,  uri.replace(":", "%") + ".json")

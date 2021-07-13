@@ -75,6 +75,9 @@ class PulseDatabase:
     def get_repositories(self):
         pass
 
+    def get_projects(self):
+        pass
+
     def create_project(self, project_name):
         pass
 

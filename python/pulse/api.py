@@ -1063,6 +1063,9 @@ class Connection:
                 db_repo['settings'])
         return repositories
 
+    def get_projects(self):
+        return self.db.get_projects()
+
     def create_project(self,
                        project_name,
                        work_user_root,

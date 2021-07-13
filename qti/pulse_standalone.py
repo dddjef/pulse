@@ -117,12 +117,13 @@ class MainWindow(QMainWindow):
         self.listResources_pushButton.clicked.connect(self.list_resources)
 
         self.connection = None
+        self.project_list = []
         self.project = None
         self.settings = QSettings('pulse_standalone', 'Main')
         try:
             self.resize(self.settings.value('window size'))
             self.move(self.settings.value('window position'))
-            self.projectName_lineEdit.setText(self.settings.value('project_name'))
+            #TODO set project as settings
 
         except:
             pass
@@ -148,25 +149,28 @@ class MainWindow(QMainWindow):
             self.setWindowTitle("Disconnected")
             return False
         self.setWindowTitle("Connected -- " + self.connection.path)
+        self.project_list = self.connection.get_projects()
+        self.update_project_list()
         message_user("Successfull connection", "INFO")
         return True
 
+    def update_project_list(self):
+        self.project_comboBox.clear()
+        self.project_comboBox.addItems(self.project_list)
+        self.update_project()
+
     def update_project(self):
-        project_name = self.projectName_lineEdit.text()
+        project_name = self.project_comboBox.currentText()
         if project_name != "":
-            try:
-                self.project = self.connection.get_project(self.projectName_lineEdit.text())
-            except Exception as e:
-                print_exception(e)
-                return False
-        return True
+            self.project = self.connection.get_project(project_name)
+        else:
+            self.project = None
 
     def list_resources(self):
         if not self.project:
-            if not self.update_project():
-                return
+            return
         self.treeWidget.clear()
-        project_name = self.projectName_lineEdit.text()
+        project_name = self.project_comboBox.currentText()
         filter = self.filterEntity_lineEdit.text() + "-" + self.filterType_lineEdit.text()
         resources = self.connection.db.find_uris(project_name, "Resource", filter)
         try:
@@ -287,7 +291,7 @@ app = QApplication(sys.argv)
 try:
     mainwindow = MainWindow()
 except Exception as e:
-    print_exception(e)
+    traceback.print_exc()
 
 try:
     sys.exit(app.exec_())
