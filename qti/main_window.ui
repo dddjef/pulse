@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>720</width>
-    <height>634</height>
+    <width>665</width>
+    <height>747</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -202,7 +202,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>720</width>
+     <width>665</width>
      <height>26</height>
     </rect>
    </property>
@@ -210,7 +210,7 @@
     <property name="title">
      <string>Project</string>
     </property>
-    <addaction name="actionCreate"/>
+    <addaction name="projectCreate_action"/>
     <addaction name="actionDelete"/>
     <addaction name="actionConnect"/>
    </widget>
@@ -225,7 +225,7 @@
    <addaction name="menuProject"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionCreate">
+  <action name="projectCreate_action">
    <property name="text">
     <string>Create</string>
    </property>

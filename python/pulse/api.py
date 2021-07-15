@@ -1066,6 +1066,7 @@ class Connection:
     def get_projects(self):
         return self.db.get_projects()
 
+# TODO : work user root should be renamed pulse_sandbox_path and product_user_root pulse_products_path
     def create_project(self,
                        project_name,
                        work_user_root,

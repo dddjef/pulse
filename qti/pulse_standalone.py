@@ -8,6 +8,8 @@ import pulse.api as pulse
 import pulse.uri_standards as pulse_uri
 from PyQt5.QtCore import QSettings
 import traceback
+import os
+
 
 LOG = "interface"
 
@@ -74,6 +76,47 @@ class CreateResourceWindow(QDialog):
         self.typeTemplate_comboBox.setEnabled(False)
         self.typeCustom_lineEdit.setEnabled(True)
 
+class ProjectWindow(QDialog):
+    def __init__(self, mainWindow):
+        #TODO : add a tooltip to explain how to add an env var in pathes
+        super(ProjectWindow, self).__init__()
+        loadUi("create_project.ui", self)
+        self.createProject_pushButton.clicked.connect(self.create_project)
+        self.mainWindow = mainWindow
+        self.repository_comboBox.clear()
+        self.repository_comboBox.addItems(mainWindow.connection.get_repositories().keys())
+        self.sandboxPath_lineEdit.setText(os.path.join(os.path.expanduser("~"), "pulse_sandbox"))
+        self.versionPrefix_lineEdit.setText(pulse.DEFAULT_VERSION_PREFIX)
+        self.versionPadding_spinBox.setValue(pulse.DEFAULT_VERSION_PADDING)
+        self.sameProductPath_checkBox.stateChanged.connect(self.same_path_checkbox_changed)
+
+    def same_path_checkbox_changed(self):
+        self.productsPath_lineEdit.setEnabled(not self.sameProductPath_checkBox.isChecked())
+
+    def create_project(self):
+        if self.sameProductPath_checkBox.isChecked():
+            product_user_root = None
+        else:
+            product_user_root = self.productsPath_lineEdit.text()
+
+        try:
+            self.mainWindow.connection.create_project(
+                project_name=self.name_lineEdit.text(),
+                work_user_root=self.sandboxPath_lineEdit.text(),
+                default_repository=self.repository_comboBox.currentText(),
+                product_user_root=product_user_root,
+                version_padding=self.versionPadding_spinBox.value(),
+                version_prefix=self.versionPrefix_lineEdit.text()
+            )
+
+            message_user("project " + self.name_lineEdit.text() + " successfully created")
+            self.close()
+            self.mainWindow.project_comboBox.addItem(self.name_lineEdit.text())
+            self.mainWindow.project_comboBox.setCurrentIndex(self.mainWindow.project_comboBox.count() - 1)
+            self.mainWindow.update_project()
+        except Exception as e:
+            print_exception(e)
+
 class ConnectWindow(QDialog):
     def __init__(self, mainWindow):
         super(ConnectWindow, self).__init__()
@@ -114,7 +157,9 @@ class MainWindow(QMainWindow):
         self.treeWidget.setColumnCount(1)
 
         self.actionConnect_to_Pulse_Server.triggered.connect(self.executeConnectPage)
+        self.projectCreate_action.triggered.connect(self.executeCreateProjectPage)
         self.listResources_pushButton.clicked.connect(self.list_resources)
+        self.project_comboBox.activated.connect(self.update_project)
 
         self.connection = None
         self.project_list = []
@@ -139,6 +184,10 @@ class MainWindow(QMainWindow):
         except:
             pass
         self.show()
+
+    def clear_displayed_data(self):
+        self.treeWidget.clear()
+        self.tableWidget.setRowCount(0)
 
     def updateConnection(self, db_type, path, username, password, text_settings):
         settings = text_settings_to_dict(text_settings)
@@ -165,6 +214,7 @@ class MainWindow(QMainWindow):
             self.project = self.connection.get_project(project_name)
         else:
             self.project = None
+        self.clear_displayed_data()
 
     def list_resources(self):
         if not self.project:
@@ -236,6 +286,11 @@ class MainWindow(QMainWindow):
             print(Exception)
             pass
         connect_page.exec_()
+
+    def executeCreateProjectPage(self):
+        #TODO : check there's an exisiting repository before opening
+        page = ProjectWindow(self)
+        page.exec_()
 
     def tree_rc_menu(self, pos):
         if not self.project:
