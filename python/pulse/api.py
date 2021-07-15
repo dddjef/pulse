@@ -4,6 +4,7 @@ Created on 07 September 2020
 """
 
 import os
+import glob
 import pulse.file_utils as fu
 import shutil
 import time
@@ -1155,6 +1156,18 @@ class Connection:
         )
 
 
+def get_adapter_directory_path(adapter_type):
+    pulse_filepath = os.path.dirname(os.path.realpath(__file__))
+    return os.path.join(pulse_filepath, adapter_type + "_adapters")
+
+
+def get_adapter_list(adapter_type):
+    files = [os.path.basename(x) for x in glob.glob(os.path.join(get_adapter_directory_path(adapter_type), "*.py"))]
+    files.remove("interface_class.py")
+    files.remove("__init__.py")
+    return [os.path.splitext(x)[0] for x in files]
+
+
 def import_adapter(adapter_type, adapter_name):
     """
     dynamically import a module adapter from plugins directory
@@ -1163,8 +1176,7 @@ def import_adapter(adapter_type, adapter_name):
     :param adapter_name:
     :return: the adapter module
     """
-    pulse_filepath = os.path.dirname(os.path.realpath(__file__))
-    path = os.path.join(pulse_filepath, adapter_type + "_adapters", adapter_name + ".py")
+    path = os.path.join(get_adapter_directory_path(adapter_type), adapter_name + ".py")
 
     try:
         # python 3 import

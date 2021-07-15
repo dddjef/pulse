@@ -117,13 +117,35 @@ class ProjectWindow(QDialog):
         except Exception as e:
             print_exception(e)
 
+
+class RepositoryWindow(QDialog):
+    def __init__(self, mainWindow):
+        super(RepositoryWindow, self).__init__()
+        loadUi("create_repository.ui", self)
+        self.saveButton.clicked.connect(self.add_repository)
+        self.typeComboBox.addItems(pulse.get_adapter_list("repository"))
+        self.mainWindow = mainWindow
+
+    def add_repository(self):
+        try:
+            self.mainWindow.connection.add_repository(
+                name = self.name_lineEdit.text(),
+                adapter = self.typeComboBox.currentText(),
+                login = self.username_lineEdit.text(),
+                password = self.password_lineEdit.text(),
+                #TODO : convert settings to a dict
+                settings = self.settings_textEdit.toPlainText()
+            )
+        except Exception as ex:
+            print_exception(ex)
+
+
 class ConnectWindow(QDialog):
     def __init__(self, mainWindow):
         super(ConnectWindow, self).__init__()
         loadUi("connect_database.ui", self)
         self.connectButton.clicked.connect(self.connect_button)
-        #TODO : list available adapters
-        #TODO : adapters should give the parameters they need to dynamicaly creates the interface
+        self.typeComboBox.addItems(pulse.get_adapter_list("database"))
         self.mainWindow = mainWindow
 
     def connect_button(self):
@@ -158,6 +180,8 @@ class MainWindow(QMainWindow):
 
         self.actionConnect_to_Pulse_Server.triggered.connect(self.executeConnectPage)
         self.projectCreate_action.triggered.connect(self.executeCreateProjectPage)
+        self.actionCreate_Repository.triggered.connect(self.executeRepositoryPage)
+
         self.listResources_pushButton.clicked.connect(self.list_resources)
         self.project_comboBox.activated.connect(self.update_project)
 
@@ -209,12 +233,13 @@ class MainWindow(QMainWindow):
         self.update_project()
 
     def update_project(self):
+        self.clear_displayed_data()
         project_name = self.project_comboBox.currentText()
         if project_name != "":
             self.project = self.connection.get_project(project_name)
         else:
             self.project = None
-        self.clear_displayed_data()
+
 
     def list_resources(self):
         if not self.project:
@@ -290,6 +315,10 @@ class MainWindow(QMainWindow):
     def executeCreateProjectPage(self):
         #TODO : check there's an exisiting repository before opening
         page = ProjectWindow(self)
+        page.exec_()
+
+    def executeRepositoryPage(self):
+        page = RepositoryWindow(self)
         page.exec_()
 
     def tree_rc_menu(self, pos):

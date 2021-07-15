@@ -220,6 +220,8 @@
     </property>
     <addaction name="actionConnect_to_Pulse_Server"/>
     <addaction name="actionDisconnect"/>
+    <addaction name="separator"/>
+    <addaction name="actionCreate_Repository"/>
    </widget>
    <addaction name="menuConnection"/>
    <addaction name="menuProject"/>
@@ -248,6 +250,11 @@
   <action name="actionDisconnect">
    <property name="text">
     <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="actionCreate_Repository">
+   <property name="text">
+    <string>Create Repository</string>
    </property>
   </action>
  </widget>
