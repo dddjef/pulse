@@ -10,6 +10,7 @@ from PyQt5.QtCore import QSettings
 import traceback
 import os
 
+#TODO : add template resource funtion
 
 LOG = "interface"
 SETTINGS_DEFAULT_TEXT = "attribute = value"
@@ -50,7 +51,20 @@ class CreateResourceWindow(QDialog):
         self.createResource_pushButton.clicked.connect(self.create_resource)
         self.template_types = [pulse_uri.convert_to_dict(x)["resource_type"] for x in self.mainWindow.connection.db.find_uris(mainWindow.project.name, "Resource", "_template-*")]
         self.typeTemplate_comboBox.addItems(self.template_types)
-        #TODO :  add the repository choice
+        self.repository_comboBox.clear()
+        # add the repository choice
+        self.repositories = list(mainWindow.connection.get_repositories().keys())
+        display_repo_names = []
+        i = 0
+        default_repository_index = 0
+        for repo_name in self.repositories:
+            if repo_name == mainWindow.project.cfg.default_repository:
+                repo_name = repo_name + " (default)"
+                default_repository_index = i
+            display_repo_names.append(repo_name)
+            i += 1
+        self.repository_comboBox.addItems(display_repo_names)
+        self.repository_comboBox.setCurrentIndex(default_repository_index)
 
     def create_resource(self):
         entity_name = self.entityName_lineEdit.text()
@@ -59,8 +73,13 @@ class CreateResourceWindow(QDialog):
         else:
             entity_type = self.typeCustom_lineEdit.text()
         #TODO : check the input strings are valid
+
         try:
-            new_resource = self.mainWindow.project.create_resource(entity_name, entity_type)
+            new_resource = self.mainWindow.project.create_resource(
+                entity_name,
+                entity_type,
+                repository=self.repositories[self.repository_comboBox.currentIndex()]
+            )
         except Exception as e:
             print_exception(e)
             return
