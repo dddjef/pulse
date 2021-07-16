@@ -206,8 +206,9 @@ class MainWindow(QMainWindow):
         self.treeWidget.setColumnCount(1)
 
         self.actionConnect_to_Pulse_Server.triggered.connect(self.executeConnectPage)
-        self.projectCreate_action.triggered.connect(self.executeCreateProjectPage)
-        self.actionCreate_Repository.triggered.connect(self.executeRepositoryPage)
+        self.createProject_action.triggered.connect(self.executeCreateProjectPage)
+        self.createRepository_action.triggered.connect(self.executeRepositoryPage)
+        self.createResource_action.triggered.connect(self.create_resource)
 
         self.listResources_pushButton.clicked.connect(self.list_resources)
         self.project_comboBox.activated.connect(self.update_project)

@@ -208,11 +208,12 @@
    </property>
    <widget class="QMenu" name="menuProject">
     <property name="title">
-     <string>Project</string>
+     <string>Create</string>
     </property>
-    <addaction name="projectCreate_action"/>
-    <addaction name="actionDelete"/>
-    <addaction name="actionConnect"/>
+    <addaction name="createRepository_action"/>
+    <addaction name="createProject_action"/>
+    <addaction name="createResourceTemplate_action"/>
+    <addaction name="createResource_action"/>
    </widget>
    <widget class="QMenu" name="menuConnection">
     <property name="title">
@@ -221,15 +222,14 @@
     <addaction name="actionConnect_to_Pulse_Server"/>
     <addaction name="actionDisconnect"/>
     <addaction name="separator"/>
-    <addaction name="actionCreate_Repository"/>
    </widget>
    <addaction name="menuConnection"/>
    <addaction name="menuProject"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="projectCreate_action">
+  <action name="createProject_action">
    <property name="text">
-    <string>Create</string>
+    <string>Project</string>
    </property>
   </action>
   <action name="actionDelete">
@@ -252,9 +252,19 @@
     <string>Disconnect</string>
    </property>
   </action>
-  <action name="actionCreate_Repository">
+  <action name="createRepository_action">
    <property name="text">
-    <string>Create Repository</string>
+    <string>Repository</string>
+   </property>
+  </action>
+  <action name="createResourceTemplate_action">
+   <property name="text">
+    <string>Resource Template</string>
+   </property>
+  </action>
+  <action name="createResource_action">
+   <property name="text">
+    <string>Resource</string>
    </property>
   </action>
  </widget>
