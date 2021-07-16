@@ -10,10 +10,11 @@ from PyQt5.QtCore import QSettings
 import traceback
 import os
 
-#TODO : add template resource funtion
+#TODO : add create template resource funtion
 
 LOG = "interface"
 SETTINGS_DEFAULT_TEXT = "attribute = value"
+
 
 class PulseItem(QTreeWidgetItem):
     def __init__(self, parent, pulse_node):
@@ -41,6 +42,7 @@ def print_exception(exception):
 
 
 class CreateResourceWindow(QDialog):
+    #TODO : add the create from another resource feature
     def __init__(self, mainWindow, entity_name):
         super(CreateResourceWindow, self).__init__()
         loadUi("create_resource.ui", self)
@@ -148,7 +150,7 @@ class RepositoryWindow(QDialog):
 
 
     def add_repository(self):
-        #TODO : detect the adapter mandatory attributes and show them in the interface
+        #TODO : CBB detect the adapter mandatory attributes and show them in the interface
         try:
             self.mainWindow.connection.add_repository(
                 name=self.name_lineEdit.text(),
@@ -160,6 +162,7 @@ class RepositoryWindow(QDialog):
         except Exception as ex:
             print_exception(ex)
         message_user("Repository successfully added " + self.name_lineEdit.text(), "INFO")
+        #TODO: CBB ask a confirmation if the repository is not reachable
         self.close()
 
 
@@ -216,8 +219,6 @@ class MainWindow(QMainWindow):
         try:
             self.resize(self.settings.value('window size'))
             self.move(self.settings.value('window position'))
-            #TODO set project as settings
-
         except:
             pass
         try:
@@ -228,7 +229,6 @@ class MainWindow(QMainWindow):
                 self.settings.value('password'),
                 self.settings.value('connection_settings')
             )
-            self.update_project()
         except:
             pass
         self.show()
@@ -254,16 +254,26 @@ class MainWindow(QMainWindow):
     def update_project_list(self):
         self.project_comboBox.clear()
         self.project_comboBox.addItems(self.project_list)
+
+        # try to restore last used project
+        last_project = self.settings.value('current_project')
+        if last_project:
+            try:
+                index = self.project_list.index(last_project)
+                self.project_comboBox.setCurrentIndex(index)
+            except ValueError:
+                pass
+
         self.update_project()
 
     def update_project(self):
         self.clear_displayed_data()
         project_name = self.project_comboBox.currentText()
+        self.settings.setValue('current_project', project_name)
         if project_name != "":
             self.project = self.connection.get_project(project_name)
         else:
             self.project = None
-
 
     def list_resources(self):
         if not self.project:
