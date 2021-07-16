@@ -127,17 +127,19 @@ class RepositoryWindow(QDialog):
         self.mainWindow = mainWindow
 
     def add_repository(self):
+        #TODO : detect the adapter mandatory attributes and show them in the interface
         try:
             self.mainWindow.connection.add_repository(
-                name = self.name_lineEdit.text(),
-                adapter = self.typeComboBox.currentText(),
-                login = self.username_lineEdit.text(),
-                password = self.password_lineEdit.text(),
-                #TODO : convert settings to a dict
-                settings = self.settings_textEdit.toPlainText()
+                name=self.name_lineEdit.text(),
+                adapter=self.typeComboBox.currentText(),
+                login=self.username_lineEdit.text(),
+                password=self.password_lineEdit.text(),
+                **text_settings_to_dict(self.settings_textEdit.toPlainText())
             )
         except Exception as ex:
             print_exception(ex)
+        message_user("Repository successfully added " + self.name_lineEdit.text(), "INFO")
+        self.close()
 
 
 class ConnectWindow(QDialog):
