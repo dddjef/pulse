@@ -1135,7 +1135,6 @@ class Connection:
         if name in self.repositories:
             raise PulseError("Repository already exists : " + name)
         # test valid settings
-        print(settings)
         repository = import_adapter("repository", adapter).Repository(settings=settings, login=login, password=password)
         repository.test_settings()
         # write repo settings to db config

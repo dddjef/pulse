@@ -12,7 +12,7 @@ import os
 
 
 LOG = "interface"
-
+SETTINGS_DEFAULT_TEXT = "attribute = value"
 
 class PulseItem(QTreeWidgetItem):
     def __init__(self, parent, pulse_node):
@@ -125,6 +125,8 @@ class RepositoryWindow(QDialog):
         self.saveButton.clicked.connect(self.add_repository)
         self.typeComboBox.addItems(pulse.get_adapter_list("repository"))
         self.mainWindow = mainWindow
+        self.settings_textEdit.setPlaceholderText(SETTINGS_DEFAULT_TEXT)
+
 
     def add_repository(self):
         #TODO : detect the adapter mandatory attributes and show them in the interface
@@ -149,6 +151,7 @@ class ConnectWindow(QDialog):
         self.connectButton.clicked.connect(self.connect_button)
         self.typeComboBox.addItems(pulse.get_adapter_list("database"))
         self.mainWindow = mainWindow
+        self.settings_textEdit.setPlaceholderText(SETTINGS_DEFAULT_TEXT)
 
     def connect_button(self):
         try:
