@@ -10,8 +10,6 @@ from PyQt5.QtCore import QSettings
 import traceback
 import os
 
-#TODO : add create template resource funtion
-
 LOG = "interface"
 SETTINGS_DEFAULT_TEXT = "attribute = value"
 
@@ -39,6 +37,41 @@ def print_exception(exception):
     if LOG == "interface":
         message_user(str(exception), message_type=type(exception).__name__)
         traceback.print_exc()
+
+
+class CreateResourceTemplateWindow(QDialog):
+    #TODO : add the create from another resource feature
+    def __init__(self, mainWindow):
+        super(CreateResourceTemplateWindow, self).__init__()
+        loadUi("create_resource_template.ui", self)
+        self.mainWindow = mainWindow
+        # add the repository choice
+        self.repositories = list(mainWindow.connection.get_repositories().keys())
+        display_repo_names = []
+        i = 0
+        default_repository_index = 0
+        for repo_name in self.repositories:
+            if repo_name == mainWindow.project.cfg.default_repository:
+                repo_name = repo_name + " (default)"
+                default_repository_index = i
+            display_repo_names.append(repo_name)
+            i += 1
+        self.repository_comboBox.addItems(display_repo_names)
+        self.repository_comboBox.setCurrentIndex(default_repository_index)
+        self.create_pushButton.clicked.connect(self.create_template)
+
+    def create_template(self):
+        try:
+            new_resource = self.mainWindow.project.create_template(
+                self.type_lineEdit.text(),
+                repository=self.repositories[self.repository_comboBox.currentIndex()]
+            )
+        except Exception as e:
+            print_exception(e)
+            return
+        resource_item = PulseItem([new_resource.uri], new_resource)
+        self.mainWindow.treeWidget.addTopLevelItem(resource_item)
+        self.close()
 
 
 class CreateResourceWindow(QDialog):
@@ -209,6 +242,7 @@ class MainWindow(QMainWindow):
         self.createProject_action.triggered.connect(self.executeCreateProjectPage)
         self.createRepository_action.triggered.connect(self.executeRepositoryPage)
         self.createResource_action.triggered.connect(self.create_resource)
+        self.createResourceTemplate_action.triggered.connect(self.create_template)
 
         self.listResources_pushButton.clicked.connect(self.list_resources)
         self.project_comboBox.activated.connect(self.update_project)
@@ -343,7 +377,6 @@ class MainWindow(QMainWindow):
             connect_page.password_lineEdit.setText(self.settings.value('password'))
             connect_page.settings_textEdit.setPlainText(self.settings.value('connection_settings'))
         except Exception as ex:
-            print(Exception)
             pass
         connect_page.exec_()
 
@@ -389,6 +422,12 @@ class MainWindow(QMainWindow):
             entity_name = item.pulse_node.entity
         dialog = CreateResourceWindow(self, entity_name)
         dialog.exec_()
+
+    def create_template(self, item=None):
+        dialog = CreateResourceTemplateWindow(self)
+        dialog.exec_()
+
+
 
     def getParentPath(self, item):
         def getParent(item, outstring):
