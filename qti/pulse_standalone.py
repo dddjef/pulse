@@ -245,6 +245,9 @@ class MainWindow(QMainWindow):
         self.createResourceTemplate_action.triggered.connect(self.create_template)
 
         self.listResources_pushButton.clicked.connect(self.list_resources)
+        self.filterEntity_lineEdit.returnPressed.connect(self.list_resources)
+        self.filterType_lineEdit.returnPressed.connect(self.list_resources)
+
         self.project_comboBox.activated.connect(self.update_project)
 
         self.connection = None
@@ -315,8 +318,13 @@ class MainWindow(QMainWindow):
             return
         self.treeWidget.clear()
         project_name = self.project_comboBox.currentText()
-        filter = self.filterEntity_lineEdit.text() + "-" + self.filterType_lineEdit.text()
-        resources = self.connection.db.find_uris(project_name, "Resource", filter)
+        filter_entity = self.filterEntity_lineEdit.text()
+        if filter_entity == "":
+            filter_entity = "*"
+        filter_type = self.filterType_lineEdit.text()
+        if filter_type == "":
+            filter_type = "*"
+        resources = self.connection.db.find_uris(project_name, "Resource", filter_entity + "-" + filter_type)
         try:
             for resource_uri in resources:
                 uri_dict = pulse_uri.convert_to_dict(resource_uri)
@@ -426,8 +434,6 @@ class MainWindow(QMainWindow):
     def create_template(self, item=None):
         dialog = CreateResourceTemplateWindow(self)
         dialog.exec_()
-
-
 
     def getParentPath(self, item):
         def getParent(item, outstring):
