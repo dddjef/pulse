@@ -1,7 +1,7 @@
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QDialog, QTreeWidgetItem, QMenu, QAction, QMainWindow
+from PyQt5.QtWidgets import QApplication, QDialog, QTreeWidgetItem, QMenu, QMainWindow
 from PyQt5.QtCore import Qt
 from functools import partial
 import pulse.api as pulse
@@ -29,29 +29,26 @@ def text_settings_to_dict(text):
     return settings
 
 
-def message_user(message_text, message_type=""):
-    mainwindow.message_label.setText(message_type + ": " + message_text)
-
-
-def print_exception(exception):
+def print_exception(exception, window=None):
     if LOG == "interface":
-        message_user(str(exception), message_type=type(exception).__name__)
+        window.message_user(str(exception), message_type=type(exception).__name__)
         traceback.print_exc()
 
 
+# TODO : add the create from another resource feature
 class CreateResourceTemplateWindow(QDialog):
-    #TODO : add the create from another resource feature
-    def __init__(self, mainWindow):
+
+    def __init__(self, main_window):
         super(CreateResourceTemplateWindow, self).__init__()
         loadUi("create_resource_template.ui", self)
-        self.mainWindow = mainWindow
+        self.mainWindow = main_window
         # add the repository choice
-        self.repositories = list(mainWindow.connection.get_repositories().keys())
+        self.repositories = list(main_window.connection.get_repositories().keys())
         display_repo_names = []
         i = 0
         default_repository_index = 0
         for repo_name in self.repositories:
-            if repo_name == mainWindow.project.cfg.default_repository:
+            if repo_name == main_window.project.cfg.default_repository:
                 repo_name = repo_name + " (default)"
                 default_repository_index = i
             display_repo_names.append(repo_name)
@@ -66,34 +63,39 @@ class CreateResourceTemplateWindow(QDialog):
                 self.type_lineEdit.text(),
                 repository=self.repositories[self.repository_comboBox.currentIndex()]
             )
-        except Exception as e:
-            print_exception(e)
+        except Exception as ex:
+            print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
         self.mainWindow.treeWidget.addTopLevelItem(resource_item)
         self.close()
 
 
+# TODO : add the create from another resource feature
 class CreateResourceWindow(QDialog):
-    #TODO : add the create from another resource feature
-    def __init__(self, mainWindow, entity_name):
+    def __init__(self, main_window, entity_name):
         super(CreateResourceWindow, self).__init__()
         loadUi("create_resource.ui", self)
-        self.mainWindow = mainWindow
-        self.typeFromTemplate_radioButton.clicked.connect(self.typeFromTemplateChecked)
-        self.typeCustom_radioButton.clicked.connect(self.typeCustomChecked)
+        self.mainWindow = main_window
+        self.typeFromTemplate_radioButton.clicked.connect(self.type_from_template_checked)
+        self.typeCustom_radioButton.clicked.connect(self.type_custom_checked)
         self.entityName_lineEdit.setText(entity_name)
         self.createResource_pushButton.clicked.connect(self.create_resource)
-        self.template_types = [pulse_uri.convert_to_dict(x)["resource_type"] for x in self.mainWindow.connection.db.find_uris(mainWindow.project.name, "Resource", "_template-*")]
+        self.template_types = [
+            pulse_uri.convert_to_dict(x)["resource_type"] for x in self.mainWindow.connection.db.find_uris(
+                main_window.project.name,
+                "Resource",
+                "_template-*"
+            )]
         self.typeTemplate_comboBox.addItems(self.template_types)
         self.repository_comboBox.clear()
         # add the repository choice
-        self.repositories = list(mainWindow.connection.get_repositories().keys())
+        self.repositories = list(main_window.connection.get_repositories().keys())
         display_repo_names = []
         i = 0
         default_repository_index = 0
         for repo_name in self.repositories:
-            if repo_name == mainWindow.project.cfg.default_repository:
+            if repo_name == main_window.project.cfg.default_repository:
                 repo_name = repo_name + " (default)"
                 default_repository_index = i
             display_repo_names.append(repo_name)
@@ -107,7 +109,7 @@ class CreateResourceWindow(QDialog):
             entity_type = self.typeTemplate_comboBox.currentText()
         else:
             entity_type = self.typeCustom_lineEdit.text()
-        #TODO : check the input strings are valid
+        # TODO : check the input strings are valid
 
         try:
             new_resource = self.mainWindow.project.create_resource(
@@ -115,30 +117,31 @@ class CreateResourceWindow(QDialog):
                 entity_type,
                 repository=self.repositories[self.repository_comboBox.currentIndex()]
             )
-        except Exception as e:
-            print_exception(e)
+        except Exception as ex:
+            print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
         self.mainWindow.treeWidget.addTopLevelItem(resource_item)
         self.close()
 
-    def typeFromTemplateChecked(self):
+    def type_from_template_checked(self):
         self.typeTemplate_comboBox.setEnabled(True)
         self.typeCustom_lineEdit.setEnabled(False)
 
-    def typeCustomChecked(self):
+    def type_custom_checked(self):
         self.typeTemplate_comboBox.setEnabled(False)
         self.typeCustom_lineEdit.setEnabled(True)
 
+
+# TODO : add a tooltip to explain how to add an env var in path
 class ProjectWindow(QDialog):
-    def __init__(self, mainWindow):
-        #TODO : add a tooltip to explain how to add an env var in pathes
+    def __init__(self, main_window):
         super(ProjectWindow, self).__init__()
         loadUi("create_project.ui", self)
         self.createProject_pushButton.clicked.connect(self.create_project)
-        self.mainWindow = mainWindow
+        self.mainWindow = main_window
         self.repository_comboBox.clear()
-        self.repository_comboBox.addItems(mainWindow.connection.get_repositories().keys())
+        self.repository_comboBox.addItems(main_window.connection.get_repositories().keys())
         self.sandboxPath_lineEdit.setText(os.path.join(os.path.expanduser("~"), "pulse_sandbox"))
         self.versionPrefix_lineEdit.setText(pulse.DEFAULT_VERSION_PREFIX)
         self.versionPadding_spinBox.setValue(pulse.DEFAULT_VERSION_PADDING)
@@ -163,27 +166,26 @@ class ProjectWindow(QDialog):
                 version_prefix=self.versionPrefix_lineEdit.text()
             )
 
-            message_user("project " + self.name_lineEdit.text() + " successfully created")
+            self.mainWindow.message_user("project " + self.name_lineEdit.text() + " successfully created")
             self.close()
             self.mainWindow.project_comboBox.addItem(self.name_lineEdit.text())
             self.mainWindow.project_comboBox.setCurrentIndex(self.mainWindow.project_comboBox.count() - 1)
             self.mainWindow.update_project()
-        except Exception as e:
-            print_exception(e)
+        except Exception as ex:
+            print_exception(ex, self.mainWindow)
 
 
 class RepositoryWindow(QDialog):
-    def __init__(self, mainWindow):
+    def __init__(self, main_window):
         super(RepositoryWindow, self).__init__()
         loadUi("create_repository.ui", self)
         self.saveButton.clicked.connect(self.add_repository)
         self.typeComboBox.addItems(pulse.get_adapter_list("repository"))
-        self.mainWindow = mainWindow
+        self.mainWindow = main_window
         self.settings_textEdit.setPlaceholderText(SETTINGS_DEFAULT_TEXT)
 
-
     def add_repository(self):
-        #TODO : CBB detect the adapter mandatory attributes and show them in the interface
+        # TODO : CBB detect the adapter mandatory attributes and show them in the interface
         try:
             self.mainWindow.connection.add_repository(
                 name=self.name_lineEdit.text(),
@@ -192,32 +194,32 @@ class RepositoryWindow(QDialog):
                 password=self.password_lineEdit.text(),
                 **text_settings_to_dict(self.settings_textEdit.toPlainText())
             )
+            self.mainWindow.message_user("Repository successfully added " + self.name_lineEdit.text(), "INFO")
+            # TODO: CBB ask a confirmation if the repository is not reachable
+            self.close()
         except Exception as ex:
-            print_exception(ex)
-        message_user("Repository successfully added " + self.name_lineEdit.text(), "INFO")
-        #TODO: CBB ask a confirmation if the repository is not reachable
-        self.close()
+            print_exception(ex, self.mainWindow)
 
 
 class ConnectWindow(QDialog):
-    def __init__(self, mainWindow):
+    def __init__(self, main_window):
         super(ConnectWindow, self).__init__()
         loadUi("connect_database.ui", self)
         self.connectButton.clicked.connect(self.connect_button)
         self.typeComboBox.addItems(pulse.get_adapter_list("database"))
-        self.mainWindow = mainWindow
+        self.mainWindow = main_window
         self.settings_textEdit.setPlaceholderText(SETTINGS_DEFAULT_TEXT)
 
     def connect_button(self):
         try:
-            self.mainWindow.updateConnection(
+            self.mainWindow.update_connection(
                 self.typeComboBox.currentText(),
                 self.path_lineEdit.text(),
                 self.username_lineEdit.text(),
                 self.password_lineEdit.text(),
                 self.settings_textEdit.toPlainText()
             )
-            #TODO : test connection quality before going further
+            # TODO : test connection quality before going further
             if self.saveConnectionSettingscheckBox.isChecked:
                 self.mainWindow.settings.setValue('db_type', self.typeComboBox.currentText())
                 self.mainWindow.settings.setValue('path', self.path_lineEdit.text())
@@ -226,21 +228,21 @@ class ConnectWindow(QDialog):
                 self.mainWindow.settings.setValue('connection_settings', self.settings_textEdit.toPlainText())
             self.close()
         except Exception as ex:
-            print_exception(ex)
+            print_exception(ex, self.mainWindow)
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         loadUi("main_window.ui", self)
-        self.treeWidget.itemClicked.connect(self.onItemClicked)
+        self.treeWidget.itemClicked.connect(self.on_item_clicked)
         self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
         self.treeWidget.setColumnCount(1)
 
-        self.actionConnect_to_Pulse_Server.triggered.connect(self.executeConnectPage)
-        self.createProject_action.triggered.connect(self.executeCreateProjectPage)
-        self.createRepository_action.triggered.connect(self.executeRepositoryPage)
+        self.actionConnect_to_Pulse_Server.triggered.connect(self.open_connect_dialog)
+        self.createProject_action.triggered.connect(self.open_create_project_dialog)
+        self.createRepository_action.triggered.connect(self.open_repository_page)
         self.createResource_action.triggered.connect(self.create_resource)
         self.createResourceTemplate_action.triggered.connect(self.create_template)
 
@@ -257,36 +259,39 @@ class MainWindow(QMainWindow):
         try:
             self.resize(self.settings.value('window size'))
             self.move(self.settings.value('window position'))
-        except:
-            pass
+        except Exception as ex:
+            print_exception(ex, self)
         try:
-            self.updateConnection(
+            self.update_connection(
                 self.settings.value('db_type'),
                 self.settings.value('path'),
                 self.settings.value('username'),
                 self.settings.value('password'),
                 self.settings.value('connection_settings')
             )
-        except:
-            pass
+        except Exception as ex:
+            print_exception(ex, self)
         self.show()
+
+    def message_user(self, message_text, message_type=""):
+        self.message_label.setText(message_type + ": " + message_text)
 
     def clear_displayed_data(self):
         self.treeWidget.clear()
         self.tableWidget.setRowCount(0)
 
-    def updateConnection(self, db_type, path, username, password, text_settings):
+    def update_connection(self, db_type, path, username, password, text_settings):
         settings = text_settings_to_dict(text_settings)
         try:
             self.connection = pulse.Connection(db_type, path, username, password, **settings)
-        except Exception as e:
-            print_exception(e)
+        except Exception as ex:
+            print_exception(ex, self)
             self.setWindowTitle("Disconnected")
             return False
         self.setWindowTitle("Connected -- " + self.connection.path)
         self.project_list = self.connection.get_projects()
         self.update_project_list()
-        message_user("Successfull connection", "INFO")
+        self.message_user("Successful connection", "INFO")
         return True
 
     def update_project_list(self):
@@ -339,17 +344,21 @@ class MainWindow(QMainWindow):
                     commit_item = PulseItem(["V" + version.zfill(3)], commit)
                     resource_item.addChild(commit_item)
 
-                    for product_uri in self.connection.db.find_uris(project_name, "CommitProduct", resource_uri + ".*@" + version):
+                    for product_uri in self.connection.db.find_uris(
+                            project_name,
+                            "CommitProduct",
+                            resource_uri + ".*@" + version
+                    ):
                         product_type = pulse_uri.convert_to_dict(product_uri)["product_type"]
                         product = pulse.CommitProduct(commit, product_type)
                         product_item = PulseItem([product_type], product)
                         commit_item.addChild(product_item)
-        except Exception as e:
-            print_exception(e)
+        except Exception as ex:
+            print_exception(ex, self)
             return
-        message_user(str(len(resources)) + " Resource(s) listed", "INFO")
+        self.message_user(str(len(resources)) + " Resource(s) listed", "INFO")
 
-    def showDetails(self, node, properties):
+    def show_details(self, node, properties):
         self.tableWidget.setRowCount(len(properties))
         property_index = 0
         for property_name in properties:
@@ -362,22 +371,22 @@ class MainWindow(QMainWindow):
         self.tableWidget.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.Stretch)
 
-    def onItemClicked(self):
+    def on_item_clicked(self):
         item = self.treeWidget.currentItem()
         if isinstance(item.pulse_node, pulse.Resource):
-            self.showDetails(item.pulse_node, [
+            self.show_details(item.pulse_node, [
                 "last_version",
                 "repository",
                 "resource_template",
                 "lock_user"
             ])
         if isinstance(item.pulse_node, pulse.Commit):
-            self.showDetails(item.pulse_node, [
+            self.show_details(item.pulse_node, [
                 "comment",
                 "products_inputs",
             ])
 
-    def executeConnectPage(self, checked=None):
+    def open_connect_dialog(self):
         connect_page = ConnectWindow(self)
         try:
             connect_page.path_lineEdit.setText(self.settings.value('path'))
@@ -385,15 +394,15 @@ class MainWindow(QMainWindow):
             connect_page.password_lineEdit.setText(self.settings.value('password'))
             connect_page.settings_textEdit.setPlainText(self.settings.value('connection_settings'))
         except Exception as ex:
-            pass
+            print_exception(ex, self)
         connect_page.exec_()
 
-    def executeCreateProjectPage(self):
-        #TODO : check there's an exisiting repository before opening
+    def open_create_project_dialog(self):
+        # TODO : check there's an exiting repository before opening
         page = ProjectWindow(self)
         page.exec_()
 
-    def executeRepositoryPage(self):
+    def open_repository_page(self):
         page = RepositoryWindow(self)
         page.exec_()
 
@@ -403,24 +412,23 @@ class MainWindow(QMainWindow):
         item = self.treeWidget.currentItem()
         item1 = self.treeWidget.itemAt(pos)
 
-        popMenu = QMenu(self.treeWidget)
+        rc_menu = QMenu(self.treeWidget)
 
         if not item or not item1:
-            action = popMenu.addAction(self.tr("Create Resource"))
+            action = rc_menu.addAction(self.tr("Create Resource"))
             action.triggered.connect(partial(self.create_resource, None))
         elif isinstance(item.pulse_node, pulse.Resource):
-            action = popMenu.addAction(self.tr("Create Resource"))
+            action = rc_menu.addAction(self.tr("Create Resource"))
             action.triggered.connect(partial(self.create_resource, item))
         elif isinstance(item.pulse_node, pulse.Commit):
-            action = popMenu.addAction(self.tr("Commit Action"))
-            action.triggered.connect(partial(self.TreeItem_Add, item))
+            action = rc_menu.addAction(self.tr("Commit Action"))
+            action.triggered.connect(partial(self.add_tree_item, item))
         elif isinstance(item.pulse_node, pulse.CommitProduct):
-            action = popMenu.addAction(self.tr("Product Action"))
-            action.triggered.connect(partial(self.TreeItem_Add, item))
-        popMenu.exec_(self.treeWidget.mapToGlobal(pos))
+            action = rc_menu.addAction(self.tr("Product Action"))
+            action.triggered.connect(partial(self.add_tree_item, item))
+        rc_menu.exec_(self.treeWidget.mapToGlobal(pos))
 
-
-    def TreeItem_Add(self, item):
+    def add_tree_item(self, item):
         print(item.pulse_node)
 
     def create_resource(self, item=None):
@@ -435,16 +443,6 @@ class MainWindow(QMainWindow):
         dialog = CreateResourceTemplateWindow(self)
         dialog.exec_()
 
-    def getParentPath(self, item):
-        def getParent(item, outstring):
-            if item.parent() is None:
-                return outstring
-            outstring = item.parent.text(0) + "/" + outstring
-            return getParent(item.parent, outstring)
-
-        output = getParent(item, item.text(0))
-        return output
-
     def closeEvent(self, event):
         self.settings.setValue('window size', self.size())
         self.settings.setValue('window position', self.pos())
@@ -452,12 +450,10 @@ class MainWindow(QMainWindow):
 
 
 app = QApplication(sys.argv)
-try:
-    mainwindow = MainWindow()
-except Exception as e:
-    traceback.print_exc()
+main_window_app = MainWindow()
 
 try:
     sys.exit(app.exec_())
-except:
+except Exception as exit_exception:
     print('exiting')
+    print(str(exit_exception))
