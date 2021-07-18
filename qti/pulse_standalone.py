@@ -417,12 +417,17 @@ class MainWindow(QMainWindow):
         if not item or not item1:
             action = rc_menu.addAction(self.tr("Create Resource"))
             action.triggered.connect(partial(self.create_resource, None))
+
         elif isinstance(item.pulse_node, pulse.Resource):
             action = rc_menu.addAction(self.tr("Create Resource"))
             action.triggered.connect(partial(self.create_resource, item))
+            action2 = rc_menu.addAction(self.tr("Check out last version"))
+            action2.triggered.connect(partial(self.checkout, item))
+
         elif isinstance(item.pulse_node, pulse.Commit):
             action = rc_menu.addAction(self.tr("Commit Action"))
             action.triggered.connect(partial(self.add_tree_item, item))
+
         elif isinstance(item.pulse_node, pulse.CommitProduct):
             action = rc_menu.addAction(self.tr("Product Action"))
             action.triggered.connect(partial(self.add_tree_item, item))
@@ -430,6 +435,13 @@ class MainWindow(QMainWindow):
 
     def add_tree_item(self, item):
         print(item.pulse_node)
+
+    def checkout(self, item):
+        try:
+            work = item.pulse_node.checkout()
+            self.message_user("Checkout to :" + work.directory)
+        except Exception as ex:
+            print_exception(ex, self)
 
     def create_resource(self, item=None):
         if not item:
