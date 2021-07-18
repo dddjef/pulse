@@ -7,6 +7,7 @@ from functools import partial
 import pulse.api as pulse
 import pulse.uri_standards as pulse_uri
 from PyQt5.QtCore import QSettings
+from PyQt5.QtGui import QIcon
 import traceback
 import os
 
@@ -255,6 +256,7 @@ class MainWindow(QMainWindow):
         self.connection = None
         self.project_list = []
         self.project = None
+        self.local_products = []
         self.settings = QSettings('pulse_standalone', 'Main')
         try:
             self.resize(self.settings.value('window size'))
@@ -315,6 +317,7 @@ class MainWindow(QMainWindow):
         self.settings.setValue('current_project', project_name)
         if project_name != "":
             self.project = self.connection.get_project(project_name)
+            self.local_products = self.project.get_local_commit_products()
         else:
             self.project = None
 
@@ -352,6 +355,8 @@ class MainWindow(QMainWindow):
                         product_type = pulse_uri.convert_to_dict(product_uri)["product_type"]
                         product = pulse.CommitProduct(commit, product_type)
                         product_item = PulseItem([product_type], product)
+                        if product in self.local_products:
+                            product_item.setIcon(QIcon.fromTheme("edit-undo"))
                         commit_item.addChild(product_item)
         except Exception as ex:
             print_exception(ex, self)
@@ -429,12 +434,19 @@ class MainWindow(QMainWindow):
             action.triggered.connect(partial(self.add_tree_item, item))
 
         elif isinstance(item.pulse_node, pulse.CommitProduct):
-            action = rc_menu.addAction(self.tr("Product Action"))
-            action.triggered.connect(partial(self.add_tree_item, item))
+            action = rc_menu.addAction(self.tr("Download Product"))
+            action.triggered.connect(partial(self.download_product, item))
         rc_menu.exec_(self.treeWidget.mapToGlobal(pos))
 
     def add_tree_item(self, item):
         print(item.pulse_node)
+
+    def download_product(self, item):
+        try:
+            product_path = item.pulse_node.download()
+            self.message_user("downloaded to " + product_path)
+        except Exception as ex:
+            print_exception(ex, self)
 
     def checkout(self, item):
         try:
