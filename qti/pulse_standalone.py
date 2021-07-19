@@ -14,17 +14,6 @@ import os
 LOG = "interface"
 SETTINGS_DEFAULT_TEXT = "attribute = value"
 
-###########
-## avoir un template avec des produits?
-## permettrait d'avoir une creation par défaut des produits attendus sur toute nouvelle version (option pour ne pas créer de produit)
-### La mise à jour du template qui ajoute de nouveaux produits se repercuteraient sur les nouvelles versions
-### OU BIEN : on recrée les derniers produits dès le checkout (option pour ne pas le faire). De cette façon les workflow
-### plus custom pourraient être supportés (mais pas d'update generale du comportement de tel type de work)
-
-## permettrait d'avoir une V000 avec des produits fallback
-### à voir si ce premier commit est automatisé ?
-#### cela peut être une option à la création de l'asset (créer une v zero)
-
 
 class PulseItem(QTreeWidgetItem):
     def __init__(self, parent, pulse_node):
@@ -69,6 +58,7 @@ class CreateResourceTemplateWindow(QDialog):
         self.repository_comboBox.setCurrentIndex(default_repository_index)
         self.create_pushButton.clicked.connect(self.create_template)
 
+    # TODO : create template did crash with a vanilla app session
     def create_template(self):
         try:
             new_resource = self.mainWindow.project.create_template(
@@ -301,7 +291,6 @@ class MainWindow(QMainWindow):
             self.message_label.setStyleSheet("")
         else:
             self.message_label.setStyleSheet("background-color: pink;")
-
 
     def clear_displayed_data(self):
         self.current_treeWidget.clear()
