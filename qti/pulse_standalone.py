@@ -1,7 +1,7 @@
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QDialog, QTreeWidgetItem, QMenu, QMainWindow
+from PyQt5.QtWidgets import QApplication, QDialog, QTreeWidgetItem, QMenu, QMainWindow, QInputDialog
 from PyQt5.QtCore import Qt
 from functools import partial
 import pulse.api as pulse
@@ -13,6 +13,17 @@ import os
 
 LOG = "interface"
 SETTINGS_DEFAULT_TEXT = "attribute = value"
+
+###########
+## avoir un template avec des produits?
+## permettrait d'avoir une creation par défaut des produits attendus sur toute nouvelle version (option pour ne pas créer de produit)
+### La mise à jour du template qui ajoute de nouveaux produits se repercuteraient sur les nouvelles versions
+### OU BIEN : on recrée les derniers produits dès le checkout (option pour ne pas le faire). De cette façon les workflow
+### plus custom pourraient être supportés (mais pas d'update generale du comportement de tel type de work)
+
+## permettrait d'avoir une V000 avec des produits fallback
+### à voir si ce premier commit est automatisé ?
+#### cela peut être une option à la création de l'asset (créer une v zero)
 
 
 class PulseItem(QTreeWidgetItem):
@@ -239,12 +250,12 @@ class MainWindow(QMainWindow):
         self.current_treeWidget = self.project_treeWidget
         self.current_tableWidget = self.project_tableWidget
         
-        self.project_treeWidget.itemClicked.connect(self.on_tree_clicked)
+        self.project_treeWidget.itemClicked.connect(self.show_current_item_details)
         self.project_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.project_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
         self.project_treeWidget.setColumnCount(1)
 
-        self.sandbox_treeWidget.itemClicked.connect(self.on_tree_clicked)
+        self.sandbox_treeWidget.itemClicked.connect(self.show_current_item_details)
         self.sandbox_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.sandbox_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
         self.sandbox_treeWidget.setColumnCount(1)
@@ -347,7 +358,7 @@ class MainWindow(QMainWindow):
                 for commit_uri in self.connection.db.find_uris(project_name, "Commit", resource_uri + "@*"):
                     version = commit_uri.split("@")[-1]
                     commit = resource.get_commit(int(version))
-
+                    # TODO : format version as project preferences
                     commit_item = PulseItem(["V" + version.zfill(3)], commit)
                     resource_item.addChild(commit_item)
 
@@ -365,6 +376,7 @@ class MainWindow(QMainWindow):
         except Exception as ex:
             print_exception(ex, self)
             return
+        self.current_tableWidget.setRowCount(0)
         self.message_user(str(len(resources)) + " Resource(s) listed", "INFO")
 
     def show_details(self, node, properties):
@@ -409,22 +421,19 @@ class MainWindow(QMainWindow):
                 uri_dict = pulse_uri.convert_to_dict(resource_uri)
                 resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
                 work = pulse.Work(resource).read()
-                resource_item = PulseItem([resource_uri], resource)
+                resource_item = PulseItem([resource_uri], work)
                 self.sandbox_treeWidget.addTopLevelItem(resource_item)
-                # TODO : format version as project preferences
-                version_item = PulseItem(["V" + str(work.version).zfill(3)], work)
-                resource_item.addChild(version_item)
-
                 for product_type in work.list_products():
                     product = work.get_product(product_type)
                     product_item = PulseItem([product_type], product)
-                    version_item.addChild(product_item)
+                    resource_item.addChild(product_item)
         except Exception as ex:
             print_exception(ex, self)
             return
+        self.current_tableWidget.setRowCount(0)
         self.message_user(str(len(resources_uri)) + " Work(s) listed", "INFO")
 
-    def on_tree_clicked(self):
+    def show_current_item_details(self):
         item = self.current_treeWidget.currentItem()
         if isinstance(item.pulse_node, pulse.Resource):
             self.show_details(item.pulse_node, [
@@ -489,10 +498,35 @@ class MainWindow(QMainWindow):
         elif isinstance(item.pulse_node, pulse.CommitProduct):
             action = rc_menu.addAction(self.tr("Download Product"))
             action.triggered.connect(partial(self.download_product, item))
+
+        elif isinstance(item.pulse_node, pulse.Work):
+            action = rc_menu.addAction(self.tr("Commit"))
+            action.triggered.connect(partial(self.commit_work, item))
+            action2 = rc_menu.addAction(self.tr("Create Product"))
+            action2.triggered.connect(partial(self.create_product, item))
         rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
 
     def add_tree_item(self, item):
         print(item.pulse_node)
+
+    def create_product(self, item):
+        product_type, ok = QInputDialog.getText(self, "Input", "Product Type")
+        if not ok:
+            return
+        try:
+            item.pulse_node.create_product(product_type)
+            self.message_user("Product Created " + product_type)
+        except Exception as ex:
+            print_exception(ex, self)
+        self.list_sandbox()
+
+    def commit_work(self, item):
+        try:
+            commit = item.pulse_node.commit()
+            self.message_user("commit to version " + str(commit.version))
+        except Exception as ex:
+            print_exception(ex, self)
+        self.list_sandbox()
 
     def download_product(self, item):
         try:
