@@ -400,6 +400,10 @@ class TestResources(unittest.TestCase):
         self.assertTrue(len(self.prj.list_products("anna*")) == 2)
         self.assertTrue(len(self.prj.list_products("an?a*")) == 2)
 
+    def test_project_list_works(self):
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_resource.checkout()
+        self.assertEqual(self.prj.get_local_works(), ['anna-mdl', 'anna-rigging'])
 
 if __name__ == '__main__':
     unittest.main()
