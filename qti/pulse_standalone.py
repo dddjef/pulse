@@ -297,6 +297,11 @@ class MainWindow(QMainWindow):
 
     def message_user(self, message_text, message_type=""):
         self.message_label.setText(message_type + ": " + message_text)
+        if message_type == "INFO":
+            self.message_label.setStyleSheet("")
+        else:
+            self.message_label.setStyleSheet("background-color: pink;")
+
 
     def clear_displayed_data(self):
         self.current_treeWidget.clear()
@@ -518,6 +523,7 @@ class MainWindow(QMainWindow):
             self.message_user("Product Created " + product_type)
         except Exception as ex:
             print_exception(ex, self)
+            return
         self.list_sandbox()
 
     def commit_work(self, item):
@@ -526,6 +532,7 @@ class MainWindow(QMainWindow):
             self.message_user("commit to version " + str(commit.version))
         except Exception as ex:
             print_exception(ex, self)
+            return
         self.list_sandbox()
 
     def download_product(self, item):
