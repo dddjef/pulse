@@ -355,8 +355,8 @@ class MainWindow(QMainWindow):
                         product_type = pulse_uri.convert_to_dict(product_uri)["product_type"]
                         product = pulse.CommitProduct(commit, product_type)
                         product_item = PulseItem([product_type], product)
-                        if product in self.local_products:
-                            product_item.setIcon(QIcon.fromTheme("edit-undo"))
+                        if product.uri in self.local_products:
+                            product_item.setIcon(0, QIcon(r'icons\folder.png'))
                         commit_item.addChild(product_item)
         except Exception as ex:
             print_exception(ex, self)
@@ -475,7 +475,6 @@ class MainWindow(QMainWindow):
 
 app = QApplication(sys.argv)
 main_window_app = MainWindow()
-
 try:
     sys.exit(app.exec_())
 except Exception as exit_exception:
