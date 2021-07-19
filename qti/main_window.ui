@@ -143,7 +143,7 @@
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <widget class="QTreeWidget" name="treeWidget">
+          <widget class="QTreeWidget" name="project_treeWidget">
            <property name="rootIsDecorated">
             <bool>true</bool>
            </property>
@@ -156,7 +156,7 @@
             </property>
            </column>
           </widget>
-          <widget class="QTableWidget" name="tableWidget">
+          <widget class="QTableWidget" name="project_tableWidget">
            <property name="autoFillBackground">
             <bool>false</bool>
            </property>
@@ -182,6 +182,46 @@
        <attribute name="title">
         <string>Sandbox</string>
        </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QSplitter" name="splitter_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <widget class="QTreeWidget" name="sandbox_treeWidget">
+           <property name="rootIsDecorated">
+            <bool>true</bool>
+           </property>
+           <property name="headerHidden">
+            <bool>true</bool>
+           </property>
+           <column>
+            <property name="text">
+             <string>projet</string>
+            </property>
+           </column>
+          </widget>
+          <widget class="QTableWidget" name="sandbox_tableWidget">
+           <property name="autoFillBackground">
+            <bool>false</bool>
+           </property>
+           <attribute name="verticalHeaderVisible">
+            <bool>false</bool>
+           </attribute>
+           <column>
+            <property name="text">
+             <string>property</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>value</string>
+            </property>
+           </column>
+          </widget>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>

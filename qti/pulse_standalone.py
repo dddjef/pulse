@@ -236,10 +236,18 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         loadUi("main_window.ui", self)
-        self.treeWidget.itemClicked.connect(self.on_item_clicked)
-        self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
-        self.treeWidget.setColumnCount(1)
+        self.current_treeWidget = self.project_treeWidget
+        self.current_tableWidget = self.project_tableWidget
+        
+        self.project_treeWidget.itemClicked.connect(self.on_tree_clicked)
+        self.project_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.project_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
+        self.project_treeWidget.setColumnCount(1)
+
+        self.sandbox_treeWidget.itemClicked.connect(self.on_tree_clicked)
+        self.sandbox_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.sandbox_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
+        self.sandbox_treeWidget.setColumnCount(1)
 
         self.actionConnect_to_Pulse_Server.triggered.connect(self.open_connect_dialog)
         self.createProject_action.triggered.connect(self.open_create_project_dialog)
@@ -252,6 +260,7 @@ class MainWindow(QMainWindow):
         self.filterType_lineEdit.returnPressed.connect(self.list_resources)
 
         self.project_comboBox.activated.connect(self.update_project)
+        self.tabWidget.currentChanged.connect(self.on_tab_change)
 
         self.connection = None
         self.project_list = []
@@ -279,8 +288,8 @@ class MainWindow(QMainWindow):
         self.message_label.setText(message_type + ": " + message_text)
 
     def clear_displayed_data(self):
-        self.treeWidget.clear()
-        self.tableWidget.setRowCount(0)
+        self.current_treeWidget.clear()
+        self.current_tableWidget.setRowCount(0)
 
     def update_connection(self, db_type, path, username, password, text_settings):
         settings = text_settings_to_dict(text_settings)
@@ -324,22 +333,17 @@ class MainWindow(QMainWindow):
     def list_resources(self):
         if not self.project:
             return
-        self.treeWidget.clear()
+        self.project_treeWidget.clear()
         project_name = self.project_comboBox.currentText()
-        filter_entity = self.filterEntity_lineEdit.text()
-        if filter_entity == "":
-            filter_entity = "*"
-        filter_type = self.filterType_lineEdit.text()
-        if filter_type == "":
-            filter_type = "*"
-        resources = self.connection.db.find_uris(project_name, "Resource", filter_entity + "-" + filter_type)
+        resources = self.connection.db.find_uris(project_name, "Resource", self.get_filter_string())
         try:
             for resource_uri in resources:
                 uri_dict = pulse_uri.convert_to_dict(resource_uri)
                 resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
                 resource_item = PulseItem([resource_uri], resource)
-                self.treeWidget.addTopLevelItem(resource_item)
+                self.project_treeWidget.addTopLevelItem(resource_item)
 
+                # TODO : get commit products should an api method
                 for commit_uri in self.connection.db.find_uris(project_name, "Commit", resource_uri + "@*"):
                     version = commit_uri.split("@")[-1]
                     commit = resource.get_commit(int(version))
@@ -364,20 +368,64 @@ class MainWindow(QMainWindow):
         self.message_user(str(len(resources)) + " Resource(s) listed", "INFO")
 
     def show_details(self, node, properties):
-        self.tableWidget.setRowCount(len(properties))
+        self.current_tableWidget.setRowCount(len(properties))
         property_index = 0
         for property_name in properties:
             value = getattr(node, property_name)
-            self.tableWidget.setItem(property_index, 0, QtWidgets.QTableWidgetItem(property_name))
-            self.tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(str(value)))
+            self.current_tableWidget.setItem(property_index, 0, QtWidgets.QTableWidgetItem(property_name))
+            self.current_tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(str(value)))
             property_index += 1
         # Table will fit the screen horizontally
-        self.tableWidget.horizontalHeader().setStretchLastSection(True)
-        self.tableWidget.horizontalHeader().setSectionResizeMode(
+        self.current_tableWidget.horizontalHeader().setStretchLastSection(True)
+        self.current_tableWidget.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.Stretch)
 
-    def on_item_clicked(self):
-        item = self.treeWidget.currentItem()
+    def on_tab_change(self, tab_index):
+        if tab_index == 0:
+            self.current_treeWidget = self.project_treeWidget
+            self.current_tableWidget = self.project_tableWidget
+            self.list_resources()
+        else:
+            self.current_treeWidget = self.sandbox_treeWidget
+            self.current_tableWidget = self.sandbox_tableWidget
+            self.list_sandbox()
+
+    def get_filter_string(self):
+        filter_entity = self.filterEntity_lineEdit.text()
+        if filter_entity == "":
+            filter_entity = "*"
+        filter_type = self.filterType_lineEdit.text()
+        if filter_type == "":
+            filter_type = "*"
+        return filter_entity + "-" + filter_type
+
+    def list_sandbox(self):
+        if not self.project:
+            return
+        self.sandbox_treeWidget.clear()
+        resources_uri = self.project.get_local_works()
+        try:
+            for resource_uri in resources_uri:
+                uri_dict = pulse_uri.convert_to_dict(resource_uri)
+                resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
+                work = pulse.Work(resource).read()
+                resource_item = PulseItem([resource_uri], resource)
+                self.sandbox_treeWidget.addTopLevelItem(resource_item)
+                # TODO : format version as project preferences
+                version_item = PulseItem(["V" + str(work.version).zfill(3)], work)
+                resource_item.addChild(version_item)
+
+                for product_type in work.list_products():
+                    product = work.get_product(product_type)
+                    product_item = PulseItem([product_type], product)
+                    version_item.addChild(product_item)
+        except Exception as ex:
+            print_exception(ex, self)
+            return
+        self.message_user(str(len(resources_uri)) + " Work(s) listed", "INFO")
+
+    def on_tree_clicked(self):
+        item = self.current_treeWidget.currentItem()
         if isinstance(item.pulse_node, pulse.Resource):
             self.show_details(item.pulse_node, [
                 "last_version",
@@ -389,6 +437,11 @@ class MainWindow(QMainWindow):
             self.show_details(item.pulse_node, [
                 "comment",
                 "products_inputs",
+            ])
+        if isinstance(item.pulse_node, pulse.Work):
+            self.show_details(item.pulse_node, [
+                "directory",
+                "version",
             ])
 
     def open_connect_dialog(self):
@@ -414,10 +467,10 @@ class MainWindow(QMainWindow):
     def tree_rc_menu(self, pos):
         if not self.project:
             return
-        item = self.treeWidget.currentItem()
-        item1 = self.treeWidget.itemAt(pos)
+        item = self.current_treeWidget.currentItem()
+        item1 = self.current_treeWidget.itemAt(pos)
 
-        rc_menu = QMenu(self.treeWidget)
+        rc_menu = QMenu(self.current_treeWidget)
 
         if not item or not item1:
             action = rc_menu.addAction(self.tr("Create Resource"))
@@ -436,7 +489,7 @@ class MainWindow(QMainWindow):
         elif isinstance(item.pulse_node, pulse.CommitProduct):
             action = rc_menu.addAction(self.tr("Download Product"))
             action.triggered.connect(partial(self.download_product, item))
-        rc_menu.exec_(self.treeWidget.mapToGlobal(pos))
+        rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
 
     def add_tree_item(self, item):
         print(item.pulse_node)
