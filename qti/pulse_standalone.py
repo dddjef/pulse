@@ -285,7 +285,7 @@ class MainWindow(QMainWindow):
             print_exception(ex, self)
         self.show()
 
-    def message_user(self, message_text, message_type=""):
+    def message_user(self, message_text, message_type="INFO"):
         self.message_label.setText(message_type + ": " + message_text)
         if message_type == "INFO":
             self.message_label.setStyleSheet("")
@@ -498,6 +498,8 @@ class MainWindow(QMainWindow):
             action.triggered.connect(partial(self.commit_work, item))
             action2 = rc_menu.addAction(self.tr("Create Product"))
             action2.triggered.connect(partial(self.create_product, item))
+            action3 = rc_menu.addAction(self.tr("Trash"))
+            action3.triggered.connect(partial(self.trash, item))
         rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
 
     def add_tree_item(self, item):
@@ -523,6 +525,22 @@ class MainWindow(QMainWindow):
             print_exception(ex, self)
             return
         self.list_sandbox()
+
+    def trash(self, item):
+
+        try:
+            trash_options = ("Keep work files in trash directory", "Delete files")
+            trash_option, ok = QInputDialog.getItem(self, "Confirm", "Do you want to :", trash_options, 0, False)
+            if not ok:
+                self.message_user("Trash process aborted")
+                return
+            no_backup = trash_option == trash_options[1]
+            item.pulse_node.trash(no_backup=no_backup)
+            self.list_sandbox()
+            self.message_user("Work trashed")
+        except Exception as ex:
+            print_exception(ex, self)
+            return
 
     def download_product(self, item):
         try:
