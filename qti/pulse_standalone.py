@@ -283,6 +283,7 @@ class MainWindow(QMainWindow):
             )
         except Exception as ex:
             print_exception(ex, self)
+        self.list_resources()
         self.show()
 
     def message_user(self, message_text, message_type="INFO"):
