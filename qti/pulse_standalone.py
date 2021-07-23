@@ -36,6 +36,12 @@ def print_exception(exception, window=None):
         traceback.print_exc()
 
 
+def set_tree_item_style(item, style):
+    if style == "downloaded":
+        item.setIcon(0, QIcon(r'icons\folder.png'))
+    else:
+        item.setIcon(0, QIcon())
+        
 # TODO : add the create from another resource feature
 class CreateResourceTemplateWindow(QDialog):
 
@@ -266,7 +272,6 @@ class MainWindow(QMainWindow):
         self.connection = None
         self.project_list = []
         self.project = None
-        self.local_products = []
         self.settings = QSettings('pulse_standalone', 'Main')
         try:
             self.resize(self.settings.value('window size'))
@@ -332,7 +337,6 @@ class MainWindow(QMainWindow):
         self.settings.setValue('current_project', project_name)
         if project_name != "":
             self.project = self.connection.get_project(project_name)
-            self.local_products = self.project.get_local_commit_products()
         else:
             self.project = None
 
@@ -341,6 +345,7 @@ class MainWindow(QMainWindow):
             return
         self.project_treeWidget.clear()
         project_name = self.project_comboBox.currentText()
+
         resources = self.connection.db.find_uris(project_name, "Resource", self.get_filter_string())
         try:
             for resource_uri in resources:
@@ -365,8 +370,8 @@ class MainWindow(QMainWindow):
                         product_type = pulse_uri.convert_to_dict(product_uri)["product_type"]
                         product = pulse.CommitProduct(commit, product_type)
                         product_item = PulseItem([product_type], product)
-                        if product.uri in self.local_products:
-                            product_item.setIcon(0, QIcon(r'icons\folder.png'))
+                        if product.uri in self.project.get_local_commit_products():
+                            set_tree_item_style(product_item, "downloaded")
                         commit_item.addChild(product_item)
         except Exception as ex:
             print_exception(ex, self)
@@ -548,6 +553,7 @@ class MainWindow(QMainWindow):
         try:
             product_path = item.pulse_node.download()
             self.message_user("downloaded to " + product_path)
+            set_tree_item_style(item, "downloaded")
         except Exception as ex:
             print_exception(ex, self)
 
@@ -555,7 +561,7 @@ class MainWindow(QMainWindow):
         try:
             item.pulse_node.remove_from_user_products()
             self.message_user("Product removed from local cache")
-            self.list_resources()
+            set_tree_item_style(item, None)
         except Exception as ex:
             print_exception(ex, self)
 
