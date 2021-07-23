@@ -92,10 +92,16 @@ class Product:
         self.parent = parent
         self.product_type = product_type
         self.directory = os.path.join(parent.get_products_directory(), product_type)
-        self.product_users_file = os.path.join(
+        self.product_users_file = os.path.normpath(os.path.join(
             self.parent.project.product_data_directory,
             fu.uri_to_json_filename(self.uri)
-        )
+        ))
+
+    def init_local_data_file(self):
+        """
+        create the local data file on user space
+        :return:
+        """
         if not os.path.isfile(self.product_users_file):
             fu.json_list_init(self.product_users_file)
 
@@ -161,6 +167,8 @@ class CommitProduct(PulseDbObject, Product):
         if not os.path.exists(self.parent.pulse_filepath):
             open(self.parent.pulse_filepath, 'a').close()
 
+        self.init_local_data_file()
+
         fu.write_data(self.product_users_file, [])
         for uri in self.products_inputs:
             product = self.project.get_product(uri)
@@ -196,11 +204,7 @@ class CommitProduct(PulseDbObject, Product):
                     product_input.remove_from_user_products(recursive_clean=True)
                 except PulseError:
                     pass
-        for path, subdirs, files in os.walk(self.directory):
-            for name in files:
-                filepath = os.path.join(path, name)
-                if filepath.endswith(".pipe"):
-                    os.chmod(filepath, 0o777)
+
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
         version_dir = os.path.dirname(self.directory)
@@ -368,6 +372,9 @@ class Work(WorkNode):
         if product_type in outputs:
             raise PulseError("product already exists : " + product_type)
         work_product = WorkProduct(self, product_type)
+        # create the pulse data file
+        work_product.init_local_data_file()
+
         os.makedirs(work_product.directory)
         pulse_filepath = os.path.join(self.get_products_directory(), pulse_filename)
         if not os.path.exists(pulse_filepath):
