@@ -491,9 +491,10 @@ class MainWindow(QMainWindow):
             action.triggered.connect(partial(self.add_tree_item, item))
 
         elif isinstance(item.pulse_node, pulse.CommitProduct):
-            action = rc_menu.addAction(self.tr("Download Product"))
+            action = rc_menu.addAction(self.tr("Download To Cache"))
             action.triggered.connect(partial(self.download_product, item))
-
+            action2 = rc_menu.addAction(self.tr("Remove From Cache"))
+            action2.triggered.connect(partial(self.remove_product, item))
         elif isinstance(item.pulse_node, pulse.Work):
             action = rc_menu.addAction(self.tr("Commit"))
             action.triggered.connect(partial(self.commit_work, item))
@@ -549,6 +550,15 @@ class MainWindow(QMainWindow):
             self.message_user("downloaded to " + product_path)
         except Exception as ex:
             print_exception(ex, self)
+
+    def remove_product(self, item):
+        try:
+            item.pulse_node.remove_from_user_products()
+            self.message_user("Product removed from local cache")
+            self.list_resources()
+        except Exception as ex:
+            print_exception(ex, self)
+
 
     def checkout(self, item):
         try:
