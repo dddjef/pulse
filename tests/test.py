@@ -117,7 +117,7 @@ class TestResources(unittest.TestCase):
 
     def test_delete_project(self):
         self.cnx.delete_project(test_project_name)
-        with self.assertRaises(PulseDatabaseMissingObject):
+        with self.assertRaises(PulseError):
             self.cnx.get_project(test_project_name)
 
     def test_template_resource(self):
