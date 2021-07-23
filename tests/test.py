@@ -390,6 +390,20 @@ class TestResources(unittest.TestCase):
         self.anna_mdl_work.trash()
         self.assertFalse(os.path.exists(product.directory))
         self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
+        self.assertFalse(os.path.exists(product.product_users_file))
+
+    def test_product_download(self):
+        self.anna_mdl_work.trash()
+        self.prj.purge_unused_user_products()
+        product = self.prj.get_product("anna-mdl.abc@1")
+        self.assertFalse(os.path.exists(product.directory))
+        self.assertFalse(os.path.exists(product.product_users_file))
+        product.download()
+        self.assertTrue(os.path.exists(product.directory))
+        self.assertTrue(os.path.exists(product.product_users_file))
+        product.remove_from_user_products()
+        self.assertFalse(os.path.exists(product.directory))
+        self.assertFalse(os.path.exists(product.product_users_file))
 
     def test_project_list_products(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
