@@ -523,6 +523,9 @@ class MainWindow(QMainWindow):
         rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
 
     def node_add_input(self, item):
+        # TODO : add input window should first try to get the product, and not close on error
+        # TODO : should launch a "select input product" window,
+        #  and get back to the project tab, waiting for user selection
         try:
             uri, ok = QInputDialog.getText(self, "Add Input", "Input URI")
             if not ok:
