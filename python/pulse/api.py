@@ -281,6 +281,7 @@ class WorkNode:
         return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
 
     def add_input(self, product):
+        # TODO : a work should not accept to add its own product as input
         """
         add a local product to work or product inputs list
 

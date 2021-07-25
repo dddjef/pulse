@@ -80,6 +80,32 @@ class CreateResourceTemplateWindow(QDialog):
         self.close()
 
 
+class AddInputWindow(QDialog):
+    def __init__(self, main_window, pulse_node):
+        QDialog.__init__(self, main_window)
+        loadUi("add_input.ui", self)
+        self.mainWindow = main_window
+        self.pulse_node = pulse_node
+        self.setWindowTitle(self.mainWindow.current_treeWidget.currentItem().text(0))
+        self.addInput_pushButton.clicked.connect(self.add_input)
+        self.cancel_pushButton.clicked.connect(self.cancel)
+
+    def add_input(self):
+        current_item = self.mainWindow.current_treeWidget.currentItem()
+        if not current_item:
+            self.label.setText("You have to select an item in the treeview")
+        elif not isinstance(current_item.pulse_node, pulse.Product):
+            self.label.setText("the selected item should be a product only")
+        else:
+            self.pulse_node.add_input(current_item.pulse_node)
+            self.mainWindow.message_user("Added to inputs : " + current_item.pulse_node.uri)
+            self.close()
+            # TODO : refresh the current tree view to show the downloaded product if needed
+
+    def cancel(self):
+        self.close()
+
+
 # TODO : add the create from another resource feature
 class CreateResourceWindow(QDialog):
     def __init__(self, main_window, entity_name):
@@ -493,7 +519,8 @@ class MainWindow(QMainWindow):
             action2.triggered.connect(partial(self.checkout, item))
 
         elif isinstance(item.pulse_node, pulse.Commit):
-            action = rc_menu.addAction(self.tr("Commit Action"))
+            pass
+            # action = rc_menu.addAction(self.tr("Commit Action"))
             # action.triggered.connect(partial(self.add_tree_item, item))
 
         elif isinstance(item.pulse_node, pulse.CommitProduct):
@@ -523,21 +550,8 @@ class MainWindow(QMainWindow):
         rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
 
     def node_add_input(self, item):
-        # TODO : add input window should first try to get the product, and not close on error
-        # TODO : should launch a "select input product" window,
-        #  and get back to the project tab, waiting for user selection
-        try:
-            uri, ok = QInputDialog.getText(self, "Add Input", "Input URI")
-            if not ok:
-                return
-            product = self.project.get_product(uri)
-            item.pulse_node.add_input(product)
-            self.show_current_item_details()
-            self.message_user("Added to input : " + uri)
-
-        except Exception as ex:
-            print_exception(ex, self)
-            return
+        input_window = AddInputWindow(self, item.pulse_node)
+        input_window.show()
 
     def explore(self, item):
         if not os.path.exists(item.pulse_node.directory):
