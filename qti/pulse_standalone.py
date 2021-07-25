@@ -1,7 +1,7 @@
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QDialog, QTreeWidgetItem, QMenu, QMainWindow, QInputDialog
+from PyQt5.QtWidgets import QApplication, QDialog, QTreeWidgetItem, QMenu, QMainWindow, QInputDialog, QMessageBox
 from PyQt5.QtCore import Qt
 from functools import partial
 import pulse.api as pulse
@@ -41,10 +41,10 @@ def set_tree_item_style(item, style):
         item.setIcon(0, QIcon(r'icons\folder.png'))
     else:
         item.setIcon(0, QIcon())
-        
+
+
 # TODO : add the create from another resource feature
 class CreateResourceTemplateWindow(QDialog):
-
     def __init__(self, main_window):
         super(CreateResourceTemplateWindow, self).__init__()
         loadUi("create_resource_template.ui", self)
@@ -493,24 +493,46 @@ class MainWindow(QMainWindow):
 
         elif isinstance(item.pulse_node, pulse.Commit):
             action = rc_menu.addAction(self.tr("Commit Action"))
-            action.triggered.connect(partial(self.add_tree_item, item))
+            # action.triggered.connect(partial(self.add_tree_item, item))
 
         elif isinstance(item.pulse_node, pulse.CommitProduct):
             action = rc_menu.addAction(self.tr("Download To Cache"))
             action.triggered.connect(partial(self.download_product, item))
             action2 = rc_menu.addAction(self.tr("Remove From Cache"))
             action2.triggered.connect(partial(self.remove_product, item))
+
+        elif isinstance(item.pulse_node, pulse.WorkProduct):
+            action = rc_menu.addAction(self.tr("Trash"))
+            action.triggered.connect(partial(self.trash_product, item))
+
         elif isinstance(item.pulse_node, pulse.Work):
             action = rc_menu.addAction(self.tr("Commit"))
             action.triggered.connect(partial(self.commit_work, item))
             action2 = rc_menu.addAction(self.tr("Create Product"))
             action2.triggered.connect(partial(self.create_product, item))
             action3 = rc_menu.addAction(self.tr("Trash"))
-            action3.triggered.connect(partial(self.trash, item))
+            action3.triggered.connect(partial(self.trash_work, item))
         rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
 
-    def add_tree_item(self, item):
-        print(item.pulse_node)
+    def trash_product(self, item):
+        try:
+            confirm = QMessageBox.question(
+                self,
+                'Confirm',
+                "Are you sure you want to thrash this product?",
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                QMessageBox.Cancel
+            )
+            if confirm == QMessageBox.Yes:
+                item.parent().pulse_node.trash_product(item.pulse_node.product_type)
+                self.list_sandbox()
+                self.message_user("Product trashed")
+            else:
+                self.message_user("Process aborted")
+
+        except Exception as ex:
+            print_exception(ex, self)
+            return
 
     def create_product(self, item):
         product_type, ok = QInputDialog.getText(self, "Input", "Product Type")
@@ -533,7 +555,7 @@ class MainWindow(QMainWindow):
             return
         self.list_sandbox()
 
-    def trash(self, item):
+    def trash_work(self, item):
 
         try:
             trash_options = ("Keep work files in trash directory", "Delete files")
@@ -564,7 +586,6 @@ class MainWindow(QMainWindow):
             set_tree_item_style(item, None)
         except Exception as ex:
             print_exception(ex, self)
-
 
     def checkout(self, item):
         try:
