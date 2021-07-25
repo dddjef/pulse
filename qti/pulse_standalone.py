@@ -10,6 +10,7 @@ from PyQt5.QtCore import QSettings
 from PyQt5.QtGui import QIcon
 import traceback
 import os
+import webbrowser
 
 LOG = "interface"
 SETTINGS_DEFAULT_TEXT = "attribute = value"
@@ -512,7 +513,15 @@ class MainWindow(QMainWindow):
             action2.triggered.connect(partial(self.create_product, item))
             action3 = rc_menu.addAction(self.tr("Trash"))
             action3.triggered.connect(partial(self.trash_work, item))
+            action4 = rc_menu.addAction(self.tr("Explore Directory"))
+            action4.triggered.connect(partial(self.explore, item))
         rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
+
+    def explore(self, item):
+        if not os.path.exists(item.pulse_node.directory):
+            self.message_user("Directory missing : " + item.pulse_node.directory, message_type="ERROR")
+            return
+        webbrowser.open(item.pulse_node.directory)
 
     def trash_product(self, item):
         try:
@@ -548,7 +557,13 @@ class MainWindow(QMainWindow):
 
     def commit_work(self, item):
         try:
-            commit = item.pulse_node.commit()
+            if not item.pulse_node.status():
+                self.message_user("No changes to commit. Process Aborted", message_type="ERROR")
+                return
+            comment, ok = QInputDialog.getText(self, "Commit", "Optional Comment")
+            if not ok:
+                return
+            commit = item.pulse_node.commit(comment=comment)
             self.message_user("commit to version " + str(commit.version))
         except Exception as ex:
             print_exception(ex, self)
