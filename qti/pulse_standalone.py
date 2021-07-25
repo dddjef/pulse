@@ -505,6 +505,8 @@ class MainWindow(QMainWindow):
         elif isinstance(item.pulse_node, pulse.WorkProduct):
             action = rc_menu.addAction(self.tr("Trash"))
             action.triggered.connect(partial(self.trash_product, item))
+            action2 = rc_menu.addAction(self.tr("Add Input"))
+            action2.triggered.connect(partial(self.node_add_input, item))
 
         elif isinstance(item.pulse_node, pulse.Work):
             action = rc_menu.addAction(self.tr("Commit"))
@@ -515,7 +517,24 @@ class MainWindow(QMainWindow):
             action3.triggered.connect(partial(self.trash_work, item))
             action4 = rc_menu.addAction(self.tr("Explore Directory"))
             action4.triggered.connect(partial(self.explore, item))
+            action5 = rc_menu.addAction(self.tr("Add Input"))
+            action5.triggered.connect(partial(self.node_add_input, item))
+
         rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
+
+    def node_add_input(self, item):
+        try:
+            uri, ok = QInputDialog.getText(self, "Add Input", "Input URI")
+            if not ok:
+                return
+            product = self.project.get_product(uri)
+            item.pulse_node.add_input(product)
+            self.show_current_item_details()
+            self.message_user("Added to input : " + uri)
+
+        except Exception as ex:
+            print_exception(ex, self)
+            return
 
     def explore(self, item):
         if not os.path.exists(item.pulse_node.directory):
