@@ -76,11 +76,13 @@ class CreateResourceTemplateWindow(QDialog):
             print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
-        self.mainWindow.treeWidget.addTopLevelItem(resource_item)
+        self.mainWindow.project_treeWidget.addTopLevelItem(resource_item)
         self.close()
 
 
 class AddInputWindow(QDialog):
+    # TODO : should propose to enter manually an URI
+    # TODO : should be placed upper than the treeview, to help the user to focus directly on the right part
     def __init__(self, main_window, pulse_node):
         QDialog.__init__(self, main_window)
         loadUi("add_input.ui", self)
@@ -156,7 +158,7 @@ class CreateResourceWindow(QDialog):
             print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
-        self.mainWindow.treeWidget.addTopLevelItem(resource_item)
+        self.mainWindow.project_treeWidget.addTopLevelItem(resource_item)
         self.close()
 
     def type_from_template_checked(self):
