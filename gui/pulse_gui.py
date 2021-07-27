@@ -643,9 +643,18 @@ class MainWindow(QMainWindow):
     def checkout(self, item):
         try:
             work = item.pulse_node.checkout()
-            self.message_user("Checkout to :" + work.directory)
         except Exception as ex:
             print_exception(ex, self)
+            return
+        self.message_user("Checkout to :" + work.directory)
+        self.tabWidget.setCurrentIndex(1)
+        root = self.sandbox_treeWidget.invisibleRootItem()
+        child_count = root.childCount()
+        for i in range(child_count):
+            item = root.child(i)
+            if item.pulse_node.resource.uri == work.resource.uri:
+                self.sandbox_treeWidget.setCurrentItem(item, 0)
+        self.show_current_item_details()
 
     def create_resource(self, item=None):
         if not item:

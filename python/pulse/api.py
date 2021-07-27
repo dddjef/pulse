@@ -770,7 +770,7 @@ class Resource(PulseDbObject):
         Download the resource work files in the user work space.
         Download related dependencies if they are not available in user products space
         """
-
+        # TODO : checkout raise an error if it's the first checkout and the template did not have a first version
         work = Work(self)
 
         # abort checkout if the work already exists in user sandbox, just rebuild its data
