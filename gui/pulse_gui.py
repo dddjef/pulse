@@ -299,6 +299,8 @@ class MainWindow(QMainWindow):
         self.project_comboBox.activated.connect(self.update_project)
         self.tabWidget.currentChanged.connect(self.on_tab_change)
 
+        self.filter_groupBox.setChecked(False)
+
         self.connection = None
         self.project_list = []
         self.project = None
