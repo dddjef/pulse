@@ -274,7 +274,8 @@ class MainWindow(QMainWindow):
         loadUi("main_window.ui", self)
         self.current_treeWidget = self.project_treeWidget
         self.current_tableWidget = self.project_tableWidget
-        
+        self.project_tableWidget.setColumnWidth(1, 20)
+
         self.project_treeWidget.itemClicked.connect(self.show_current_item_details)
         self.project_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.project_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
