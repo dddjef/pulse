@@ -308,6 +308,9 @@ class MainWindow(QMainWindow):
         try:
             self.resize(self.settings.value('window size'))
             self.move(self.settings.value('window position'))
+            # settings save the filter checkbox state in lowercase string, I have to convert it to boolean
+            if self.settings.value('filter_visible') == "true":
+                self.filter_groupBox.setChecked(True)
         except Exception as ex:
             print_exception(ex, self)
         try:
@@ -672,10 +675,13 @@ class MainWindow(QMainWindow):
         dialog.exec_()
 
     def closeEvent(self, event):
-        self.settings.setValue('window size', self.size())
-        self.settings.setValue('window position', self.pos())
-        self.settings.setValue('project_name', self.projectName_lineEdit.text())
-
+        try:
+            self.settings.setValue('window size', self.size())
+            self.settings.setValue('window position', self.pos())
+            self.settings.setValue('project_name', self.project_comboBox.currentText())
+            self.settings.setValue('filter_visible', self.filter_groupBox.isChecked())
+        except Exception as ex:
+            print_exception(ex, self)
 
 app = QApplication(sys.argv)
 main_window_app = MainWindow()
