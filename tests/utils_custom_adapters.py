@@ -29,7 +29,7 @@ def reset_sql_db(project_name):
                         user=ini.get('mysql', 'username'), password=ini.get('mysql', 'password'))
 
     cnx.cursor().execute("DROP DATABASE IF EXISTS " + project_name)
-    cnx.cursor().execute("DROP DATABASE IF EXISTS _Config")
+    cnx.cursor().execute("DROP DATABASE IF EXISTS _Pulse_config")
     cnx.close()
 
 

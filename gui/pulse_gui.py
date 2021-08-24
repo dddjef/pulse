@@ -313,18 +313,20 @@ class MainWindow(QMainWindow):
                 self.filter_groupBox.setChecked(True)
         except Exception as ex:
             print_exception(ex, self)
+        self.show()
         try:
-            self.update_connection(
+            if self.update_connection(
                 self.settings.value('db_type'),
                 self.settings.value('path'),
                 self.settings.value('username'),
                 self.settings.value('password'),
                 self.settings.value('connection_settings')
-            )
+            ):
+                self.list_resources()
         except Exception as ex:
             print_exception(ex, self)
-        self.list_resources()
-        self.show()
+
+
 
     def message_user(self, message_text, message_type="INFO"):
         self.message_label.setText(message_type + ": " + message_text)
@@ -338,8 +340,10 @@ class MainWindow(QMainWindow):
         self.current_tableWidget.setRowCount(0)
 
     def update_connection(self, db_type, path, username, password, text_settings):
+        self.message_user("Connecting to database...", "INFO")
         settings = text_settings_to_dict(text_settings)
         try:
+            pass
             self.connection = pulse.Connection(db_type, path, username, password, **settings)
         except Exception as ex:
             print_exception(ex, self)
@@ -376,6 +380,7 @@ class MainWindow(QMainWindow):
             self.project = None
 
     def list_resources(self):
+        self.message_user("Updating Resources", "INFO")
         if not self.project:
             return
         self.project_treeWidget.clear()

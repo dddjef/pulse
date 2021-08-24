@@ -30,9 +30,8 @@ class Database(PulseDatabase):
         return repositories
 
     def get_projects(self):
-        tt = [x for x in os.listdir(self._projects_path) if os.path.isdir(os.path.join(self._projects_path, x))]
-        print(tt)
-        return tt
+        projects = [x for x in os.listdir(self._projects_path) if os.path.isdir(os.path.join(self._projects_path, x))]
+        return projects
 
     def create_repository(self, name, adapter, login, password, settings):
         json_filepath = os.path.join(self.repo_filepath, name + ".json")
