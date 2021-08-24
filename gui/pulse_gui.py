@@ -283,7 +283,6 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         loadUi("main_window.ui", self)
         self.current_treeWidget = self.project_treeWidget
-        self.current_tableWidget = self.project_tableWidget
 
         self.project_treeWidget.itemClicked.connect(self.show_current_item_details)
         self.project_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -444,11 +443,9 @@ class MainWindow(QMainWindow):
     def on_tab_change(self, tab_index):
         if tab_index == 0:
             self.current_treeWidget = self.project_treeWidget
-            self.current_tableWidget = self.project_tableWidget
             self.list_resources()
         else:
             self.current_treeWidget = self.sandbox_treeWidget
-            self.current_tableWidget = self.sandbox_tableWidget
             self.list_sandbox()
 
     def get_filter_string(self):
