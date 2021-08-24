@@ -243,9 +243,19 @@ class ConnectWindow(QDialog):
         super(ConnectWindow, self).__init__()
         loadUi("connect_database.ui", self)
         self.connectButton.clicked.connect(self.connect_button)
-        self.typeComboBox.addItems(pulse.get_adapter_list("database"))
+        adapters = pulse.get_adapter_list("database")
+        self.typeComboBox.addItems(adapters)
         self.mainWindow = main_window
         self.settings_textEdit.setPlaceholderText(SETTINGS_DEFAULT_TEXT)
+        try:
+            index = adapters.index(self.mainWindow.settings.value('db_type'))
+            self.typeComboBox.setCurrentIndex(index)
+            self.path_lineEdit.setText(self.mainWindow.settings.value('path'))
+            self.username_lineEdit.setText(self.mainWindow.settings.value('username'))
+            self.password_lineEdit.setText(self.mainWindow.settings.value('password'))
+            self.settings_textEdit.setPlainText(self.mainWindow.settings.value('connection_settings'))
+        except Exception as ex:
+            print_exception(ex, self)
 
     def connect_button(self):
         try:
@@ -314,6 +324,8 @@ class MainWindow(QMainWindow):
         except Exception as ex:
             print_exception(ex, self)
         self.show()
+        self.message_user("Initializing Connection ...", "INFO")
+        QApplication.processEvents()
         try:
             if self.update_connection(
                 self.settings.value('db_type'),
@@ -325,8 +337,6 @@ class MainWindow(QMainWindow):
                 self.list_resources()
         except Exception as ex:
             print_exception(ex, self)
-
-
 
     def message_user(self, message_text, message_type="INFO"):
         self.message_label.setText(message_type + ": " + message_text)
@@ -495,13 +505,6 @@ class MainWindow(QMainWindow):
 
     def open_connect_dialog(self):
         connect_page = ConnectWindow(self)
-        try:
-            connect_page.path_lineEdit.setText(self.settings.value('path'))
-            connect_page.username_lineEdit.setText(self.settings.value('username'))
-            connect_page.password_lineEdit.setText(self.settings.value('password'))
-            connect_page.settings_textEdit.setPlainText(self.settings.value('connection_settings'))
-        except Exception as ex:
-            print_exception(ex, self)
         connect_page.exec_()
 
     def open_create_project_dialog(self):
