@@ -284,7 +284,7 @@ class MainWindow(QMainWindow):
         loadUi("main_window.ui", self)
         self.current_treeWidget = self.project_treeWidget
         self.current_tableWidget = self.project_tableWidget
-        self.project_tableWidget.setColumnWidth(1, 20)
+        # self.project_tableWidget.setColumnWidth(1, 20)
 
         self.project_treeWidget.itemClicked.connect(self.show_current_item_details)
         self.project_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -440,7 +440,7 @@ class MainWindow(QMainWindow):
         # Table will fit the screen horizontally
         self.current_tableWidget.horizontalHeader().setStretchLastSection(True)
         self.current_tableWidget.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.Stretch)
+           QtWidgets.QHeaderView.Interactive)
 
     def on_tab_change(self, tab_index):
         if tab_index == 0:
