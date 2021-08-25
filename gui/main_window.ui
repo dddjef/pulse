@@ -229,7 +229,7 @@
             </layout>
            </item>
            <item>
-            <widget class="QTreeWidget" name="current_treeWidget">
+            <widget class="QTreeWidget" name="treeWidget">
              <property name="maximumSize">
               <size>
                <width>300</width>
@@ -255,7 +255,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QTableWidget" name="current_tableWidget">
+          <widget class="QTableWidget" name="tableWidget">
            <property name="editTriggers">
             <set>QAbstractItemView::NoEditTriggers</set>
            </property>

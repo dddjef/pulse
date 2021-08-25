@@ -76,7 +76,7 @@ class CreateResourceTemplateWindow(QDialog):
             print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
-        self.mainWindow.current_treeWidget.addTopLevelItem(resource_item)
+        self.mainWindow.treeWidget.addTopLevelItem(resource_item)
         self.close()
 
 
@@ -88,12 +88,12 @@ class AddInputWindow(QDialog):
         loadUi("add_input.ui", self)
         self.mainWindow = main_window
         self.pulse_node = pulse_node
-        self.setWindowTitle(self.mainWindow.current_treeWidget.currentItem().text(0))
+        self.setWindowTitle(self.mainWindow.treeWidget.currentItem().text(0))
         self.addInput_pushButton.clicked.connect(self.add_input)
         self.cancel_pushButton.clicked.connect(self.cancel)
 
     def add_input(self):
-        current_item = self.mainWindow.current_treeWidget.currentItem()
+        current_item = self.mainWindow.treeWidget.currentItem()
         if not current_item:
             self.label.setText("You have to select an item in the treeview")
         elif not isinstance(current_item.pulse_node, pulse.Product):
@@ -158,7 +158,7 @@ class CreateResourceWindow(QDialog):
             print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
-        self.mainWindow.current_treeWidget.addTopLevelItem(resource_item)
+        self.mainWindow.treeWidget.addTopLevelItem(resource_item)
         self.close()
 
     def type_from_template_checked(self):
@@ -283,10 +283,10 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         loadUi("main_window.ui", self)
 
-        self.current_treeWidget.itemClicked.connect(self.show_current_item_details)
-        self.current_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.current_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
-        self.current_treeWidget.setColumnCount(1)
+        self.treeWidget.itemClicked.connect(self.show_current_item_details)
+        self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
+        self.treeWidget.setColumnCount(1)
 
         self.actionConnect_to_Pulse_Server.triggered.connect(self.open_connect_dialog)
         self.createProject_action.triggered.connect(self.open_create_project_dialog)
@@ -338,8 +338,8 @@ class MainWindow(QMainWindow):
             self.message_label.setStyleSheet("background-color: pink;")
 
     def clear_displayed_data(self):
-        self.current_treeWidget.clear()
-        self.current_tableWidget.setRowCount(0)
+        self.treeWidget.clear()
+        self.tableWidget.setRowCount(0)
 
     def update_connection(self, db_type, path, username, password, text_settings):
         self.message_user("Connecting to database...", "INFO")
@@ -395,7 +395,7 @@ class MainWindow(QMainWindow):
                     resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
                     work = pulse.Work(resource).read()
                     resource_item = PulseItem([resource_uri], work)
-                    self.current_treeWidget.addTopLevelItem(resource_item)
+                    self.treeWidget.addTopLevelItem(resource_item)
                     for product_type in work.list_products():
                         product = work.get_product(product_type)
                         product_item = PulseItem([product_type], product)
@@ -403,7 +403,7 @@ class MainWindow(QMainWindow):
             except Exception as ex:
                 print_exception(ex, self)
                 return
-            self.current_tableWidget.setRowCount(0)
+            self.tableWidget.setRowCount(0)
             self.message_user(str(len(resources_uri)) + " Work(s) listed", "INFO")
         else:
             project_name = self.project_comboBox.currentText()
@@ -413,7 +413,7 @@ class MainWindow(QMainWindow):
                     uri_dict = pulse_uri.convert_to_dict(resource_uri)
                     resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
                     resource_item = PulseItem([resource_uri], resource)
-                    self.current_treeWidget.addTopLevelItem(resource_item)
+                    self.treeWidget.addTopLevelItem(resource_item)
 
                     # TODO : get commit products should an api method
                     for commit_uri in self.connection.db.find_uris(project_name, "Commit", resource_uri + "@*"):
@@ -437,20 +437,20 @@ class MainWindow(QMainWindow):
             except Exception as ex:
                 print_exception(ex, self)
                 return
-            self.current_tableWidget.setRowCount(0)
+            self.tableWidget.setRowCount(0)
             self.message_user(str(len(resources)) + " Resource(s) listed", "INFO")
 
     def show_details(self, node, properties):
-        self.current_tableWidget.setRowCount(len(properties))
+        self.tableWidget.setRowCount(len(properties))
         property_index = 0
         for property_name in properties:
             value = getattr(node, property_name)
-            self.current_tableWidget.setItem(property_index, 0, QtWidgets.QTableWidgetItem(property_name))
-            self.current_tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(str(value)))
+            self.tableWidget.setItem(property_index, 0, QtWidgets.QTableWidgetItem(property_name))
+            self.tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(str(value)))
             property_index += 1
         # Table will fit the screen horizontally
-        self.current_tableWidget.horizontalHeader().setStretchLastSection(True)
-        self.current_tableWidget.horizontalHeader().setSectionResizeMode(
+        self.tableWidget.horizontalHeader().setStretchLastSection(True)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(
            QtWidgets.QHeaderView.Interactive)
 
     def get_filter_string(self):
@@ -463,7 +463,7 @@ class MainWindow(QMainWindow):
         return filter_entity + "-" + filter_type
 
     def show_current_item_details(self):
-        item = self.current_treeWidget.currentItem()
+        item = self.treeWidget.currentItem()
         if isinstance(item.pulse_node, pulse.Resource):
             self.show_details(item.pulse_node, [
                 "last_version",
@@ -498,10 +498,10 @@ class MainWindow(QMainWindow):
     def tree_rc_menu(self, pos):
         if not self.project:
             return
-        item = self.current_treeWidget.currentItem()
-        item1 = self.current_treeWidget.itemAt(pos)
+        item = self.treeWidget.currentItem()
+        item1 = self.treeWidget.itemAt(pos)
 
-        rc_menu = QMenu(self.current_treeWidget)
+        rc_menu = QMenu(self.treeWidget)
 
         if not item or not item1:
             action = rc_menu.addAction(self.tr("Create Resource"))
@@ -542,7 +542,7 @@ class MainWindow(QMainWindow):
             action5 = rc_menu.addAction(self.tr("Add Input"))
             action5.triggered.connect(partial(self.node_add_input, item))
 
-        rc_menu.exec_(self.current_treeWidget.mapToGlobal(pos))
+        rc_menu.exec_(self.treeWidget.mapToGlobal(pos))
 
     def node_add_input(self, item):
         input_window = AddInputWindow(self, item.pulse_node)
@@ -640,12 +640,12 @@ class MainWindow(QMainWindow):
             self.message_user("Checkout to :" + work.directory)
             self.sandbox_pushButton.setChecked(True)
             self.update_treeview()
-            root = self.current_treeWidget.invisibleRootItem()
+            root = self.treeWidget.invisibleRootItem()
             child_count = root.childCount()
             for i in range(child_count):
                 item = root.child(i)
                 if item.pulse_node.resource.uri == work.resource.uri:
-                    self.current_treeWidget.setCurrentItem(item, 0)
+                    self.treeWidget.setCurrentItem(item, 0)
                     break
             self.show_current_item_details()
         except Exception as ex:
