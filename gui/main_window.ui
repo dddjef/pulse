@@ -73,192 +73,220 @@
      </widget>
     </item>
     <item>
-     <widget class="QGroupBox" name="filter_groupBox">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>100</height>
-       </size>
-      </property>
+     <widget class="QGroupBox" name="resources_groupBox">
       <property name="title">
-       <string>Filter</string>
+       <string>Resources</string>
       </property>
-      <property name="flat">
-       <bool>true</bool>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <layout class="QGridLayout" name="gridLayout">
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item row="0" column="0">
-        <widget class="QFrame" name="filter_frame">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QGroupBox" name="filter_groupBox">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>100</height>
+          </size>
          </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
+         <property name="title">
+          <string>Options</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
-          <item>
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>entity</string>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QFrame" name="filter_frame">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
             </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="filterEntity_lineEdit">
-            <property name="text">
-             <string/>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
             </property>
-            <property name="placeholderText">
-             <string>*</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>type</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="filterType_lineEdit">
-            <property name="text">
-             <string/>
-            </property>
-            <property name="placeholderText">
-             <string>*</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="listResources_pushButton">
-            <property name="text">
-             <string>List Resources</string>
-            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QLabel" name="label">
+               <property name="text">
+                <string>entity</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="filterEntity_lineEdit">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="placeholderText">
+                <string>*</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>type</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="filterType_lineEdit">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="placeholderText">
+                <string>*</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="listResources_pushButton">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Update</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
+       <item>
+        <layout class="QHBoxLayout" name="main_layout">
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="sizeConstraint">
+            <enum>QLayout::SetMaximumSize</enum>
+           </property>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="0,0">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="leftMargin">
+              <number>1</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="project_pushButton">
+               <property name="text">
+                <string>Project</string>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">mode_buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="sandbox_pushButton">
+               <property name="text">
+                <string>Sandbox</string>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">mode_buttonGroup</string>
+               </attribute>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QTreeWidget" name="current_treeWidget">
+             <property name="maximumSize">
+              <size>
+               <width>300</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="lineWidth">
+              <number>1</number>
+             </property>
+             <property name="rootIsDecorated">
+              <bool>true</bool>
+             </property>
+             <property name="headerHidden">
+              <bool>true</bool>
+             </property>
+             <column>
+              <property name="text">
+               <string>projet</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QTableWidget" name="current_tableWidget">
+           <property name="editTriggers">
+            <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+           <property name="alternatingRowColors">
+            <bool>true</bool>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::NoSelection</enum>
+           </property>
+           <attribute name="horizontalHeaderStretchLastSection">
+            <bool>true</bool>
+           </attribute>
+           <attribute name="verticalHeaderVisible">
+            <bool>false</bool>
+           </attribute>
+           <column>
+            <property name="text">
+             <string>Property</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Value</string>
+            </property>
+           </column>
+          </widget>
+         </item>
+        </layout>
+       </item>
       </layout>
      </widget>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="main_layout">
-      <item>
-       <widget class="QTabWidget" name="tabWidget">
-        <property name="maximumSize">
-         <size>
-          <width>317</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="currentIndex">
-         <number>1</number>
-        </property>
-        <widget class="QWidget" name="project_tab">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <attribute name="title">
-          <string>Project</string>
-         </attribute>
-         <layout class="QHBoxLayout" name="horizontalLayout">
-          <item>
-           <widget class="QTreeWidget" name="project_treeWidget">
-            <property name="maximumSize">
-             <size>
-              <width>300</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="rootIsDecorated">
-             <bool>true</bool>
-            </property>
-            <property name="headerHidden">
-             <bool>true</bool>
-            </property>
-            <column>
-             <property name="text">
-              <string>projet</string>
-             </property>
-            </column>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="sandbox_tab">
-         <attribute name="title">
-          <string>Sandbox</string>
-         </attribute>
-         <layout class="QHBoxLayout" name="horizontalLayout_6">
-          <item>
-           <widget class="QTreeWidget" name="sandbox_treeWidget">
-            <property name="maximumSize">
-             <size>
-              <width>300</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="rootIsDecorated">
-             <bool>true</bool>
-            </property>
-            <property name="headerHidden">
-             <bool>true</bool>
-            </property>
-            <column>
-             <property name="text">
-              <string>projet</string>
-             </property>
-            </column>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </widget>
-      </item>
-      <item>
-       <widget class="QTableWidget" name="current_tableWidget">
-        <property name="editTriggers">
-         <set>QAbstractItemView::NoEditTriggers</set>
-        </property>
-        <property name="alternatingRowColors">
-         <bool>true</bool>
-        </property>
-        <property name="selectionMode">
-         <enum>QAbstractItemView::NoSelection</enum>
-        </property>
-        <attribute name="horizontalHeaderStretchLastSection">
-         <bool>true</bool>
-        </attribute>
-        <attribute name="verticalHeaderVisible">
-         <bool>false</bool>
-        </attribute>
-        <column>
-         <property name="text">
-          <string>Property</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Value</string>
-         </property>
-        </column>
-       </widget>
-      </item>
-     </layout>
     </item>
     <item>
      <widget class="QGroupBox" name="groupBox_2">
@@ -367,4 +395,7 @@
    </hints>
   </connection>
  </connections>
+ <buttongroups>
+  <buttongroup name="mode_buttonGroup"/>
+ </buttongroups>
 </ui>

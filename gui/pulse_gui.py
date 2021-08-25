@@ -76,7 +76,7 @@ class CreateResourceTemplateWindow(QDialog):
             print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
-        self.mainWindow.project_treeWidget.addTopLevelItem(resource_item)
+        self.mainWindow.current_treeWidget.addTopLevelItem(resource_item)
         self.close()
 
 
@@ -158,7 +158,7 @@ class CreateResourceWindow(QDialog):
             print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
-        self.mainWindow.project_treeWidget.addTopLevelItem(resource_item)
+        self.mainWindow.current_treeWidget.addTopLevelItem(resource_item)
         self.close()
 
     def type_from_template_checked(self):
@@ -282,17 +282,11 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         loadUi("main_window.ui", self)
-        self.current_treeWidget = self.project_treeWidget
 
-        self.project_treeWidget.itemClicked.connect(self.show_current_item_details)
-        self.project_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.project_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
-        self.project_treeWidget.setColumnCount(1)
-
-        self.sandbox_treeWidget.itemClicked.connect(self.show_current_item_details)
-        self.sandbox_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.sandbox_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
-        self.sandbox_treeWidget.setColumnCount(1)
+        self.current_treeWidget.itemClicked.connect(self.show_current_item_details)
+        self.current_treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.current_treeWidget.customContextMenuRequested.connect(self.tree_rc_menu)
+        self.current_treeWidget.setColumnCount(1)
 
         self.actionConnect_to_Pulse_Server.triggered.connect(self.open_connect_dialog)
         self.createProject_action.triggered.connect(self.open_create_project_dialog)
@@ -300,14 +294,14 @@ class MainWindow(QMainWindow):
         self.createResource_action.triggered.connect(self.create_resource)
         self.createResourceTemplate_action.triggered.connect(self.create_template)
 
-        self.listResources_pushButton.clicked.connect(self.list_resources)
-        self.filterEntity_lineEdit.returnPressed.connect(self.list_resources)
-        self.filterType_lineEdit.returnPressed.connect(self.list_resources)
+        self.listResources_pushButton.clicked.connect(self.update_treeview)
+        self.filterEntity_lineEdit.returnPressed.connect(self.update_treeview)
+        self.filterType_lineEdit.returnPressed.connect(self.update_treeview)
 
         self.project_comboBox.activated.connect(self.update_project)
-        self.tabWidget.currentChanged.connect(self.on_tab_change)
 
         self.filter_groupBox.setChecked(False)
+        self.mode_buttonGroup.buttonClicked[int].connect(self.update_treeview)
 
         self.connection = None
         self.project_list = []
@@ -332,7 +326,7 @@ class MainWindow(QMainWindow):
                 self.settings.value('password'),
                 self.settings.value('connection_settings')
             ):
-                self.list_resources()
+                self.update_treeview()
         except Exception as ex:
             print_exception(ex, self)
 
@@ -384,48 +378,67 @@ class MainWindow(QMainWindow):
         self.settings.setValue('current_project', project_name)
         if project_name != "":
             self.project = self.connection.get_project(project_name)
+            self.update_treeview()
         else:
             self.project = None
 
-    def list_resources(self):
-        self.message_user("Updating Resources", "INFO")
+    def update_treeview(self):
         if not self.project:
             return
-        self.project_treeWidget.clear()
-        project_name = self.project_comboBox.currentText()
-
-        resources = self.connection.db.find_uris(project_name, "Resource", self.get_filter_string())
-        try:
-            for resource_uri in resources:
-                uri_dict = pulse_uri.convert_to_dict(resource_uri)
-                resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
-                resource_item = PulseItem([resource_uri], resource)
-                self.project_treeWidget.addTopLevelItem(resource_item)
-
-                # TODO : get commit products should an api method
-                for commit_uri in self.connection.db.find_uris(project_name, "Commit", resource_uri + "@*"):
-                    version = commit_uri.split("@")[-1]
-                    commit = resource.get_commit(int(version))
-                    # TODO : format version as project preferences
-                    commit_item = PulseItem(["V" + version.zfill(3)], commit)
-                    resource_item.addChild(commit_item)
-
-                    for product_uri in self.connection.db.find_uris(
-                            project_name,
-                            "CommitProduct",
-                            resource_uri + ".*@" + version
-                    ):
-                        product_type = pulse_uri.convert_to_dict(product_uri)["product_type"]
-                        product = pulse.CommitProduct(commit, product_type)
+        self.message_user("Updating Tree View", "INFO")
+        self.clear_displayed_data()
+        if self.sandbox_pushButton.isChecked():
+            resources_uri = self.project.get_local_works()
+            try:
+                for resource_uri in resources_uri:
+                    uri_dict = pulse_uri.convert_to_dict(resource_uri)
+                    resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
+                    work = pulse.Work(resource).read()
+                    resource_item = PulseItem([resource_uri], work)
+                    self.current_treeWidget.addTopLevelItem(resource_item)
+                    for product_type in work.list_products():
+                        product = work.get_product(product_type)
                         product_item = PulseItem([product_type], product)
-                        if product.uri in self.project.get_local_commit_products():
-                            set_tree_item_style(product_item, "downloaded")
-                        commit_item.addChild(product_item)
-        except Exception as ex:
-            print_exception(ex, self)
-            return
-        self.current_tableWidget.setRowCount(0)
-        self.message_user(str(len(resources)) + " Resource(s) listed", "INFO")
+                        resource_item.addChild(product_item)
+            except Exception as ex:
+                print_exception(ex, self)
+                return
+            self.current_tableWidget.setRowCount(0)
+            self.message_user(str(len(resources_uri)) + " Work(s) listed", "INFO")
+        else:
+            project_name = self.project_comboBox.currentText()
+            resources = self.connection.db.find_uris(project_name, "Resource", self.get_filter_string())
+            try:
+                for resource_uri in resources:
+                    uri_dict = pulse_uri.convert_to_dict(resource_uri)
+                    resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
+                    resource_item = PulseItem([resource_uri], resource)
+                    self.current_treeWidget.addTopLevelItem(resource_item)
+
+                    # TODO : get commit products should an api method
+                    for commit_uri in self.connection.db.find_uris(project_name, "Commit", resource_uri + "@*"):
+                        version = commit_uri.split("@")[-1]
+                        commit = resource.get_commit(int(version))
+                        # TODO : format version as project preferences
+                        commit_item = PulseItem(["V" + version.zfill(3)], commit)
+                        resource_item.addChild(commit_item)
+
+                        for product_uri in self.connection.db.find_uris(
+                                project_name,
+                                "CommitProduct",
+                                resource_uri + ".*@" + version
+                        ):
+                            product_type = pulse_uri.convert_to_dict(product_uri)["product_type"]
+                            product = pulse.CommitProduct(commit, product_type)
+                            product_item = PulseItem([product_type], product)
+                            if product.uri in self.project.get_local_commit_products():
+                                set_tree_item_style(product_item, "downloaded")
+                            commit_item.addChild(product_item)
+            except Exception as ex:
+                print_exception(ex, self)
+                return
+            self.current_tableWidget.setRowCount(0)
+            self.message_user(str(len(resources)) + " Resource(s) listed", "INFO")
 
     def show_details(self, node, properties):
         self.current_tableWidget.setRowCount(len(properties))
@@ -440,14 +453,6 @@ class MainWindow(QMainWindow):
         self.current_tableWidget.horizontalHeader().setSectionResizeMode(
            QtWidgets.QHeaderView.Interactive)
 
-    def on_tab_change(self, tab_index):
-        if tab_index == 0:
-            self.current_treeWidget = self.project_treeWidget
-            self.list_resources()
-        else:
-            self.current_treeWidget = self.sandbox_treeWidget
-            self.list_sandbox()
-
     def get_filter_string(self):
         filter_entity = self.filterEntity_lineEdit.text()
         if filter_entity == "":
@@ -456,28 +461,6 @@ class MainWindow(QMainWindow):
         if filter_type == "":
             filter_type = "*"
         return filter_entity + "-" + filter_type
-
-    def list_sandbox(self):
-        if not self.project:
-            return
-        self.sandbox_treeWidget.clear()
-        resources_uri = self.project.get_local_works()
-        try:
-            for resource_uri in resources_uri:
-                uri_dict = pulse_uri.convert_to_dict(resource_uri)
-                resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
-                work = pulse.Work(resource).read()
-                resource_item = PulseItem([resource_uri], work)
-                self.sandbox_treeWidget.addTopLevelItem(resource_item)
-                for product_type in work.list_products():
-                    product = work.get_product(product_type)
-                    product_item = PulseItem([product_type], product)
-                    resource_item.addChild(product_item)
-        except Exception as ex:
-            print_exception(ex, self)
-            return
-        self.current_tableWidget.setRowCount(0)
-        self.message_user(str(len(resources_uri)) + " Work(s) listed", "INFO")
 
     def show_current_item_details(self):
         item = self.current_treeWidget.currentItem()
@@ -582,7 +565,7 @@ class MainWindow(QMainWindow):
             )
             if confirm == QMessageBox.Yes:
                 item.parent().pulse_node.trash_product(item.pulse_node.product_type)
-                self.list_sandbox()
+                self.update_treeview()
                 self.message_user("Product trashed")
             else:
                 self.message_user("Process aborted")
@@ -601,7 +584,7 @@ class MainWindow(QMainWindow):
         except Exception as ex:
             print_exception(ex, self)
             return
-        self.list_sandbox()
+        self.update_treeview()
 
     def commit_work(self, item):
         try:
@@ -616,7 +599,7 @@ class MainWindow(QMainWindow):
         except Exception as ex:
             print_exception(ex, self)
             return
-        self.list_sandbox()
+        self.update_treeview()
 
     def trash_work(self, item):
 
@@ -628,7 +611,7 @@ class MainWindow(QMainWindow):
                 return
             no_backup = trash_option == trash_options[1]
             item.pulse_node.trash(no_backup=no_backup)
-            self.list_sandbox()
+            self.update_treeview()
             self.message_user("Work trashed")
         except Exception as ex:
             print_exception(ex, self)
@@ -653,18 +636,21 @@ class MainWindow(QMainWindow):
     def checkout(self, item):
         try:
             work = item.pulse_node.checkout()
+
+            self.message_user("Checkout to :" + work.directory)
+            self.sandbox_pushButton.setChecked(True)
+            self.update_treeview()
+            root = self.current_treeWidget.invisibleRootItem()
+            child_count = root.childCount()
+            for i in range(child_count):
+                item = root.child(i)
+                if item.pulse_node.resource.uri == work.resource.uri:
+                    self.current_treeWidget.setCurrentItem(item, 0)
+                    break
+            self.show_current_item_details()
         except Exception as ex:
             print_exception(ex, self)
             return
-        self.message_user("Checkout to :" + work.directory)
-        self.tabWidget.setCurrentIndex(1)
-        root = self.sandbox_treeWidget.invisibleRootItem()
-        child_count = root.childCount()
-        for i in range(child_count):
-            item = root.child(i)
-            if item.pulse_node.resource.uri == work.resource.uri:
-                self.sandbox_treeWidget.setCurrentItem(item, 0)
-        self.show_current_item_details()
 
     def create_resource(self, item=None):
         if not item:
