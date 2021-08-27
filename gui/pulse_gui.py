@@ -388,6 +388,8 @@ class MainWindow(QMainWindow):
         self.message_user("Updating Tree View", "INFO")
         self.clear_displayed_data()
         if self.sandbox_pushButton.isChecked():
+            self.sandbox_pushButton.setStyleSheet('QPushButton {font-weight: bold;}')
+            self.project_pushButton.setStyleSheet('QPushButton {font-weight: normal;}')
             resources_uri = self.project.get_local_works()
             try:
                 for resource_uri in resources_uri:
@@ -406,6 +408,8 @@ class MainWindow(QMainWindow):
             self.tableWidget.setRowCount(0)
             self.message_user(str(len(resources_uri)) + " Work(s) listed", "INFO")
         else:
+            self.project_pushButton.setStyleSheet('QPushButton {font-weight: bold;}')
+            self.sandbox_pushButton.setStyleSheet('QPushButton {font-weight: normal;}')
             project_name = self.project_comboBox.currentText()
             resources = self.connection.db.find_uris(project_name, "Resource", self.get_filter_string())
             try:
