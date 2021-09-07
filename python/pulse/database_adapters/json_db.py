@@ -30,6 +30,8 @@ class Database(PulseDatabase):
         return repositories
 
     def get_projects(self):
+        if not os.path.exists(self._projects_path):
+            return []
         projects = [x for x in os.listdir(self._projects_path) if os.path.isdir(os.path.join(self._projects_path, x))]
         return projects
 
