@@ -174,6 +174,25 @@ class TestResources(unittest.TestCase):
         with self.assertRaises(PulseError):
             res_work.commit()
 
+    def test_check_out_from_template(self):
+        #if no template exists
+        resource = self.prj.create_resource("joe", "surface")
+        resource.checkout()
+
+        #if a template exists, but without any version
+        self.prj.create_template("rig")
+        resource = self.prj.create_resource("joe", "rig")
+        resource.checkout()
+
+        #if the template exists
+        template = self.prj.create_template("shapes")
+        template_work = template.checkout()
+        utils.add_file_to_directory(template_work.directory)
+        template_work.commit()
+
+        resource = self.prj.create_resource("joe", "shapes")
+        resource.checkout()
+
     def test_check_out_from_another_resource(self):
         shader_work_file = "shader_work_file.ma"
         shader_product_file = "shader_product_file.ma"
