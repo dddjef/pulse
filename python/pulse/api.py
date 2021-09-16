@@ -410,7 +410,7 @@ class Work(WorkNode):
         # unregister from products
         for input_product in product.get_inputs():
             if os.path.exists(input_product.directory):
-                input_product.remove_product_user(self.directory)
+                input_product.remove_product_user(product.directory)
 
         # create the trash work directory
         trash_directory = self._get_trash_directory()

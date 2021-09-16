@@ -250,7 +250,6 @@ class TestResources(unittest.TestCase):
         anna_rig_resource.checkout()
         self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
-
     def test_recursive_dependencies_download(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
@@ -430,6 +429,13 @@ class TestResources(unittest.TestCase):
         self.assertFalse(os.path.exists(product.directory))
         self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
         self.assertFalse(os.path.exists(product.product_users_file))
+
+    def test_product_trash(self):
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_actor = anna_rig_work.create_product("actor_anim")
+        anna_rig_actor.add_input(self.anna_abc_product)
+        anna_rig_work.trash_product("actor_anim")
 
     def test_product_download(self):
         self.anna_mdl_work.trash()
