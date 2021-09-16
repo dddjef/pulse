@@ -430,6 +430,14 @@ class TestResources(unittest.TestCase):
         self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
         self.assertFalse(os.path.exists(product.product_users_file))
 
+    def test_work_commit_data(self):
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+        utils.add_file_to_directory(anna_rig_work.directory, "work_file.txt")
+        anna_rig_work.commit()
+        commit = anna_rig_resource.get_commit("last")
+        self.assertEqual(list(commit.files.keys())[0], '/work_file.txt')
+
     def test_product_trash(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()

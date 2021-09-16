@@ -497,8 +497,9 @@ class Work(WorkNode):
 
         # copy work files to a new version in repository
         commit = Commit(self.resource, self.version)
+        commit.files = self._get_work_files()
         commit.project.cnx.repositories[self.resource.repository].upload_resource_commit(
-            commit, self.directory, self._get_work_files(), self.get_products_directory())
+            commit, self.directory, commit.files, self.get_products_directory())
 
         # register changes to database
         commit.comment = comment
