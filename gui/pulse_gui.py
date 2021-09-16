@@ -477,6 +477,7 @@ class MainWindow(QMainWindow):
         if isinstance(item.pulse_node, pulse.Commit):
             properties = {
                 "comment": item.pulse_node.comment,
+                "files": list(item.pulse_node.files.keys())
             }
             input_index = 1
             for product_uri in item.pulse_node.products_inputs:
