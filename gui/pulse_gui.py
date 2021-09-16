@@ -443,11 +443,10 @@ class MainWindow(QMainWindow):
             self.tableWidget.setRowCount(0)
             self.message_user(str(len(resources)) + " Resource(s) listed", "INFO")
 
-    def show_details(self, node, properties):
+    def show_details(self, properties):
         self.tableWidget.setRowCount(len(properties))
         property_index = 0
-        for property_name in properties:
-            value = getattr(node, property_name)
+        for property_name, value in properties.items():
             self.tableWidget.setItem(property_index, 0, QtWidgets.QTableWidgetItem(property_name))
             self.tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(str(value)))
             property_index += 1
@@ -468,22 +467,27 @@ class MainWindow(QMainWindow):
     def show_current_item_details(self):
         item = self.treeWidget.currentItem()
         if isinstance(item.pulse_node, pulse.Resource):
-            self.show_details(item.pulse_node, [
-                "last_version",
-                "repository",
-                "resource_template",
-                "lock_user"
-            ])
+            self.show_details({
+                "last_version": item.pulse_node.last_version,
+                "repository": item.pulse_node.repository,
+                "resource_template": item.pulse_node.resource_template,
+                "lock_user": item.pulse_node.lock_user
+            })
         if isinstance(item.pulse_node, pulse.Commit):
-            self.show_details(item.pulse_node, [
-                "comment",
-                "products_inputs",
-            ])
+            self.show_details({
+                "comment": item.pulse_node.comment,
+                "products_inputs":  item.pulse_node.products_inputs,
+            })
         if isinstance(item.pulse_node, pulse.Work):
-            self.show_details(item.pulse_node, [
-                "directory",
-                "version",
-            ])
+            properties = {
+                "directory": item.pulse_node.directory,
+                "version": item.pulse_node.version,
+            }
+            input_index = 1
+            for product in item.pulse_node.get_inputs():
+                properties["product input " + str(input_index)] = product.uri
+                input_index += 1
+            self.show_details(properties)
 
     def open_connect_dialog(self):
         connect_page = ConnectWindow(self)
