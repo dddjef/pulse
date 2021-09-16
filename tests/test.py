@@ -231,6 +231,26 @@ class TestResources(unittest.TestCase):
         anna_surf_work.trash()
         froga_mdl_work.trash()
 
+    def test_work_dependencies_download(self):
+        anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
+        anna_surf_work = anna_surf_resource.checkout()
+        anna_surf_textures = anna_surf_work.create_product("textures")
+        utils.add_file_to_directory(anna_surf_textures.directory, "product_file.txt")
+        anna_surf_work.commit(comment="test generated product")
+        anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_work.add_input(anna_surf_textures)
+        anna_rig_work.commit("comment test")
+        anna_rig_work.trash()
+        anna_surf_work.trash()
+        self.prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(anna_surf_textures.directory))
+        rig_v01 = anna_rig_resource.get_commit(1)
+        self.assertEqual(rig_v01.products_inputs[0], 'ch_anna-surfacing.textures@1')
+        anna_rig_resource.checkout()
+        self.assertTrue(os.path.exists(anna_surf_textures.directory))
+
+
     def test_recursive_dependencies_download(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()

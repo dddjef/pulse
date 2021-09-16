@@ -232,7 +232,7 @@ class Commit(PulseDbObject):
         self.products = []
         self.pulse_filepath = os.path.join(self.get_products_directory(), pulse_filename)
         """ list of product names"""
-        self._storage_vars = ['version', 'products', 'files', 'comment']
+        self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
 
     def get_product(self, product_type):
         """
@@ -502,7 +502,7 @@ class Work(WorkNode):
 
         # register changes to database
         commit.comment = comment
-        commit.products_inputs = self.get_inputs()
+        commit.products_inputs = [x.uri for x in self.get_inputs()]
         commit.products = self.list_products()
 
         # convert work products to commit products
