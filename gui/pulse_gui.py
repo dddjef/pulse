@@ -488,6 +488,15 @@ class MainWindow(QMainWindow):
                 properties["product input " + str(input_index)] = product.uri
                 input_index += 1
             self.show_details(properties)
+        if isinstance(item.pulse_node, pulse.WorkProduct):
+            properties = {
+                "directory": item.pulse_node.directory,
+            }
+            input_index = 1
+            for product in item.pulse_node.get_inputs():
+                properties["product input " + str(input_index)] = product.uri
+                input_index += 1
+            self.show_details(properties)
 
     def open_connect_dialog(self):
         connect_page = ConnectWindow(self)
