@@ -473,11 +473,17 @@ class MainWindow(QMainWindow):
                 "resource_template": item.pulse_node.resource_template,
                 "lock_user": item.pulse_node.lock_user
             })
+
         if isinstance(item.pulse_node, pulse.Commit):
-            self.show_details({
+            properties = {
                 "comment": item.pulse_node.comment,
-                "products_inputs":  item.pulse_node.products_inputs,
-            })
+            }
+            input_index = 1
+            for product_uri in item.pulse_node.products_inputs:
+                properties["product input " + str(input_index)] = product_uri
+                input_index += 1
+            self.show_details(properties)
+
         if isinstance(item.pulse_node, pulse.Work):
             properties = {
                 "directory": item.pulse_node.directory,
@@ -488,6 +494,7 @@ class MainWindow(QMainWindow):
                 properties["product input " + str(input_index)] = product.uri
                 input_index += 1
             self.show_details(properties)
+
         if isinstance(item.pulse_node, pulse.WorkProduct):
             properties = {
                 "directory": item.pulse_node.directory,
