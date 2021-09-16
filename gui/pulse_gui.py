@@ -389,7 +389,7 @@ class MainWindow(QMainWindow):
         if self.sandbox_pushButton.isChecked():
             self.sandbox_pushButton.setStyleSheet('QPushButton {font-weight: bold;}')
             self.project_pushButton.setStyleSheet('QPushButton {font-weight: normal;}')
-            resources_uri = self.project.get_local_works()
+            resources_uri = self.project.get_local_works(self.get_filter_string())
             try:
                 for resource_uri in resources_uri:
                     uri_dict = pulse_uri.convert_to_dict(resource_uri)

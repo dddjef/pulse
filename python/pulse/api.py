@@ -966,14 +966,15 @@ class Project:
         file_list = os.listdir(self.product_data_directory)
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
-    def get_local_works(self):
+    def get_local_works(self, uri_pattern="*"):
         """
         return the list of work resource in user sandbox
         :return: uri list
         """
         if not os.path.exists(self.work_data_directory):
             return []
-        file_list = os.listdir(self.work_data_directory)
+        path_list = glob.glob(os.path.join(self.work_data_directory, uri_pattern) + ".json")
+        file_list = [os.path.basename(x) for x in path_list]
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
     def purge_unused_user_products(self, unused_days=0, resource_filter=None):
