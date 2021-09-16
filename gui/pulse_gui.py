@@ -297,7 +297,6 @@ class MainWindow(QMainWindow):
         self.listResources_pushButton.clicked.connect(self.update_treeview)
         self.filterEntity_lineEdit.returnPressed.connect(self.update_treeview)
         self.filterType_lineEdit.returnPressed.connect(self.update_treeview)
-
         self.project_comboBox.activated.connect(self.update_project)
 
         self.filter_groupBox.setChecked(False)
