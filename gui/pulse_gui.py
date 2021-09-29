@@ -463,6 +463,7 @@ class MainWindow(QMainWindow):
         self.tableWidget.horizontalHeader().setSectionResizeMode(
            QtWidgets.QHeaderView.Interactive)
 
+
     def get_filter_string(self):
         filter_entity = self.filterEntity_lineEdit.text()
         if filter_entity == "":
@@ -473,47 +474,51 @@ class MainWindow(QMainWindow):
         return filter_entity + "-" + filter_type
 
     def show_current_item_details(self):
-        item = self.treeWidget.currentItem()
-        if isinstance(item.pulse_node, pulse.Resource):
-            self.show_details({
-                "last_version": item.pulse_node.last_version,
-                "repository": item.pulse_node.repository,
-                "resource_template": item.pulse_node.resource_template,
-                "lock_user": item.pulse_node.lock_user
-            })
+        try:
+            item = self.treeWidget.currentItem()
+            if isinstance(item.pulse_node, pulse.Resource):
+                self.show_details({
+                    "last_version": item.pulse_node.last_version,
+                    "repository": item.pulse_node.repository,
+                    "resource_template": item.pulse_node.resource_template,
+                    "lock_user": item.pulse_node.lock_user
+                })
 
-        if isinstance(item.pulse_node, pulse.Commit):
-            print(item.pulse_node.files)
-            properties = {
-                "comment": item.pulse_node.comment,
-                "files": list(item.pulse_node.files.keys())
-            }
-            input_index = 1
-            for product_uri in item.pulse_node.products_inputs:
-                properties["product input " + str(input_index)] = product_uri
-                input_index += 1
-            self.show_details(properties)
+            if isinstance(item.pulse_node, pulse.Commit):
+                print(item.pulse_node.files)
+                properties = {
+                    "comment": item.pulse_node.comment,
+                    "files": list(item.pulse_node.files.keys())
+                }
+                input_index = 1
+                for product_uri in item.pulse_node.products_inputs:
+                    properties["product input " + str(input_index)] = product_uri
+                    input_index += 1
+                self.show_details(properties)
 
-        if isinstance(item.pulse_node, pulse.Work):
-            properties = {
-                "directory": item.pulse_node.directory,
-                "version": item.pulse_node.version,
-            }
-            input_index = 1
-            for product in item.pulse_node.get_inputs():
-                properties["product input " + str(input_index)] = product.uri
-                input_index += 1
-            self.show_details(properties)
+            if isinstance(item.pulse_node, pulse.Work):
+                properties = {
+                    "directory": item.pulse_node.directory,
+                    "version": item.pulse_node.version,
+                }
+                input_index = 1
+                for product in item.pulse_node.get_inputs():
+                    properties["product input " + str(input_index)] = product.uri
+                    input_index += 1
+                self.show_details(properties)
 
-        if isinstance(item.pulse_node, pulse.WorkProduct):
-            properties = {
-                "directory": item.pulse_node.directory,
-            }
-            input_index = 1
-            for product in item.pulse_node.get_inputs():
-                properties["product input " + str(input_index)] = product.uri
-                input_index += 1
-            self.show_details(properties)
+            if isinstance(item.pulse_node, pulse.WorkProduct):
+                properties = {
+                    "directory": item.pulse_node.directory,
+                }
+                input_index = 1
+                for product in item.pulse_node.get_inputs():
+                    properties["product input " + str(input_index)] = product.uri
+                    input_index += 1
+                self.show_details(properties)
+        except Exception as ex:
+            print_exception(ex, self)
+            return
 
     def open_connect_dialog(self):
         connect_page = ConnectWindow(self)
