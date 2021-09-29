@@ -89,7 +89,7 @@
          <property name="maximumSize">
           <size>
            <width>16777215</width>
-           <height>100</height>
+           <height>16777215</height>
           </size>
          </property>
          <property name="title">
@@ -104,7 +104,7 @@
          <property name="checked">
           <bool>false</bool>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
           <property name="topMargin">
            <number>11</number>
           </property>
@@ -112,36 +112,47 @@
            <number>11</number>
           </property>
           <item>
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>entity</string>
-            </property>
-           </widget>
+           <layout class="QHBoxLayout" name="filterName_Layout">
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>entity</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="filterEntity_lineEdit">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="placeholderText">
+               <string>*</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>type</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="filterType_lineEdit">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="placeholderText">
+               <string>*</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item>
-           <widget class="QLineEdit" name="filterEntity_lineEdit">
+           <widget class="QCheckBox" name="filterTemplates_checkBox">
             <property name="text">
-             <string/>
-            </property>
-            <property name="placeholderText">
-             <string>*</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>type</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="filterType_lineEdit">
-            <property name="text">
-             <string/>
-            </property>
-            <property name="placeholderText">
-             <string>*</string>
+             <string>Show templates</string>
             </property>
            </widget>
           </item>
@@ -155,7 +166,7 @@
             </property>
             <property name="maximumSize">
              <size>
-              <width>60</width>
+              <width>16777215</width>
               <height>16777215</height>
              </size>
             </property>

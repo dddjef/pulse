@@ -226,7 +226,7 @@ class Commit(PulseDbObject):
         PulseDbObject.__init__(self, resource.project, self.uri)
         self.resource = resource
         self.comment = ""
-        self.files = []
+        self.files = {}
         self.products_inputs = []
         self.version = int(version)
         self.products = []

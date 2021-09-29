@@ -297,6 +297,8 @@ class MainWindow(QMainWindow):
         self.listResources_pushButton.clicked.connect(self.update_treeview)
         self.filterEntity_lineEdit.returnPressed.connect(self.update_treeview)
         self.filterType_lineEdit.returnPressed.connect(self.update_treeview)
+        self.filterTemplates_checkBox.stateChanged.connect(self.update_treeview)
+
         self.project_comboBox.activated.connect(self.update_project)
 
         self.filter_groupBox.setChecked(False)
@@ -393,6 +395,8 @@ class MainWindow(QMainWindow):
             try:
                 for resource_uri in resources_uri:
                     uri_dict = pulse_uri.convert_to_dict(resource_uri)
+                    if not self.filterTemplates_checkBox.isChecked() and uri_dict["entity"] == pulse.template_name:
+                        continue
                     resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
                     work = pulse.Work(resource).read()
                     resource_item = PulseItem([resource_uri], work)
@@ -414,6 +418,8 @@ class MainWindow(QMainWindow):
             try:
                 for resource_uri in resources:
                     uri_dict = pulse_uri.convert_to_dict(resource_uri)
+                    if not self.filterTemplates_checkBox.isChecked() and uri_dict["entity"] == pulse.template_name:
+                        continue
                     resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
                     resource_item = PulseItem([resource_uri], resource)
                     self.treeWidget.addTopLevelItem(resource_item)
@@ -447,6 +453,8 @@ class MainWindow(QMainWindow):
         self.tableWidget.setRowCount(len(properties))
         property_index = 0
         for property_name, value in properties.items():
+            if type(value) == list:
+                value = str(value)[1:-1]
             self.tableWidget.setItem(property_index, 0, QtWidgets.QTableWidgetItem(property_name))
             self.tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(str(value)))
             property_index += 1
@@ -475,6 +483,7 @@ class MainWindow(QMainWindow):
             })
 
         if isinstance(item.pulse_node, pulse.Commit):
+            print(item.pulse_node.files)
             properties = {
                 "comment": item.pulse_node.comment,
                 "files": list(item.pulse_node.files.keys())
