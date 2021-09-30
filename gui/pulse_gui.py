@@ -172,13 +172,13 @@ class CreateResourceWindow(QDialog):
 
 # TODO : add a tooltip to explain how to add an env var in path
 class ProjectWindow(QDialog):
-    def __init__(self, main_window):
+    def __init__(self, main_window, repositories):
         super(ProjectWindow, self).__init__()
         loadUi("create_project.ui", self)
         self.createProject_pushButton.clicked.connect(self.create_project)
         self.mainWindow = main_window
         self.repository_comboBox.clear()
-        self.repository_comboBox.addItems(main_window.connection.get_repositories().keys())
+        self.repository_comboBox.addItems(repositories)
         self.sandboxPath_lineEdit.setText(os.path.join(os.path.expanduser("~"), "pulse_sandbox"))
         self.versionPrefix_lineEdit.setText(pulse.DEFAULT_VERSION_PREFIX)
         self.versionPadding_spinBox.setValue(pulse.DEFAULT_VERSION_PADDING)
@@ -525,7 +525,11 @@ class MainWindow(QMainWindow):
         connect_page.exec_()
 
     def open_create_project_dialog(self):
-        # TODO : check there's an exiting repository before opening
+        # ensure there's at least a repository before opening
+        repositories = self.connection.get_repositories().keys()
+        if not repositories:
+            self.message_user("You have to create at least a repository before creating a project", "ERROR")
+            return
         page = ProjectWindow(self)
         page.exec_()
 
