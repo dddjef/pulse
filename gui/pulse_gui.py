@@ -294,7 +294,6 @@ class MainWindow(QMainWindow):
         self.createResource_action.triggered.connect(self.create_resource)
         self.createResourceTemplate_action.triggered.connect(self.create_template)
 
-        self.listResources_pushButton.clicked.connect(self.update_treeview)
         self.filterEntity_lineEdit.returnPressed.connect(self.update_treeview)
         self.filterType_lineEdit.returnPressed.connect(self.update_treeview)
         self.filterTemplates_checkBox.stateChanged.connect(self.update_treeview)
@@ -476,6 +475,7 @@ class MainWindow(QMainWindow):
     def show_current_item_details(self):
         try:
             item = self.treeWidget.currentItem()
+
             if isinstance(item.pulse_node, pulse.Resource):
                 self.show_details({
                     "last_version": item.pulse_node.last_version,
@@ -483,9 +483,7 @@ class MainWindow(QMainWindow):
                     "resource_template": item.pulse_node.resource_template,
                     "lock_user": item.pulse_node.lock_user
                 })
-
             if isinstance(item.pulse_node, pulse.Commit):
-                print(item.pulse_node.files)
                 properties = {
                     "comment": item.pulse_node.comment,
                     "files": list(item.pulse_node.files.keys())
