@@ -1,7 +1,8 @@
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QDialog, QTreeWidgetItem, QMenu, QMainWindow, QInputDialog, QMessageBox
+from PyQt5.QtWidgets import QApplication, QDialog, QTreeWidgetItem, QMenu, QMainWindow, QInputDialog, QMessageBox,\
+    QListWidgetItem
 from PyQt5.QtCore import Qt
 from functools import partial
 import pulse.api as pulse
@@ -19,6 +20,12 @@ SETTINGS_DEFAULT_TEXT = "attribute = value"
 class PulseItem(QTreeWidgetItem):
     def __init__(self, parent, pulse_node):
         super(PulseItem, self).__init__(parent)
+        self.pulse_node = pulse_node
+
+
+class ProductItem(QListWidgetItem):
+    def __init__(self, parent, pulse_node):
+        super(ProductItem, self).__init__(parent)
         self.pulse_node = pulse_node
 
 
@@ -80,32 +87,47 @@ class CreateResourceTemplateWindow(QDialog):
         self.close()
 
 
-class AddInputWindow(QDialog):
+class InputsWindow(QDialog):
     # TODO : should propose to enter manually an URI
     # TODO : should be placed upper than the treeview, to help the user to focus directly on the right part
     def __init__(self, main_window, pulse_node):
         QDialog.__init__(self, main_window)
-        loadUi("add_input.ui", self)
+        loadUi("edit_inputs.ui", self)
         self.mainWindow = main_window
         self.pulse_node = pulse_node
         self.setWindowTitle(self.mainWindow.treeWidget.currentItem().text(0))
         self.addInput_pushButton.clicked.connect(self.add_input)
-        self.cancel_pushButton.clicked.connect(self.cancel)
+        self.removeInput_pushButton.clicked.connect(self.remove_input)
+        self.close_pushButton.clicked.connect(self.close)
+        self.update_inputs_list()
+
+    def update_inputs_list(self):
+        self.inputs_listWidget.clear()
+        for product in self.pulse_node.get_inputs():
+            item = ProductItem(product.uri, pulse_node=product)
+            self.inputs_listWidget.addItem(item)
 
     def add_input(self):
         current_item = self.mainWindow.treeWidget.currentItem()
         if not current_item:
-            self.label.setText("You have to select an item in the treeview")
-        elif not isinstance(current_item.pulse_node, pulse.Product):
-            self.label.setText("the selected item should be a product only")
+            self.mainWindow.message_user("You have to select an item in the treeview", "ERROR")
+        elif not isinstance(current_item.pulse_node, pulse.CommitProduct):
+            self.mainWindow.message_user("the selected item should be a commit product only", "ERROR")
         else:
             self.pulse_node.add_input(current_item.pulse_node)
             self.mainWindow.message_user("Added to inputs : " + current_item.pulse_node.uri)
-            self.close()
-            # TODO : refresh the current tree view to show the downloaded product if needed
+            self.update_inputs_list()
+            # TODO : refresh the current tree view to show the downloaded product icon if needed
+            # TODO : refresh current details
 
-    def cancel(self):
-        self.close()
+    def remove_input(self):
+        try:
+            selected = self.inputs_listWidget.selectedItems()[0]
+        except IndexError:
+            self.mainWindow.message_user("Select an input to remove", "ERROR")
+            return
+        self.pulse_node.remove_input(selected.pulse_node)
+        self.update_inputs_list()
 
 
 # TODO : add the create from another resource feature
@@ -462,7 +484,6 @@ class MainWindow(QMainWindow):
         self.tableWidget.horizontalHeader().setSectionResizeMode(
            QtWidgets.QHeaderView.Interactive)
 
-
     def get_filter_string(self):
         filter_entity = self.filterEntity_lineEdit.text()
         if filter_entity == "":
@@ -568,7 +589,7 @@ class MainWindow(QMainWindow):
             action = rc_menu.addAction(self.tr("Trash"))
             action.triggered.connect(partial(self.trash_product, item))
             action2 = rc_menu.addAction(self.tr("Add Input"))
-            action2.triggered.connect(partial(self.node_add_input, item))
+            action2.triggered.connect(partial(self.node_edit_inputs, item))
 
         elif isinstance(item.pulse_node, pulse.Work):
             action = rc_menu.addAction(self.tr("Commit"))
@@ -579,15 +600,18 @@ class MainWindow(QMainWindow):
             action3.triggered.connect(partial(self.trash_work, item))
             action4 = rc_menu.addAction(self.tr("Explore Directory"))
             action4.triggered.connect(partial(self.explore, item))
-            action5 = rc_menu.addAction(self.tr("Add Input"))
-            action5.triggered.connect(partial(self.node_add_input, item))
+            action5 = rc_menu.addAction(self.tr("Edit Inputs"))
+            action5.triggered.connect(partial(self.node_edit_inputs, item))
 
         rc_menu.exec_(self.treeWidget.mapToGlobal(pos))
 
-    def node_add_input(self, item):
-        input_window = AddInputWindow(self, item.pulse_node)
-        input_window.show()
-
+    def node_edit_inputs(self, item):
+        try:
+            input_window = InputsWindow(self, item.pulse_node)
+            input_window.show()
+        except Exception as ex:
+            print_exception(ex, self)
+            return
     def explore(self, item):
         if not os.path.exists(item.pulse_node.directory):
             self.message_user("Directory missing : " + item.pulse_node.directory, message_type="ERROR")
