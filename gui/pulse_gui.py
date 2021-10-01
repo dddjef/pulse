@@ -95,7 +95,7 @@ class InputsWindow(QDialog):
         loadUi("edit_inputs.ui", self)
         self.mainWindow = main_window
         self.pulse_node = pulse_node
-        self.setWindowTitle(self.mainWindow.treeWidget.currentItem().text(0))
+        self.setWindowTitle(self.mainWindow.treeWidget.currentItem().text(0) + " inputs")
         self.addInput_pushButton.clicked.connect(self.add_input)
         self.removeInput_pushButton.clicked.connect(self.remove_input)
         self.close_pushButton.clicked.connect(self.close)
@@ -588,7 +588,7 @@ class MainWindow(QMainWindow):
         elif isinstance(item.pulse_node, pulse.WorkProduct):
             action = rc_menu.addAction(self.tr("Trash"))
             action.triggered.connect(partial(self.trash_product, item))
-            action2 = rc_menu.addAction(self.tr("Add Input"))
+            action2 = rc_menu.addAction(self.tr("Edit Inputs"))
             action2.triggered.connect(partial(self.node_edit_inputs, item))
 
         elif isinstance(item.pulse_node, pulse.Work):
