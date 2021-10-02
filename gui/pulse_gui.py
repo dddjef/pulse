@@ -549,7 +549,7 @@ class MainWindow(QMainWindow):
         if not repositories:
             self.message_user("You have to create at least a repository before creating a project", "ERROR")
             return
-        page = ProjectWindow(self)
+        page = ProjectWindow(self, repositories)
         page.exec_()
 
     def open_repository_page(self):
