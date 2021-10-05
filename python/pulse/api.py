@@ -92,10 +92,7 @@ class Product:
         self.parent = parent
         self.product_type = product_type
         self.directory = os.path.join(parent.get_products_directory(), product_type)
-        self.product_users_file = os.path.normpath(os.path.join(
-            self.parent.project.product_data_directory,
-            fu.uri_to_json_filename(self.uri)
-        ))
+        self.product_users_file = ""
 
     def init_local_data_file(self):
         """
@@ -156,6 +153,10 @@ class CommitProduct(PulseDbObject, Product):
         PulseDbObject.__init__(self, parent.project, self.uri)
         self.products_inputs = []
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
+        self.product_users_file = os.path.normpath(os.path.join(
+            self.parent.project.commit_product_data_directory,
+            fu.uri_to_json_filename(self.uri)
+        ))
 
     def download(self):
         """
@@ -182,7 +183,7 @@ class CommitProduct(PulseDbObject, Product):
         """
         os.remove(self.product_users_file)
 
-    def remove_from_user_products(self, recursive_clean=False):
+    def remove_from_local_products(self, recursive_clean=False):
         """
         remove the product from local pulse cache
         will raise a pulse error if the product is used by a resource
@@ -201,7 +202,7 @@ class CommitProduct(PulseDbObject, Product):
             product_input.remove_product_user(self.directory)
             if recursive_clean:
                 try:
-                    product_input.remove_from_user_products(recursive_clean=True)
+                    product_input.remove_from_local_products(recursive_clean=True)
                 except PulseError:
                     pass
 
@@ -244,7 +245,7 @@ class Commit(PulseDbObject):
         """
         return CommitProduct(self, product_type).db_read()
 
-    #TODO: this function seems not use, and return empty list anyway
+    # TODO: this function seems not use, and return empty list anyway
     def get_products(self):
         """
         return the commit's products list
@@ -280,19 +281,19 @@ class WorkNode:
         """
         return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
 
-    def add_input(self, product):
+    def add_input(self, commit_product):
         # TODO : a work should not accept to add its own product as input
         """
-        add a local product to work or product inputs list
+        add a commit_product to work or work_product inputs list
 
-        :param product: product object
+        :param commit_product: the new input used by this work node
         """
-        if not os.path.exists(product.directory):
-            # if the product is a WorkProduct try to convert it first
-            product = self.project.get_product(product.uri)
-            product.download()
-        fu.json_list_append(self.products_inputs_file, product.uri)
-        product.add_product_user(self.directory)
+        if not isinstance(commit_product, CommitProduct):
+            raise PulseError("add_input needs a commit product")
+        if not os.path.exists(commit_product.directory):
+            commit_product.download()
+        fu.json_list_append(self.products_inputs_file, commit_product.uri)
+        commit_product.add_product_user(self.directory)
 
     def remove_input(self, local_product):
         """
@@ -311,6 +312,10 @@ class WorkProduct(Product, WorkNode):
     def __init__(self, work, product_type):
         Product.__init__(self, work, product_type)
         WorkNode.__init__(self, work.project, self.directory)
+        self.product_users_file = os.path.normpath(os.path.join(
+            self.parent.project.work_product_data_directory,
+            fu.uri_to_json_filename(self.uri)
+        ))
 
 
 class Work(WorkNode):
@@ -410,7 +415,9 @@ class Work(WorkNode):
         # unregister from products
         for input_product in product.get_inputs():
             if os.path.exists(input_product.directory):
+                print("okokk")
                 input_product.remove_product_user(product.directory)
+                print("ij")
 
         # create the trash work directory
         trash_directory = self._get_trash_directory()
@@ -508,7 +515,6 @@ class Work(WorkNode):
 
         # convert work products to commit products
         if commit.products:
-            # TODO : change the product data path to a commit product
             for product_type in commit.products:
                 work_product = self.get_product(product_type)
 
@@ -517,7 +523,10 @@ class Work(WorkNode):
                 commit_product.db_create()
 
                 if trash_unused_products and commit_product.get_unused_time() > 0:
-                    commit_product.remove_from_user_products()
+                    commit_product.remove_from_local_products()
+                else:
+                    # change the work product data file to a commit product file
+                    os.rename(work_product.product_users_file, commit_product.product_users_file)
 
         commit.db_create()
         self.resource.set_last_version(self.version)
@@ -676,7 +685,7 @@ class Resource(PulseDbObject):
         self.last_version = 0
         self.resource_type = resource_type
         self.entity = entity
-        #TODO : repository doesn't seem to be written at creation
+        # TODO : repository doesn't seem to be written at creation
         self.repository = None
         self.resource_template = ''
         PulseDbObject.__init__(
@@ -783,6 +792,7 @@ class Resource(PulseDbObject):
 
         # create the work object
         work.version = self.last_version + 1
+        source_resource = None
 
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
         if self.last_version == 0:
@@ -923,7 +933,8 @@ class Project:
         self.cfg = Config(self)
         self.work_directory = None
         self.work_data_directory = None
-        self.product_data_directory = None
+        self.commit_product_data_directory = None
+        self.work_product_data_directory = None
 
     def get_product(self, uri_string):
         """
@@ -962,9 +973,9 @@ class Project:
         return the list of products in user work space
         :return: uri list
         """
-        if not os.path.exists(self.product_data_directory):
+        if not os.path.exists(self.commit_product_data_directory):
             return []
-        file_list = os.listdir(self.product_data_directory)
+        file_list = os.listdir(self.commit_product_data_directory)
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
     def get_local_works(self, uri_pattern="*"):
@@ -984,8 +995,9 @@ class Project:
 
         :param unused_days: for how many days this products have not been used by the user
         :param resource_filter: affect only products with the uri starting by the given string
+        :return: the number of purge products
         """
-
+        nb_purge = 0
         for uri in self.get_local_commit_products():
             if resource_filter:
                 if not uri.startswith(resource_filter.uri):
@@ -993,7 +1005,9 @@ class Project:
 
             product = self.get_product(uri)
             if product.get_unused_time() > (unused_days*86400):
-                product.remove_from_user_products(recursive_clean=True)
+                nb_purge += 1
+                product.remove_from_local_products(recursive_clean=True)
+        return nb_purge
 
     def load_config(self):
         """
@@ -1002,15 +1016,22 @@ class Project:
         self.cfg.db_read()
         self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
         self.work_data_directory = os.path.join(self.work_directory, ".pulse_data", "works")
-        self.product_data_directory = os.path.join(
+        self.commit_product_data_directory = os.path.join(
             self.cfg.get_product_user_root(),
             self.name,
             ".pulse_data",
-            "products"
+            "commit_products"
         )
-
+        self.work_product_data_directory = os.path.join(
+            self.cfg.get_product_user_root(),
+            self.name,
+            ".pulse_data",
+            "work_products"
+        )
         # create local data directories
-        for directory in [self.work_data_directory, self.product_data_directory]:
+        for directory in [self.work_data_directory,
+                          self.commit_product_data_directory,
+                          self.work_product_data_directory]:
             if not os.path.isdir(directory):
                 os.makedirs(directory)
             # if platform is windows, hide the directory with ctypes
