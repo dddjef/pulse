@@ -338,8 +338,15 @@
     <addaction name="properties_action"/>
     <addaction name="filters_action"/>
    </widget>
+   <widget class="QMenu" name="menuProject_2">
+    <property name="title">
+     <string>Project</string>
+    </property>
+    <addaction name="purgeProducts_action"/>
+   </widget>
    <addaction name="menuConnection"/>
    <addaction name="menuProject"/>
+   <addaction name="menuProject_2"/>
    <addaction name="menuDisplay"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -403,6 +410,11 @@
    </property>
    <property name="text">
     <string>Filters</string>
+   </property>
+  </action>
+  <action name="purgeProducts_action">
+   <property name="text">
+    <string>Purge Unused Local Products</string>
    </property>
   </action>
  </widget>

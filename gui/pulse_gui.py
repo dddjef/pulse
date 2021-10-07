@@ -50,6 +50,23 @@ def set_tree_item_style(item, style):
     else:
         item.setIcon(0, QIcon())
 
+class PurgeProductsWindow(QDialog):
+    def __init__(self, main_window):
+        super(PurgeProductsWindow, self).__init__()
+        loadUi("purge_products.ui", self)
+        self.mainWindow = main_window
+        self.project = main_window.project
+
+        self.process_pushButton.clicked.connect(self.purge)
+
+    def purge(self):
+        try:
+            purge_products = self.project.purge_unused_user_products(unused_days=self.unusedDays_spinBox.value())
+            self.mainWindow.message_user(str(len(purge_products)) + " product(s) purged")
+        except Exception as ex:
+            print_exception(ex, self.mainWindow)
+            return
+
 
 # TODO : add the create from another resource feature
 class CreateResourceTemplateWindow(QDialog):
@@ -315,6 +332,7 @@ class MainWindow(QMainWindow):
         self.createRepository_action.triggered.connect(self.open_repository_page)
         self.createResource_action.triggered.connect(self.create_resource)
         self.createResourceTemplate_action.triggered.connect(self.create_template)
+        self.purgeProducts_action.triggered.connect(self.purge_products)
 
         self.filterEntity_lineEdit.returnPressed.connect(self.update_treeview)
         self.filterType_lineEdit.returnPressed.connect(self.update_treeview)
@@ -691,7 +709,7 @@ class MainWindow(QMainWindow):
 
     def remove_product(self, item):
         try:
-            item.pulse_node.remove_from_user_products()
+            item.pulse_node.remove_from_local_products()
             self.message_user("Product removed from local cache")
             set_tree_item_style(item, None)
         except Exception as ex:
@@ -722,6 +740,11 @@ class MainWindow(QMainWindow):
         else:
             entity_name = item.pulse_node.entity
         dialog = CreateResourceWindow(self, entity_name)
+        dialog.exec_()
+
+
+    def purge_products(self, item=None):
+        dialog = PurgeProductsWindow(self)
         dialog.exec_()
 
     def create_template(self, item=None):
