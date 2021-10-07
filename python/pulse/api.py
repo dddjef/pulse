@@ -282,7 +282,6 @@ class WorkNode:
         return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
 
     def add_input(self, commit_product):
-        # TODO : a work should not accept to add its own product as input
         """
         add a commit_product to work or work_product inputs list
 
@@ -989,15 +988,16 @@ class Project:
         file_list = [os.path.basename(x) for x in path_list]
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
-    def purge_unused_user_products(self, unused_days=0, resource_filter=None):
+    def purge_unused_user_products(self, unused_days=0, resource_filter=None, dry_mode=False):
         """
         remove unused products from the user product space, based on a unused time
 
         :param unused_days: for how many days this products have not been used by the user
         :param resource_filter: affect only products with the uri starting by the given string
-        :return: the number of purge products
+        :param dry_mode: do not delete the unused products
+        :return: purge products list
         """
-        nb_purge = 0
+        purged_products = []
         for uri in self.get_local_commit_products():
             if resource_filter:
                 if not uri.startswith(resource_filter.uri):
@@ -1005,9 +1005,10 @@ class Project:
 
             product = self.get_product(uri)
             if product.get_unused_time() > (unused_days*86400):
-                nb_purge += 1
-                product.remove_from_local_products(recursive_clean=True)
-        return nb_purge
+                purged_products.append(product.uri)
+                if not dry_mode:
+                    product.remove_from_local_products(recursive_clean=True)
+        return purged_products
 
     def load_config(self):
         """

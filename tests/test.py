@@ -140,9 +140,22 @@ class TestResources(unittest.TestCase):
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_purged_product(self):
-        self.anna_mdl_work.create_product("wip")
-        # test purge products
-        self.prj.purge_unused_user_products()
+        # test the dry mode
+        self.anna_abc_product = self.prj.get_product("anna-mdl.abc@1")
+        self.assertTrue(os.path.exists(self.anna_abc_product.directory))
+        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), ['anna-mdl.abc@1'])
+        self.assertTrue(os.path.exists(self.anna_abc_product.directory))
+
+        # test product currently in use can't be purged
+        self.anna_surf = self.prj.create_resource("anna", "surfacing")
+        self.anna_surf_work = self.anna_surf.checkout()
+        self.anna_surf_work.add_input(self.anna_abc_product)
+        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), [])
+
+        # test the normal mode
+        self.anna_surf_work.trash()
+        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=False), ['anna-mdl.abc@1'])
+        self.assertFalse(os.path.exists(self.anna_abc_product.directory))
 
     def test_manipulating_trashed_work(self):
         wip_product = self.anna_mdl_work.create_product("wip")
