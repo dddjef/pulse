@@ -20,9 +20,9 @@ Here are concepts manipulated by Pulse with some examples.
 .. image:: pulse_objects.png
     :align: center
 
-API Installation
+Installation
 =================================
-Pulse APi is written in pure python, you don't need to install any external libraries to use it.
+Pulse is written in pure python, you don't need to install any external libraries to use it.
 It has been tested with python 2.7 and 3.7
 
 You'll need to add /python directory to you python path. Then you can use the launch the standard test :
