@@ -469,12 +469,12 @@ class Work(WorkNode):
         self.version = work_data["version"]
         return self
 
-    def commit(self, comment="", trash_unused_products=False):
+    def commit(self, comment="", keep_products_in_cache=True):
         """
         commit the work to the repository, and publish it to the database
 
         :param comment: a user comment string
-        :param trash_unused_products: if a work's product is not used anymore, move it to trash
+        :param keep_products_in_cache: keep the commit products in local cache after the commit
         :return: the created commit object
         """
         self._check_exists_in_user_workspace()
@@ -521,7 +521,7 @@ class Work(WorkNode):
                 commit_product.products_inputs = [x.uri for x in work_product.get_inputs()]
                 commit_product.db_create()
 
-                if trash_unused_products and commit_product.get_unused_time() > 0:
+                if not keep_products_in_cache:
                     commit_product.remove_from_local_products()
                 else:
                     # change the work product data file to a commit product file
