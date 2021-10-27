@@ -18,6 +18,7 @@ except ModuleNotFoundError:
 project_data_filename = "project.pipe"
 work_data_filename = "work.pipe"
 
+
 class PulseCliError(Exception):
     def __init__(self, reason):
         Exception.__init__(self)
@@ -70,7 +71,7 @@ def get_pulse_project(path):
                 break
         path = os.path.dirname(path)
     if not connection_data:
-        raise Exception("can't connect to project : " + path)
+        raise PulseCliError("can't connect to project : " + path)
 
     cnx = None
     if connection_data["adapter"] == "json_db":

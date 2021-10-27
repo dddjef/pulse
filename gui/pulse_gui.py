@@ -50,22 +50,44 @@ def set_tree_item_style(item, style):
     else:
         item.setIcon(0, QIcon())
 
-class PurgeProductsWindow(QDialog):
+
+class LocalProductsWindow(QDialog):
     def __init__(self, main_window):
-        super(PurgeProductsWindow, self).__init__()
-        loadUi("purge_products.ui", self)
+        super(LocalProductsWindow, self).__init__()
+        loadUi("products_local_cache.ui", self)
         self.mainWindow = main_window
         self.project = main_window.project
+        self.process_pushButton.clicked.connect(self.remove)
+        self.showUnused_checkBox.stateChanged.connect(self.update_inputs_list)
+        self.unusedDays_spinBox.valueChanged.connect(self.update_inputs_list)
+        self.update_inputs_list()
 
-        self.process_pushButton.clicked.connect(self.purge)
+    def update_inputs_list(self):
+        self.products_listWidget.clear()
+        for uri in self.project.get_local_commit_products():
+            print(uri)
+            product = self.project.get_product(uri)
+            if self.showUnused_checkBox.isChecked():
+                if product.get_unused_time() < (self.unusedDays_spinBox.value()*86400):
+                    continue
+            users = product.get_product_users()
+            item = ProductItem(product.uri + " (used : " + str(len(users)) + ")", pulse_node=product)
+            self.products_listWidget.addItem(item)
 
-    def purge(self):
-        try:
-            purge_products = self.project.purge_unused_user_products(unused_days=self.unusedDays_spinBox.value())
-            self.mainWindow.message_user(str(len(purge_products)) + " product(s) purged")
-        except Exception as ex:
-            print_exception(ex, self.mainWindow)
+    def remove(self):
+        removed = 0
+        for item in self.products_listWidget.selectedItems():
+            try:
+                item.pulse_node.remove_from_local_products()
+                removed += 1
+            except Exception as ex:
+                print_exception(ex, self.mainWindow)
             return
+        self.update_inputs_list()
+        self.mainWindow.message_user(str(removed) + " product(s) removed from local cache")
+
+
+
 
 
 # TODO : add the create from another resource feature
@@ -332,7 +354,7 @@ class MainWindow(QMainWindow):
         self.createRepository_action.triggered.connect(self.open_repository_page)
         self.createResource_action.triggered.connect(self.create_resource)
         self.createResourceTemplate_action.triggered.connect(self.create_template)
-        self.purgeProducts_action.triggered.connect(self.purge_products)
+        self.localProducts_action.triggered.connect(self.purge_products)
 
         self.filterEntity_lineEdit.returnPressed.connect(self.update_treeview)
         self.filterType_lineEdit.returnPressed.connect(self.update_treeview)
@@ -744,7 +766,7 @@ class MainWindow(QMainWindow):
 
 
     def purge_products(self, item=None):
-        dialog = PurgeProductsWindow(self)
+        dialog = LocalProductsWindow(self)
         dialog.exec_()
 
     def create_template(self, item=None):

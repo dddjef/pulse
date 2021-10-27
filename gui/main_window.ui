@@ -342,7 +342,7 @@
     <property name="title">
      <string>Project</string>
     </property>
-    <addaction name="purgeProducts_action"/>
+    <addaction name="localProducts_action"/>
    </widget>
    <addaction name="menuConnection"/>
    <addaction name="menuProject"/>
@@ -412,9 +412,9 @@
     <string>Filters</string>
    </property>
   </action>
-  <action name="purgeProducts_action">
+  <action name="localProducts_action">
    <property name="text">
-    <string>Purge Unused Local Products</string>
+    <string>Products in Local Cache</string>
    </property>
   </action>
  </widget>
