@@ -1017,18 +1017,9 @@ class Project:
         self.cfg.db_read()
         self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
         self.work_data_directory = os.path.join(self.work_directory, ".pulse_data", "works")
-        self.commit_product_data_directory = os.path.join(
-            self.cfg.get_product_user_root(),
-            self.name,
-            ".pulse_data",
-            "commit_products"
-        )
-        self.work_product_data_directory = os.path.join(
-            self.cfg.get_product_user_root(),
-            self.name,
-            ".pulse_data",
-            "work_products"
-        )
+        self.commit_product_data_directory = os.path.join(self.work_directory, ".pulse_data", "commit_products")
+        self.work_product_data_directory = os.path.join(self.work_directory, ".pulse_data", "work_products")
+
         # create local data directories
         for directory in [self.work_data_directory,
                           self.commit_product_data_directory,
