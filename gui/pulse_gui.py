@@ -87,9 +87,6 @@ class LocalProductsWindow(QDialog):
         self.mainWindow.message_user(str(removed) + " product(s) removed from local cache")
 
 
-
-
-
 # TODO : add the create from another resource feature
 class CreateResourceTemplateWindow(QDialog):
     def __init__(self, main_window):
@@ -308,6 +305,8 @@ class ConnectWindow(QDialog):
         self.typeComboBox.addItems(adapters)
         self.mainWindow = main_window
         self.settings_textEdit.setPlaceholderText(SETTINGS_DEFAULT_TEXT)
+        if not self.mainWindow.settings.contains('db_type'):
+            return
         try:
             index = adapters.index(self.mainWindow.settings.value('db_type'))
             self.typeComboBox.setCurrentIndex(index)
@@ -369,6 +368,11 @@ class MainWindow(QMainWindow):
         self.project_list = []
         self.project = None
         self.settings = QSettings('pulse_standalone', 'Main')
+        if not self.settings.contains("'window size'"):
+            self.show()
+            self.message_user("No settings found", "INFO")
+            return
+
         try:
             self.resize(self.settings.value('window size'))
             self.move(self.settings.value('window position'))
