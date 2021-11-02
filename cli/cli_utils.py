@@ -85,7 +85,7 @@ def get_project(args):
     # get config settings
     cli_filepath = os.path.dirname(os.path.realpath(__file__))
     config = ConfigParser()
-    config.read(os.path.join(cli_filepath, "../../cli/config.ini"))
+    config.read(os.path.join(cli_filepath, "config.ini"))
 
     # if no adapter specified, get setting from config
     if not args.adapter:

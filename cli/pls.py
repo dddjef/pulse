@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 import argparse
-from pulse.cli_utils import *
+from cli_utils import *
 
 # create the top-level parser
 parser = argparse.ArgumentParser()
