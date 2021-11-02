@@ -24,8 +24,11 @@ class PulseDatabaseMissingObject(Exception):
 
 
 class PulseDatabase:
-    def __init__(self, settings=None):
+    def __init__(self, path="", username="", password="", settings=None):
         self.settings = settings
+        self.path = path
+        self.username=username
+        self.password=password
 
     config_tables = {
         'Repository': [
@@ -33,6 +36,9 @@ class PulseDatabase:
             "login VARCHAR(255)",
             "password VARCHAR(255)",
             "settings LONGTEXT"
+        ],
+        'Project': [
+            "created_by VARCHAR(255)"
         ]
     }
 
@@ -70,6 +76,9 @@ class PulseDatabase:
         pass
 
     def get_repositories(self):
+        pass
+
+    def get_projects(self):
         pass
 
     def create_project(self, project_name):

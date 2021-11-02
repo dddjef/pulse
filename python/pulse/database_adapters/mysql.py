@@ -5,21 +5,35 @@ import mysql.connector as mariadb
 
 
 class Database(PulseDatabase):
-    def __init__(self, settings):
-        PulseDatabase.__init__(self, settings)
+#TODO : add the new path, username and password parameters
+    def __init__(self, path="", username="", password="", settings=None):
+        PulseDatabase.__init__(self, path, username, password, settings)
         self.connection = None
-        self.config_name = "_Config"
+        self.config_name = "_Pulse_config"
         self.cursor = None
         self.update_connection()
 
     def update_connection(self):
         self.connection = mariadb.connect(
-            host=self.settings['host'],
+            host=self.path,
             port=self.settings['port'],
-            user=self.settings['username'],
-            password=self.settings['password']
+            user=self.username,
+            password=self.password
         )
         self.cursor = self.connection.cursor()
+        # set config db if does not exists yet
+        try:
+            self.cursor.execute("USE " + self.config_name)
+        except mariadb.errors.DatabaseError:
+            self.cursor.execute("CREATE DATABASE " + self.config_name)
+            self.cursor.execute("USE " + self.config_name)
+            for table in self.config_tables:
+                cmd = "CREATE TABLE " + table + " (name VARCHAR(255) PRIMARY KEY"
+                for field in self.config_tables[table]:
+                    cmd += ", " + field
+                cmd += ")"
+                self.cursor.execute(cmd)
+            self.connection.commit()
 
     def create_repository(self, name, adapter, login, password, settings):
         data = {
@@ -40,21 +54,7 @@ class Database(PulseDatabase):
         self.connection.commit()
 
     def get_repositories(self):
-        self.connection.commit()
-        # set config db if does not exists yet
-        try:
-            self.cursor.execute("USE " + self.config_name)
-        except mariadb.errors.DatabaseError:
-            self.cursor.execute("CREATE DATABASE " + self.config_name)
-            self.cursor.execute("USE " + self.config_name)
-            for table in self.config_tables:
-                cmd = "CREATE TABLE " + table + " (name VARCHAR(255) PRIMARY KEY"
-                for field in self.config_tables[table]:
-                    cmd += ", " + field
-                cmd += ")"
-                self.cursor.execute(cmd)
-            self.connection.commit()
-            return {}
+        self.cursor.execute("USE " + self.config_name)
         self.cursor.execute("SELECT * FROM Repository")
         table = [self.cursor.fetchall()][0]
         repositories_dict = {}
@@ -66,14 +66,23 @@ class Database(PulseDatabase):
             repositories_dict[row[0]]["settings"] = json.loads(row[4])
         return repositories_dict
 
+    def get_projects(self):
+        self.cursor.execute("USE " + self.config_name)
+        self.cursor.execute("SELECT * FROM Project")
+        table = [self.cursor.fetchall()][0]
+        projects = []
+        for row in table:
+            projects.append(row[0])
+        return projects
+
     def create_project(self, project_name):
         if project_name == self.config_name:
             raise PulseDatabaseError("project name reserved by config : " + project_name)
         # test if the projects table exists
         try:
             self.cursor.execute("CREATE DATABASE " + project_name)
-        except mariadb.errors.DatabaseError:
-            raise PulseDatabaseError("project already exists : " + project_name)
+        except mariadb.errors.DatabaseError as ex:
+            raise PulseDatabaseError("project creation failed" + str(ex))
 
         self.cursor.execute("USE " + project_name)
 
@@ -90,6 +99,20 @@ class Database(PulseDatabase):
             cmd += ")"
             self.cursor.execute(cmd)
 
+        # register project to config table
+        data = {
+            "name": project_name,
+            "created_by": self.username
+        }
+
+        self.cursor.execute("USE " + self.config_name)
+        placeholders = ', '.join(['%s'] * len(data))
+        columns = ', '.join(data.keys())
+        cmd = "INSERT INTO %s ( %s ) VALUES ( %s )" % ("Project", columns, placeholders)
+        self.cursor.execute(cmd, list(data.values()))
+        self.connection.commit()
+
+
     def delete_project(self, project_name):
         self.cursor.execute("DROP DATABASE IF EXISTS " + project_name)
 
@@ -101,7 +124,7 @@ class Database(PulseDatabase):
         return [x[0] for x in self.cursor.fetchall()]
 
     def get_user_name(self):
-        return self.settings["username"]
+        return self.username
 
     def create(self, project_name, entity_type, uri, data):
         self.cursor.execute("USE " + project_name)

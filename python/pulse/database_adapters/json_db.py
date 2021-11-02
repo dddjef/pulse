@@ -6,14 +6,15 @@ from pulse.database_adapters.interface_class import *
 
 
 class Database(PulseDatabase):
-    def __init__(self, settings):
-        PulseDatabase.__init__(self, settings)
-        if not os.path.exists(self.settings["path"]):
+    def __init__(self, path="", username="", password="", settings=None):
+        PulseDatabase.__init__(self, path, username, password, settings)
+        if not os.path.exists(self.path):
             try:
-                os.makedirs(self.settings["path"])
+                os.makedirs(self.path)
             except OSError:
-                raise PulseDatabaseError("can't find json database :" + self.settings["path"])
-        self._root = self.settings["path"]
+                raise PulseDatabaseError("can't find json database :" + self.path)
+        self._root = self.path
+        self._projects_path = os.path.join(self._root, "Project")
         self.config_name = "_Config"
         self.repo_filepath = os.path.join(self._root, self.config_name, "Repository")
 
@@ -27,6 +28,12 @@ class Database(PulseDatabase):
                 data = json.load(read_file)
             repositories[data["name"]] = data
         return repositories
+
+    def get_projects(self):
+        if not os.path.exists(self._projects_path):
+            return []
+        projects = [x for x in os.listdir(self._projects_path) if os.path.isdir(os.path.join(self._projects_path, x))]
+        return projects
 
     def create_repository(self, name, adapter, login, password, settings):
         json_filepath = os.path.join(self.repo_filepath, name + ".json")
@@ -91,7 +98,7 @@ class Database(PulseDatabase):
         return data
 
     def _get_project_filepath(self, project_name):
-        return os.path.join(self._root, "Project", project_name)
+        return os.path.join(self._projects_path, project_name)
 
     def _get_json_filepath(self, project_name, entity_type, uri):
         return os.path.join(self._get_project_filepath(project_name), entity_type,  uri.replace(":", "%") + ".json")

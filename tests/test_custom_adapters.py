@@ -54,7 +54,7 @@ class TestResourcesSQL(standard_test.TestResources):
         utils_ca.reset_sql_db(test_project_name)
         self.cnx = Connection(
             adapter="mysql",
-            host=utils_ca.mysql_settings['host'],
+            path=utils_ca.mysql_settings['host'],
             username=utils_ca.mysql_settings['username'],
             password=utils_ca.mysql_settings['password'],
             port=utils_ca.mysql_settings['port']
