@@ -24,6 +24,7 @@ DEFAULT_VERSION_PADDING = 3
 DEFAULT_VERSION_PREFIX = "V"
 template_name = "_template"
 pulse_filename = ".pulse"
+pulse_data_dir = ".pulse_data"
 
 
 class PulseDbObject:
@@ -1016,9 +1017,10 @@ class Project:
         """
         self.cfg.db_read()
         self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
-        self.work_data_directory = os.path.join(self.work_directory, ".pulse_data", "works")
-        self.commit_product_data_directory = os.path.join(self.work_directory, ".pulse_data", "commit_products")
-        self.work_product_data_directory = os.path.join(self.work_directory, ".pulse_data", "work_products")
+        self.work_data_directory = os.path.join(self.work_directory, pulse_data_dir, "works")
+        product_root = os.path.join(self.cfg.get_product_user_root(), self.name)
+        self.commit_product_data_directory = os.path.join(product_root, pulse_data_dir, "commit_products")
+        self.work_product_data_directory = os.path.join(product_root, pulse_data_dir, "work_products")
 
         # create local data directories
         for directory in [self.work_data_directory,

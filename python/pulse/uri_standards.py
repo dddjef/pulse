@@ -1,4 +1,6 @@
 import os
+import pulse.api as pulse
+from pulse.exception import *
 
 
 def convert_to_dict(uri_string):
@@ -39,8 +41,34 @@ def convert_from_dict(uri_dict):
     return uri
 
 
-def path_to_uri(project_directory, path):
-    abspath = os.path.normpath(os.path.abspath(path))
-    project_relative_path = abspath.replace(os.path.normpath(project_directory), "").replace("\\", "/")
-    split_path = project_relative_path[1:].split("/")
-    return project_relative_path.replace("/", ".")
+def path_to_uri(path):
+    path = os.path.normpath(path)
+    path_list = path.split(os.sep)
+    mode = None
+    uri_dict = {}
+
+    # find the pulse_data_dir to determine if it's a product or work URI
+    for i in range(1, len(path_list)):
+        if os.path.exists(os.path.join(path, pulse.pulse_data_dir, "works")):
+            mode = "work"
+            break
+        if os.path.exists(os.path.join(path, pulse.pulse_data_dir, "work_products")):
+            mode = "product"
+            break
+        path = os.path.dirname(path)
+    if not mode:
+        raise PulseError("can't convert path to uri")
+
+    # convert path element to URI dict
+    try:
+        split_dir = path_list[-(i - 1)].split("-")
+        uri_dict['entity'] = split_dir[0]
+        uri_dict['resource_type'] = split_dir[1]
+        if mode == "product":
+            uri_dict['version'] = int(path_list[-(i - 2)].replace(pulse.DEFAULT_VERSION_PREFIX, ""))
+            if i > 3:
+                uri_dict['product_type'] = path_list[-(i - 3)]
+    except ValueError:
+        raise PulseError("can't convert path to uri")
+
+    return convert_from_dict(uri_dict)

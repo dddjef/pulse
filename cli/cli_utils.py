@@ -42,7 +42,6 @@ def get_work(path, project=None):
         project = get_pulse_project(path)
     uri = (os.path.split(path.replace(project.work_directory, ""))[0])[1:]
     work_data_filepath = os.path.join(project.work_data_directory, fu.uri_to_json_filename(uri))
-    print(work_data_filepath)
     if not os.path.exists(work_data_filepath):
         failure_message("Not in a work folder. Can't find " + work_data_filepath)
     with open(work_data_filepath, "r") as read_file:
