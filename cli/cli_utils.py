@@ -37,10 +37,9 @@ def failure_message(message):
 
 
 def get_work(path, project=None):
-
     if not project:
         project = get_pulse_project(path)
-    uri = (os.path.split(path.replace(project.work_directory, ""))[0])[1:]
+    uri = pulse.uri_standards.path_to_uri(path)
     work_data_filepath = os.path.join(project.work_data_directory, fu.uri_to_json_filename(uri))
     if not os.path.exists(work_data_filepath):
         failure_message("Not in a work folder. Can't find " + work_data_filepath)

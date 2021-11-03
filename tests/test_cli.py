@@ -3,6 +3,7 @@ import subprocess
 import utils as cfg
 from pulse.api import *
 import utils_custom_adapters as utils_ca
+import os
 
 """
 associate .py with the python interpreter.

@@ -1,5 +1,4 @@
 import os
-import pulse.api as pulse
 from pulse.exception import *
 
 
@@ -42,6 +41,7 @@ def convert_from_dict(uri_dict):
 
 
 def path_to_uri(path):
+    import pulse.api as pulse
     path = os.path.normpath(path)
     path_list = path.split(os.sep)
     mode = None
@@ -57,18 +57,18 @@ def path_to_uri(path):
             break
         path = os.path.dirname(path)
     if not mode:
-        raise PulseError("can't convert path to uri")
+        raise PulseError("can't convert path to uri, no project found")
 
     # convert path element to URI dict
-    try:
-        split_dir = path_list[-(i - 1)].split("-")
-        uri_dict['entity'] = split_dir[0]
-        uri_dict['resource_type'] = split_dir[1]
-        if mode == "product":
-            uri_dict['version'] = int(path_list[-(i - 2)].replace(pulse.DEFAULT_VERSION_PREFIX, ""))
-            if i > 3:
-                uri_dict['product_type'] = path_list[-(i - 3)]
-    except ValueError:
-        raise PulseError("can't convert path to uri")
+    # try:
+    split_dir = path_list[-(i - 1)].split("-")
+    uri_dict['entity'] = split_dir[0]
+    uri_dict['resource_type'] = split_dir[1]
+    if mode == "product":
+        uri_dict['version'] = int(path_list[-(i - 2)].replace(pulse.DEFAULT_VERSION_PREFIX, ""))
+        if i > 3:
+            uri_dict['product_type'] = path_list[-(i - 3)]
+    # except ValueError:
+    #     raise PulseError("can't convert path to uri, malformed path")
 
     return convert_from_dict(uri_dict)
