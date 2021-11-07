@@ -15,33 +15,21 @@ class TestProjectSettings(unittest.TestCase):
         self.cnx.add_repository(name="local_test_storage", adapter="file_storage", path=utils.file_storage_path)
 
     def test_same_user_work_and_product_directory(self):
-        prj = self.cnx.create_project(
-            project_name=test_project_name,
-            work_user_root=utils.sandbox_work_path,
-            default_repository="local_test_storage"
-        )
-        resource = prj.create_resource("ch_anna", "model")
-        work = resource.checkout()
-        abc_product = work.create_product("abc")
-        utils.add_file_to_directory(abc_product.directory, filename="model.abc")
-        # check the work status don't list the product twice
-        self.assertTrue(len(work.status()) == 1)
-        # check when the work is trashed and there's a commit product, the commit product stay
-        work.commit()
-        utils.add_file_to_directory(work.directory, filename="change.blend")
-        work_subfolder = os.path.join(work.directory, "subfolder")
-        os.makedirs(work_subfolder)
-        work.commit()
-        work.trash()
-        self.assertTrue(os.path.exists(abc_product.directory))
-        self.assertFalse(os.path.exists(work_subfolder))
-        # check the purge_unused_product delete the work directory
-        prj.purge_unused_user_products()
-        self.assertFalse(os.path.exists(work.directory))
-        # check the previous commit product are not uploaded again when the work is commit
-        work = resource.checkout()
-        utils.add_file_to_directory(work.directory, filename="change_two.blend")
-        self.assertTrue(len(work.status()) == 1)
+        with self.assertRaises(PulseError):
+            self.cnx.create_project(
+                project_name=test_project_name,
+                work_user_root=utils.sandbox_work_path,
+                default_repository="local_test_storage",
+                product_user_root=utils.sandbox_work_path
+            )
+
+        with self.assertRaises(PulseError):
+            self.cnx.create_project(
+                project_name=test_project_name,
+                work_user_root=utils.sandbox_work_path,
+                default_repository="local_test_storage",
+                product_user_root=utils.sandbox_work_path + "/subdir"
+            )
 
     def test_environment_variables_in_project_path(self):
         # set up env var

@@ -239,23 +239,14 @@ class ProjectWindow(QDialog):
         self.repository_comboBox.clear()
         self.repository_comboBox.addItems(repositories)
         self.sandboxPath_lineEdit.setText(os.path.join(os.path.expanduser("~"), "pulse_sandbox"))
-        self.sameProductPath_checkBox.stateChanged.connect(self.same_path_checkbox_changed)
-
-    def same_path_checkbox_changed(self):
-        self.productsPath_lineEdit.setEnabled(not self.sameProductPath_checkBox.isChecked())
 
     def create_project(self):
-        if self.sameProductPath_checkBox.isChecked():
-            product_user_root = None
-        else:
-            product_user_root = self.productsPath_lineEdit.text()
-
         try:
             self.mainWindow.connection.create_project(
                 project_name=self.name_lineEdit.text(),
                 work_user_root=self.sandboxPath_lineEdit.text(),
                 default_repository=self.repository_comboBox.currentText(),
-                product_user_root=product_user_root,
+                product_user_root=self.productsPath_lineEdit.text(),
             )
 
             self.mainWindow.message_user("project " + self.name_lineEdit.text() + " successfully created")

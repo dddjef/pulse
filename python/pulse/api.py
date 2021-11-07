@@ -336,8 +336,6 @@ class Work(WorkNode):
     def _get_work_files(self):
         files_dict = {}
         for root, dirs, files in os.walk(self.directory, topdown=True):
-            # ignore pulse version directory
-            dirs[:] = [d for d in dirs if cfg.pulse_filename not in os.listdir(os.path.join(root, d))]
             for f in files:
                 filepath = os.path.join(root, f)
                 relative_path = filepath[len(self.directory):]
@@ -1097,11 +1095,11 @@ class Connection:
                        project_name,
                        work_user_root,
                        default_repository,
-                       product_user_root=None,
+                       product_user_root,
                        ):
         """
         create a new project in the connexion database
-        work user root and product user root have to be different
+        work user root and product user root have to be independant
 
         :param project_name:
         :param work_user_root: user work space path where the project directory will be created
@@ -1110,10 +1108,9 @@ class Connection:
         :return: the new pulse Project
         """
         work_user_root = work_user_root.replace("\\", "/")
-        if not product_user_root:
-            product_user_root = work_user_root
-        else:
-            product_user_root = product_user_root.replace("\\", "/")
+        product_user_root = product_user_root.replace("\\", "/")
+        if work_user_root in product_user_root or product_user_root in work_user_root:
+            raise PulseError("work user root and product user root should be independant")
 
         project = Project(self, project_name)
         self.db.create_project(project_name)

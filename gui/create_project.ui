@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>472</width>
-    <height>321</height>
+    <height>214</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -43,33 +43,23 @@
      <item row="2" column="0">
       <widget class="QLabel" name="label_2">
        <property name="text">
-        <string>Pulse Sandbox Path</string>
+        <string>Local Work Path</string>
        </property>
       </widget>
      </item>
      <item row="2" column="1">
       <widget class="QLineEdit" name="sandboxPath_lineEdit"/>
      </item>
-     <item row="4" column="0">
+     <item row="3" column="0">
       <widget class="QLabel" name="label_4">
        <property name="text">
-        <string>Pulse Products Path</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QLineEdit" name="productsPath_lineEdit">
-       <property name="enabled">
-        <bool>false</bool>
+        <string>Local Product Path</string>
        </property>
       </widget>
      </item>
      <item row="3" column="1">
-      <widget class="QCheckBox" name="sameProductPath_checkBox">
-       <property name="text">
-        <string>Use same path for Sandbox and Products</string>
-       </property>
-       <property name="checked">
+      <widget class="QLineEdit" name="productsPath_lineEdit">
+       <property name="enabled">
         <bool>true</bool>
        </property>
       </widget>
