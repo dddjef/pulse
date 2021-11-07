@@ -183,6 +183,19 @@ class TestResources(unittest.TestCase):
         with self.assertRaises(PulseError):
             res_work.commit()
 
+    def test_checkout(self):
+        # remove a work with a commit product
+        self.anna_mdl_work.trash()
+        self.prj.purge_unused_user_products()
+        # ensure the product directory is missing
+        self.assertFalse(os.path.exists(self.anna_abc_product.directory))
+        # checkout the resource again
+        work = self.anna_mdl.checkout()
+        # test the empty product has been restored
+        # TODO : it seems get a missing product don't raise an error
+        product = work.get_product("abc")
+        self.assertTrue(os.path.exists(product.directory))
+
     def test_check_out_from_template(self):
         # if no template exists
         resource = self.prj.create_resource("joe", "surface")
@@ -197,10 +210,14 @@ class TestResources(unittest.TestCase):
         template = self.prj.create_template("shapes")
         template_work = template.checkout()
         utils.add_file_to_directory(template_work.directory)
+        product = template_work.create_product("abc")
+        utils.add_file_to_directory(product.directory, "test.abc")
         template_work.commit()
 
         resource = self.prj.create_resource("joe", "shapes")
-        resource.checkout()
+        work = resource.checkout()
+        work_abc = work.get_product("abc")
+        self.assertFalse(os.path.exists(work_abc.directory + "/test.abc"))
 
     def test_check_out_from_another_resource(self):
         shader_work_file = "shader_work_file.ma"
@@ -215,7 +232,7 @@ class TestResources(unittest.TestCase):
         anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=source_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
-        self.assertTrue(os.path.exists(os.path.join(anna_shd_work.get_product("shader").directory,
+        self.assertFalse(os.path.exists(os.path.join(anna_shd_work.get_product("shader").directory,
                                                     shader_product_file)))
 
     def test_trashing_work_errors(self):
@@ -347,8 +364,20 @@ class TestResources(unittest.TestCase):
         self.anna_mdl_work.commit()
         self.anna_mdl_work.trash()
         self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
-        self.anna_mdl.checkout()
+        mdl_work = self.anna_mdl.checkout()
         self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
+
+        # test out product are kept and empty after commit
+        product = mdl_work.create_product("export")
+        utils.add_file_to_directory(product.directory, "export.txt")
+        mdl_work.commit()
+        clean_product = mdl_work.get_product("export")
+        self.assertTrue(os.path.exists(clean_product.directory))
+        self.assertFalse(os.path.exists(clean_product.directory + "/export.txt"))
+
+
+
+
 
     def test_get_unknown_resource_index(self):
         # test get an unknown tag raise a pulseError
@@ -417,7 +446,7 @@ class TestResources(unittest.TestCase):
         })
 
     def test_work_trash(self):
-        product = self.anna_mdl_work.create_product("abc")
+        product = self.anna_mdl_work.get_product("abc")
         utils.add_file_to_directory(product.directory, "product_file.txt")
         # test trash work and its wip product
         self.anna_mdl_work.trash()

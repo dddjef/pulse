@@ -448,6 +448,7 @@ class MainWindow(QMainWindow):
             try:
                 for resource_uri in resources_uri:
                     uri_dict = pulse_uri.convert_to_dict(resource_uri)
+                    # TODO : an error is raised in sandbox with the template filter off and no template
                     if not self.filterTemplates_checkBox.isChecked() and uri_dict["entity"] == pulse.template_name:
                         continue
                     resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])

@@ -349,6 +349,8 @@ class Work(WorkNode):
         :param product_type:
         :return: a work product
         """
+        if product_type not in self.list_products():
+            raise PulseError("product not found : " + product_type)
         return WorkProduct(self, product_type)
 
     def list_products(self):
@@ -461,7 +463,7 @@ class Work(WorkNode):
         self.version = work_data["version"]
         return self
 
-    def commit(self, comment="", keep_products_in_cache=True):
+    def commit(self, comment="", keep_products_in_cache=True, recreate_last_products=True):
         """
         commit the work to the repository, and publish it to the database
 
@@ -525,6 +527,11 @@ class Work(WorkNode):
         # increment the work and the products files
         self.version += 1
         self.write()
+
+        # recreate same products
+        if recreate_last_products:
+            for product in commit.products:
+                self.create_product(product)
 
         # restore the resource lock state
         self.resource.set_lock(lock_state, lock_user, steal=True)
@@ -766,10 +773,13 @@ class Resource(PulseDbObject):
         """
         return Work(self).read()
 
-    def checkout(self, index="last", destination_folder=None):
+    def checkout(self, index="last", destination_folder=None, recreate_products=True):
         """
         Download the resource work files in the user work space.
         Download related dependencies if they are not available in user products space
+        :param recreate_products: recreate the products from the source commit
+        :param destination_folder: where the resource will be checkout, if not set, project config is used
+        :param index: the commit index to checkout. If not set, the last one will be used
         """
         # TODO : checkout raise an error if it's the first checkout and the template did not have a first version
         work = Work(self)
@@ -784,10 +794,11 @@ class Resource(PulseDbObject):
         # create the work object
         work.version = self.last_version + 1
         source_resource = None
+        source_commit = None
+        out_product_list = []
 
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
         if self.last_version == 0:
-            source_commit = None
             # if a source resource is given, get its template
             if self.resource_template != '':
                 template_dict = uri_standards.convert_to_dict(self.resource_template)
@@ -802,33 +813,29 @@ class Resource(PulseDbObject):
                 except PulseDatabaseMissingObject:
                     pass
 
-            # if no template has been found, just create empty work folder
-            if not source_commit:
-                os.makedirs(destination_folder)
-            else:
-                # initialize work and products data with source
-                self.project.cnx.repositories[source_resource.repository].download_work(
-                    source_commit,
-                    destination_folder
-                )
-                products = source_commit.get_products()
-                for product in products:
-                    product_directory = os.path.join(work.get_products_directory(), product.product_type)
-                    # os.makedirs(product_directory)
-                    self.project.cnx.repositories[source_resource.repository].download_product(
-                        product, product_directory)
-
         # else get the resource commit
         else:
-            commit = self.get_commit(index)
-            self.project.cnx.repositories[self.repository].download_work(commit, destination_folder)
+            source_resource = self
+            source_commit = self.get_commit(index)
+
+        # if no source has been found, just create empty work folder
+        if not source_commit:
+            os.makedirs(destination_folder)
+        else:
+            self.project.cnx.repositories[source_resource.repository].download_work(source_commit, destination_folder)
+            out_product_list = source_commit.products
+
+        work.write()
+        # recreate empty output products
+        if recreate_products:
+            for product in out_product_list:
+                work.create_product(product)
 
         # download requested input products if needed
         for product in work.get_inputs():
             product.download()
             product.add_product_user(self.sandbox_path)
 
-        work.write()
         return work
 
     def set_lock(self, state, user=None, steal=False):
