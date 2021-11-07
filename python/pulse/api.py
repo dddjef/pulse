@@ -781,6 +781,9 @@ class Resource(PulseDbObject):
         :param destination_folder: where the resource will be checkout, if not set, project config is used
         :param index: the commit index to checkout. If not set, the last one will be used
         """
+        if not os.path.exists(self.project.cfg.get_work_user_root()):
+            self.project.initialize_sandbox()
+
         # TODO : checkout raise an error if it's the first checkout and the template did not have a first version
         work = Work(self)
 
@@ -1016,6 +1019,7 @@ class Project:
         self.commit_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "commit_products")
         self.work_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "work_products")
 
+    def initialize_sandbox(self):
         # create local data directories
         for directory in [self.work_data_directory,
                           self.commit_product_data_directory,
