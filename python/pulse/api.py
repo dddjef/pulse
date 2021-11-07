@@ -633,7 +633,7 @@ class Work(WorkNode):
         """
         return os.path.join(
             self.directory,
-            self.project.cfg.version_prefix + str(index).zfill(self.project.cfg.version_padding) + ".pipe"
+            cfg.DEFAULT_VERSION_PREFIX + str(index).zfill(cfg.DEFAULT_VERSION_PADDING) + ".pipe"
         )
 
     def status(self):
@@ -698,12 +698,12 @@ class Resource(PulseDbObject):
         :param version_index: integer
         :return: string
         """
-        version = str(version_index).zfill(self.project.cfg.version_padding)
+        version = str(version_index).zfill(cfg.DEFAULT_VERSION_PADDING)
         path = os.path.join(
             self.project.cfg.get_product_user_root(),
             self.project.name,
             self.uri,
-            self.project.cfg.version_prefix + version
+            cfg.DEFAULT_VERSION_PREFIX + version
         )
         return path
 
@@ -890,8 +890,6 @@ class Config(PulseDbObject):
     def __init__(self, project):
         self.work_user_root = None
         self.product_user_root = None
-        self.version_padding = None
-        self.version_prefix = None
         self.default_repository = None
         self._storage_vars = vars(self).keys()
         PulseDbObject.__init__(self, project, "config")
@@ -899,8 +897,6 @@ class Config(PulseDbObject):
             "work_user_root",
             "product_user_root",
             "default_repository",
-            "version_padding",
-            "version_prefix"
         ]
 
     def get_work_user_root(self):
@@ -1102,8 +1098,6 @@ class Connection:
                        work_user_root,
                        default_repository,
                        product_user_root=None,
-                       version_padding=cfg.DEFAULT_VERSION_PADDING,
-                       version_prefix=cfg.DEFAULT_VERSION_PREFIX,
                        ):
         """
         create a new project in the connexion database
@@ -1113,8 +1107,6 @@ class Connection:
         :param work_user_root: user work space path where the project directory will be created
         :param product_user_root: user product space path where the project directory will be created
         :param default_repository: repository name use by default when a resource is created
-        :param version_padding: optional, set ehe number of digits used to number version. 3 by default
-        :param version_prefix: optional, set the prefix used before version number. "V" by default
         :return: the new pulse Project
         """
         work_user_root = work_user_root.replace("\\", "/")
@@ -1128,8 +1120,6 @@ class Connection:
         project.cfg.default_repository = default_repository
         project.cfg.work_user_root = work_user_root
         project.cfg.product_user_root = product_user_root
-        project.cfg.version_padding = version_padding
-        project.cfg.version_prefix = version_prefix
         project.cfg.db_create()
         project.load_config()
         return project

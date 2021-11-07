@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt
 from functools import partial
 import pulse.api as pulse
 import pulse.uri_standards as pulse_uri
+import pulse.config as pulse_cfg
 from PyQt5.QtCore import QSettings
 from PyQt5.QtGui import QIcon
 import traceback
@@ -238,8 +239,6 @@ class ProjectWindow(QDialog):
         self.repository_comboBox.clear()
         self.repository_comboBox.addItems(repositories)
         self.sandboxPath_lineEdit.setText(os.path.join(os.path.expanduser("~"), "pulse_sandbox"))
-        self.versionPrefix_lineEdit.setText(pulse.DEFAULT_VERSION_PREFIX)
-        self.versionPadding_spinBox.setValue(pulse.DEFAULT_VERSION_PADDING)
         self.sameProductPath_checkBox.stateChanged.connect(self.same_path_checkbox_changed)
 
     def same_path_checkbox_changed(self):
@@ -257,8 +256,6 @@ class ProjectWindow(QDialog):
                 work_user_root=self.sandboxPath_lineEdit.text(),
                 default_repository=self.repository_comboBox.currentText(),
                 product_user_root=product_user_root,
-                version_padding=self.versionPadding_spinBox.value(),
-                version_prefix=self.versionPrefix_lineEdit.text()
             )
 
             self.mainWindow.message_user("project " + self.name_lineEdit.text() + " successfully created")
@@ -483,7 +480,7 @@ class MainWindow(QMainWindow):
             try:
                 for resource_uri in resources:
                     uri_dict = pulse_uri.convert_to_dict(resource_uri)
-                    if not self.filterTemplates_checkBox.isChecked() and uri_dict["entity"] == pulse.template_name:
+                    if not self.filterTemplates_checkBox.isChecked() and uri_dict["entity"] == pulse_cfg.template_name:
                         continue
                     resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
                     resource_item = PulseItem([resource_uri], resource)
