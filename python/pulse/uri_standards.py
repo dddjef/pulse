@@ -64,7 +64,6 @@ def path_to_uri(path):
         uri_dict['entity'] = split_dir[0]
         uri_dict['resource_type'] = split_dir[1]
         if mode == "product":
-            # TODO : this won't work if the project have a different version prefix
             uri_dict['version'] = int(path_list[-(i - 2)].replace(cfg.DEFAULT_VERSION_PREFIX, ""))
             if i > 3:
                 uri_dict['product_type'] = path_list[-(i - 3)]
