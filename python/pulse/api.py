@@ -14,17 +14,12 @@ except ImportError:
     import imp
 from pulse.database_adapters.interface_class import *
 from pulse.exception import *
+import pulse.config as cfg
 import pulse.uri_standards as uri_standards
 import tempfile
 from datetime import datetime
 import sys
 import ctypes
-
-DEFAULT_VERSION_PADDING = 3
-DEFAULT_VERSION_PREFIX = "V"
-template_name = "_template"
-pulse_filename = ".pulse"
-pulse_data_dir = ".pulse_data"
 
 
 class PulseDbObject:
@@ -210,7 +205,7 @@ class CommitProduct(PulseDbObject, Product):
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
         version_dir = os.path.dirname(self.directory)
-        if os.listdir(version_dir) == [pulse_filename]:
+        if os.listdir(version_dir) == [cfg.pulse_filename]:
             shutil.rmtree(version_dir)
             parent_dir = os.path.dirname(version_dir)
             if not os.listdir(parent_dir):
@@ -232,7 +227,7 @@ class Commit(PulseDbObject):
         self.products_inputs = []
         self.version = int(version)
         self.products = []
-        self.pulse_filepath = os.path.join(self.get_products_directory(), pulse_filename)
+        self.pulse_filepath = os.path.join(self.get_products_directory(), cfg.pulse_filename)
         """ list of product names"""
         self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
 
@@ -342,7 +337,7 @@ class Work(WorkNode):
         files_dict = {}
         for root, dirs, files in os.walk(self.directory, topdown=True):
             # ignore pulse version directory
-            dirs[:] = [d for d in dirs if pulse_filename not in os.listdir(os.path.join(root, d))]
+            dirs[:] = [d for d in dirs if cfg.pulse_filename not in os.listdir(os.path.join(root, d))]
             for f in files:
                 filepath = os.path.join(root, f)
                 relative_path = filepath[len(self.directory):]
@@ -382,7 +377,7 @@ class Work(WorkNode):
         work_product.init_local_data_file()
 
         os.makedirs(work_product.directory)
-        pulse_filepath = os.path.join(self.get_products_directory(), pulse_filename)
+        pulse_filepath = os.path.join(self.get_products_directory(), cfg.pulse_filename)
         if not os.path.exists(pulse_filepath):
             open(pulse_filepath, 'a').close()
         # update work pipe file with the new output
@@ -415,9 +410,7 @@ class Work(WorkNode):
         # unregister from products
         for input_product in product.get_inputs():
             if os.path.exists(input_product.directory):
-                print("okokk")
                 input_product.remove_product_user(product.directory)
-                print("ij")
 
         # create the trash work directory
         trash_directory = self._get_trash_directory()
@@ -611,7 +604,7 @@ class Work(WorkNode):
         # remove empty work subdirectory
         for subdir in os.listdir(self.directory):
             subdir_path = os.path.join(self.directory, subdir)
-            if not os.path.exists(os.path.join(subdir_path, pulse_filename)):
+            if not os.path.exists(os.path.join(subdir_path, cfg.pulse_filename)):
                 shutil.rmtree(subdir_path)
 
         # recursively remove products directories if they are empty
@@ -805,8 +798,8 @@ class Resource(PulseDbObject):
             else:
                 # try to find a template
                 try:
-                    if self.entity != template_name:
-                        source_resource = self.project.get_resource(template_name, self.resource_type)
+                    if self.entity != cfg.template_name:
+                        source_resource = self.project.get_resource(cfg.template_name, self.resource_type)
                         source_commit = source_resource.get_commit("last")
                 except PulseDatabaseMissingObject:
                     pass
@@ -1017,10 +1010,10 @@ class Project:
         """
         self.cfg.db_read()
         self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
-        self.work_data_directory = os.path.join(self.work_directory, pulse_data_dir, "works")
+        self.work_data_directory = os.path.join(self.work_directory, cfg.pulse_data_dir, "works")
         product_root = os.path.join(self.cfg.get_product_user_root(), self.name)
-        self.commit_product_data_directory = os.path.join(product_root, pulse_data_dir, "commit_products")
-        self.work_product_data_directory = os.path.join(product_root, pulse_data_dir, "work_products")
+        self.commit_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "commit_products")
+        self.work_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "work_products")
 
         # create local data directories
         for directory in [self.work_data_directory,
@@ -1044,7 +1037,7 @@ class Project:
         return Resource(self, entity, resource_type).db_read()
 
     def create_template(self, resource_type, repository=None, source_resource=None):
-        return self.create_resource(template_name, resource_type, repository,  source_resource)
+        return self.create_resource(cfg.template_name, resource_type, repository,  source_resource)
 
     def create_resource(self, entity, resource_type, repository=None, source_resource=None):
         """
@@ -1109,8 +1102,8 @@ class Connection:
                        work_user_root,
                        default_repository,
                        product_user_root=None,
-                       version_padding=DEFAULT_VERSION_PADDING,
-                       version_prefix=DEFAULT_VERSION_PREFIX,
+                       version_padding=cfg.DEFAULT_VERSION_PADDING,
+                       version_prefix=cfg.DEFAULT_VERSION_PREFIX,
                        ):
         """
         create a new project in the connexion database

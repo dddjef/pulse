@@ -1,5 +1,6 @@
 from pulse.api import *
 from pulse.repository_adapters.interface_class import *
+import pulse.uri_standards as uri
 import unittest
 import os
 import utils
@@ -345,6 +346,9 @@ class TestResources(unittest.TestCase):
         hat_mdl_work = hat_mdl_resource.checkout()
         hat_mdl_work.remove_input(anna_mdl_v2_abc)
         anna_mdl_work.trash()
+        # test uri_standard
+        self.assertEqual(uri.path_to_uri(hat_mdl_work.directory), hat_mdl_resource.uri)
+        self.assertEqual(uri.path_to_uri(anna_mdl_v2_abc.directory), anna_mdl_v2_abc.uri)
 
     def test_work_commit(self):
         # test subdirectories are commit

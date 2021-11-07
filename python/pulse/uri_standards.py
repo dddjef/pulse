@@ -1,6 +1,6 @@
 import os
 from pulse.exception import *
-
+import pulse.config as cfg
 
 def convert_to_dict(uri_string):
     """
@@ -41,7 +41,6 @@ def convert_from_dict(uri_dict):
 
 
 def path_to_uri(path):
-    import pulse.api as pulse
     path = os.path.normpath(path)
     path_list = path.split(os.sep)
     mode = None
@@ -49,10 +48,10 @@ def path_to_uri(path):
 
     # find the pulse_data_dir to determine if it's a product or work URI
     for i in range(1, len(path_list)):
-        if os.path.exists(os.path.join(path, pulse.pulse_data_dir, "works")):
+        if os.path.exists(os.path.join(path, cfg.pulse_data_dir, "works")):
             mode = "work"
             break
-        if os.path.exists(os.path.join(path, pulse.pulse_data_dir, "work_products")):
+        if os.path.exists(os.path.join(path, cfg.pulse_data_dir, "work_products")):
             mode = "product"
             break
         path = os.path.dirname(path)
@@ -66,7 +65,7 @@ def path_to_uri(path):
         uri_dict['resource_type'] = split_dir[1]
         if mode == "product":
             # TODO : this won't work if the project have a different version prefix
-            uri_dict['version'] = int(path_list[-(i - 2)].replace(pulse.DEFAULT_VERSION_PREFIX, ""))
+            uri_dict['version'] = int(path_list[-(i - 2)].replace(cfg.DEFAULT_VERSION_PREFIX, ""))
             if i > 3:
                 uri_dict['product_type'] = path_list[-(i - 3)]
     except ValueError:
