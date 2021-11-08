@@ -192,9 +192,11 @@ class TestResources(unittest.TestCase):
         # checkout the resource again
         work = self.anna_mdl.checkout()
         # test the empty product has been restored
-        # TODO : it seems get a missing product don't raise an error
         product = work.get_product("abc")
         self.assertTrue(os.path.exists(product.directory))
+        # test get a missing product raise an error
+        with self.assertRaises(PulseError):
+            work.get_product("abcd")
 
     def test_check_out_from_template(self):
         # if no template exists
