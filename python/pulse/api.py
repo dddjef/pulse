@@ -20,6 +20,7 @@ import tempfile
 from datetime import datetime
 import sys
 import ctypes
+import json
 
 
 class PulseDbObject:
@@ -1030,6 +1031,13 @@ class Project:
             if sys.platform == "win32":
                 ctypes.windll.kernel32.SetFileAttributesW(os.path.dirname(directory), 2)
 
+        # write connexion path and settings to local project settings
+        json_path = os.path.join(self.work_directory, cfg.pulse_data_dir, cfg.project_settings)
+        data = {}
+        data['connection'] = self.cnx.get_settings()
+        with open(json_path, "w") as write_file:
+            json.dump(data, write_file, indent=4, sort_keys=True)
+
     def get_resource(self, entity, resource_type):
         """
         return a project resource based on its entity name and its type
@@ -1084,8 +1092,13 @@ class Connection:
         self.path = path
         self.user_name = self.db.get_user_name()
         self.repositories = self.get_repositories()
+        self._adapter = adapter
+        self._settings = settings
         # TODO : add a get projects fn
-        # TODO : remove repositories var and keeep only the method (multi user friendly)
+        # TODO : remove repositories var and keep only the method (multi user friendly)
+
+    def get_settings(self):
+        return {'path': self.path, 'settings': self._settings, 'adapter': self._adapter}
 
     def get_repositories(self):
         repositories = {}
@@ -1214,3 +1227,29 @@ def import_adapter(adapter_type, adapter_name):
         # python 2 import
         mod = imp.load_source(adapter_type, path)
     return mod
+
+
+def get_project_from_path(path, username="", password=""):
+    path = os.path.normpath(path)
+    path_list = path.split(os.sep)
+    mode = None
+    uri_dict = {}
+
+    # find the pulse_data_dir to determine if it's a product or work URI
+    for i in range(1, len(path_list)):
+        if os.path.exists(os.path.join(path, cfg.pulse_data_dir, "works")):
+            mode = "work"
+            break
+        path = os.path.dirname(path)
+    if not mode:
+        raise PulseError("can't convert path to uri, no project found")
+    project_name = path.split(os.sep)[-1]
+    project_settings = fu.read_data(os.path.join(path, cfg.pulse_data_dir, cfg.project_settings))
+    cnx = Connection(
+        adapter = project_settings['connection']['adapter'],
+        path = project_settings['connection']['path'],
+        username=username,
+        password=password,
+        settings= project_settings['connection']['settings']
+    )
+    return cnx.get_project(project_name)

@@ -496,6 +496,10 @@ class TestResources(unittest.TestCase):
         anna_rig_resource.checkout()
         self.assertEqual(self.prj.get_local_works(), ['anna-mdl', 'anna-rigging'])
 
+    def test_get_project_from_path(self):
+        project = get_project_from_path(self.anna_mdl_work.directory)
+        self.assertEqual(project.get_local_works(), ['anna-mdl'])
+
 
 if __name__ == '__main__':
     unittest.main()

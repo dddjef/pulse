@@ -38,7 +38,7 @@ def failure_message(message):
 
 def get_work(path, project=None):
     if not project:
-        project = get_pulse_project(path)
+        project = pulse.get_project_from_path(path)
     uri = pulse.uri_standards.path_to_uri(path)
     work_data_filepath = os.path.join(project.work_data_directory, fu.uri_to_json_filename(uri))
     if not os.path.exists(work_data_filepath):
@@ -59,7 +59,7 @@ def get_mysql_connection(adapter, url):
     )
 
 
-def get_pulse_project(path):
+def get_project_old(path):
     connection_data = None
     while not len(path) < 4:
         project_data_filepath = os.path.join(path, project_data_filename)
@@ -80,13 +80,11 @@ def get_pulse_project(path):
 
 
 def get_project(args):
-    # get config settings
-    cli_filepath = os.path.dirname(os.path.realpath(__file__))
-    config = ConfigParser()
-    config.read(os.path.join(cli_filepath, "config.ini"))
-
     # if no adapter specified, get setting from config
     if not args.adapter:
+        cli_filepath = os.path.dirname(os.path.realpath(__file__))
+        config = ConfigParser()
+        config.read(os.path.join(cli_filepath, "config.ini"))
         adapter = config.get('database', 'default_adapter')
     else:
         adapter = args.adapter
@@ -100,29 +98,15 @@ def get_project(args):
         print("database adapter not supported by CLI")
         return
 
-    # create work and product path
+    # initialize project sandbox
     prj = cnx.get_project(args.name)
-    project_work_root = os.path.expandvars(os.path.join(prj.cfg.work_user_root, args.name))
-    project_product_root = os.path.expandvars(os.path.join(prj.cfg.product_user_root, args.name))
+    prj.initialize_sandbox()
 
-    if not os.path.exists(project_work_root):
-        os.makedirs(project_work_root)
-    if prj.cfg.product_user_root and not os.path.exists(project_product_root):
-        os.makedirs(project_product_root)
-
-    # save settings to json pipe file
-    connexion_data = {
-        'settings': args.settings,
-        'adapter': args.adapter
-    }
-
-    with open(os.path.join(project_work_root, project_data_filename), "w") as write_file:
-        json.dump(connexion_data, write_file, indent=4, sort_keys=True)
-    print("project registered to ", os.path.normpath(os.path.expandvars(project_work_root)))
+    print("project initialized to ", os.path.normpath(os.path.expandvars(prj.work_directory)))
 
 
 def create_template(args):
-    project = get_pulse_project(os.getcwd())
+    project = pulse.get_project_from_path(os.getcwd())
     resource = project.create_template(args.type)
     work = resource.checkout()
     print('template check out in "' + os.path.normpath(os.path.expandvars(work.directory)) + '"')
@@ -135,7 +119,7 @@ def create_output(args):
 
 
 def add_input(args):
-    project = get_pulse_project(os.getcwd())
+    project = pulse.get_project_from_path(os.getcwd())
     product = project.get_product(args.uri)
     if not product:
         print('no product found for ' + args.uri)
@@ -146,7 +130,7 @@ def add_input(args):
 
 
 def create_resource(args):
-    project = get_pulse_project(os.getcwd())
+    project = pulse.get_project_from_path(os.getcwd())
     uri_dict = uri_standards.convert_to_dict(args.uri)
     resource = project.create_resource(uri_dict['entity'], uri_dict['resource_type'])
     work = resource.checkout()
@@ -154,7 +138,7 @@ def create_resource(args):
 
 
 def checkout(args):
-    project = get_pulse_project(os.getcwd())
+    project = pulse.get_project_from_path(os.getcwd())
     dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.checkout()
@@ -168,7 +152,7 @@ def checkout(args):
 
 
 def trash_resource(args):
-    project = get_pulse_project(os.getcwd())
+    project = pulse.get_project_from_path(os.getcwd())
     dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     resource.get_work().trash()
@@ -211,7 +195,7 @@ def unlock(args):
 
 
 def revert(args):
-    project = get_pulse_project(os.getcwd())
+    project = pulse.get_project_from_path(os.getcwd())
     dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.get_work()
@@ -220,7 +204,7 @@ def revert(args):
 
 
 def update(args):
-    project = get_pulse_project(os.getcwd())
+    project = pulse.get_project_from_path(os.getcwd())
     dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     work = resource.get_work()
