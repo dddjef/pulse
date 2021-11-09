@@ -356,7 +356,7 @@ class MainWindow(QMainWindow):
         self.project_list = []
         self.project = None
         self.settings = QSettings('pulse_standalone', 'Main')
-        if not self.settings.contains("'window size'"):
+        if not self.settings.contains("window size"):
             self.show()
             self.message_user("No settings found", "INFO")
             return
