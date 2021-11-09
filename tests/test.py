@@ -300,8 +300,6 @@ class TestResources(unittest.TestCase):
         # checkout, and check directories are created
         anna_mdl_work = anna_mdl_resource.checkout()
         self.assertTrue(os.path.exists(anna_mdl_work.directory))
-        # by default products should not exists
-        self.assertFalse(os.path.exists(anna_mdl_work.get_products_directory()))
 
         # commit should fail if nothing is change in work
         with self.assertRaises(PulseError):
@@ -501,6 +499,15 @@ class TestResources(unittest.TestCase):
     def test_get_project_from_path(self):
         project = get_project_from_path(self.anna_mdl_work.directory)
         self.assertEqual(project.get_local_works(), ['anna-mdl'])
+
+    def test_junction_point_work_product(self):
+        # ensure a resource got its output directory by default
+        resource = self.prj.create_resource("toto", "model")
+        work = resource.checkout()
+        self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_product_dir)))
+        # ensure the output directory point to the current work product
+        work.create_product("export")
+        self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_product_dir, "export")))
 
 
 if __name__ == '__main__':

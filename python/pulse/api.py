@@ -21,6 +21,7 @@ from datetime import datetime
 import sys
 import ctypes
 import json
+import subprocess
 
 
 class PulseDbObject:
@@ -451,6 +452,19 @@ class Work(WorkNode):
             "work_files": self._get_work_files()
             })
 
+        # create work product directory
+        work_product_directory = self.get_products_directory()
+        os.makedirs(work_product_directory)
+
+        # try to create junction point to the product directory
+        work_output_path = os.path.join(self.directory, cfg.work_product_dir)
+        if not os.path.exists(work_output_path):
+            # if system is windows make a junction to current product (symlink requires admin privileges)
+            if sys.platform == "win32":
+                cmd = ('mklink /j "' + work_output_path + '" "' + work_product_directory + '"')
+                with open(os.devnull, 'wb') as none_file:
+                    subprocess.call(cmd.replace("\\", "/"), shell=True, stdout=none_file, stderr=none_file)
+
     def read(self):
         """
         read the work data from user work space
@@ -469,6 +483,7 @@ class Work(WorkNode):
         commit the work to the repository, and publish it to the database
 
         :param comment: a user comment string
+        :param recreate_last_products: keep same output products after the commit
         :param keep_products_in_cache: keep the commit products in local cache after the commit
         :return: the created commit object
         """
@@ -595,34 +610,25 @@ class Work(WorkNode):
         if not os.path.exists(trash_directory):
             os.makedirs(trash_directory)
 
+        # remove work output link
+        work_output = os.path.join(self.directory, cfg.work_product_dir)
+        if os.path.exists(work_output):
+            subprocess.call('rmdir /s /q "' + work_output, shell=True)
+
         # move work product directory
         if os.path.exists(products_directory):
             shutil.move(products_directory,  os.path.join(trash_directory, "PRODUCTS"))
 
         # move work files
-        for rel_filepath in self._get_work_files():
-            filepath = self.directory + rel_filepath
-            fu.move_file(filepath, filepath.replace(self.directory, trash_directory + "/work"))
+        shutil.move(self.directory, trash_directory + "/work")
 
         if no_backup:
             shutil.rmtree(trash_directory)
-
-        # remove empty work subdirectory
-        for subdir in os.listdir(self.directory):
-            subdir_path = os.path.join(self.directory, subdir)
-            if not os.path.exists(os.path.join(subdir_path, cfg.pulse_filename)):
-                shutil.rmtree(subdir_path)
 
         # recursively remove products directories if they are empty
         fu.remove_empty_parents_directory(
             os.path.dirname(products_directory),
             [self.project.cfg.get_product_user_root()]
-        )
-
-        # recursively remove work directory if it's empty
-        fu.remove_empty_parents_directory(
-            self.directory,
-            [self.project.cfg.get_work_user_root()]
         )
 
         # remove work data file
@@ -1033,8 +1039,7 @@ class Project:
 
         # write connexion path and settings to local project settings
         json_path = os.path.join(self.work_directory, cfg.pulse_data_dir, cfg.project_settings)
-        data = {}
-        data['connection'] = self.cnx.get_settings()
+        data = {'connection': self.cnx.get_settings()}
         with open(json_path, "w") as write_file:
             json.dump(data, write_file, indent=4, sort_keys=True)
 
@@ -1123,7 +1128,7 @@ class Connection:
                        ):
         """
         create a new project in the connexion database
-        work user root and product user root have to be independant
+        work user root and product user root have to be independent
 
         :param project_name:
         :param work_user_root: user work space path where the project directory will be created
@@ -1134,7 +1139,7 @@ class Connection:
         work_user_root = work_user_root.replace("\\", "/")
         product_user_root = product_user_root.replace("\\", "/")
         if work_user_root in product_user_root or product_user_root in work_user_root:
-            raise PulseError("work user root and product user root should be independant")
+            raise PulseError("work user root and product user root should be independent")
 
         project = Project(self, project_name)
         self.db.create_project(project_name)
@@ -1233,7 +1238,6 @@ def get_project_from_path(path, username="", password=""):
     path = os.path.normpath(path)
     path_list = path.split(os.sep)
     mode = None
-    uri_dict = {}
 
     # find the pulse_data_dir to determine if it's a product or work URI
     for i in range(1, len(path_list)):
@@ -1246,10 +1250,10 @@ def get_project_from_path(path, username="", password=""):
     project_name = path.split(os.sep)[-1]
     project_settings = fu.read_data(os.path.join(path, cfg.pulse_data_dir, cfg.project_settings))
     cnx = Connection(
-        adapter = project_settings['connection']['adapter'],
-        path = project_settings['connection']['path'],
+        adapter=project_settings['connection']['adapter'],
+        path=project_settings['connection']['path'],
         username=username,
         password=password,
-        settings= project_settings['connection']['settings']
+        settings=project_settings['connection']['settings']
     )
     return cnx.get_project(project_name)
