@@ -338,6 +338,7 @@ class Work(WorkNode):
     def _get_work_files(self):
         files_dict = {}
         for root, dirs, files in os.walk(self.directory, topdown=True):
+            dirs[:] = [d for d in dirs if d != cfg.work_product_dir]
             for f in files:
                 filepath = os.path.join(root, f)
                 relative_path = filepath[len(self.directory):]
@@ -456,14 +457,16 @@ class Work(WorkNode):
         work_product_directory = self.get_products_directory()
         os.makedirs(work_product_directory)
 
-        # try to create junction point to the product directory
+        # create junction point to the product directory
         work_output_path = os.path.join(self.directory, cfg.work_product_dir)
-        if not os.path.exists(work_output_path):
-            # if system is windows make a junction to current product (symlink requires admin privileges)
-            if sys.platform == "win32":
-                cmd = ('mklink /j "' + work_output_path + '" "' + work_product_directory + '"')
-                with open(os.devnull, 'wb') as none_file:
-                    subprocess.call(cmd.replace("\\", "/"), shell=True, stdout=none_file, stderr=none_file)
+        # remove old junction if needed
+        if os.path.exists(work_output_path):
+            subprocess.call('rmdir /s /q "' + work_output_path + '"', shell=True)
+        # if system is windows make a junction to current product (symlink requires admin privileges)
+        if sys.platform == "win32":
+            cmd = ('mklink /j "' + work_output_path + '" "' + work_product_directory + '"')
+            with open(os.devnull, 'wb') as none_file:
+                subprocess.call(cmd.replace("\\", "/"), shell=True, stdout=none_file, stderr=none_file)
 
     def read(self):
         """
@@ -654,9 +657,6 @@ class Work(WorkNode):
 
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
-        product_directories = []
-        for product_name in self.list_products():
-            product_directories.append(os.path.join(self.get_products_directory(), product_name))
 
         diff = fu.compare_directory_content(
             self._get_work_files(),
