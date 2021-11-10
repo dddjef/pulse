@@ -1254,6 +1254,6 @@ def get_project_from_path(path, username="", password=""):
         path=project_settings['connection']['path'],
         username=username,
         password=password,
-        settings=project_settings['connection']['settings']
+        **project_settings['connection']['settings']
     )
     return cnx.get_project(project_name)

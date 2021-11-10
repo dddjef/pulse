@@ -68,6 +68,15 @@ class TestResourcesSQL(standard_test.TestResources):
         )
         self._initResource()
 
+    def test_get_project_from_path(self):
+        project = get_project_from_path(
+            self.anna_mdl_work.directory,
+            username=utils_ca.mysql_settings['username'],
+            password=utils_ca.mysql_settings['password']
+        )
+        self.assertEqual(project.get_local_works(), ['anna-mdl'])
+        project.cnx.db.connection.close()
+
     def tearDown(self):
         self.cnx.db.connection.close()
 

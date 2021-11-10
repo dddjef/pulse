@@ -27,8 +27,8 @@ class PulseDatabase:
     def __init__(self, path="", username="", password="", settings=None):
         self.settings = settings
         self.path = path
-        self.username=username
-        self.password=password
+        self.username = username
+        self.password = password
 
     config_tables = {
         'Repository': [
@@ -54,7 +54,8 @@ class PulseDatabase:
             "version INT",
             "products LONGTEXT",
             "files LONGTEXT",
-            "comment VARCHAR(255)"
+            "comment VARCHAR(255)",
+            "products_inputs LONGTEXT"
         ],
         'Resource': [
             "lock_state BOOLEAN",

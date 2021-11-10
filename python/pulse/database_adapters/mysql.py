@@ -5,7 +5,6 @@ import mysql.connector as mariadb
 
 
 class Database(PulseDatabase):
-#TODO : add the new path, username and password parameters
     def __init__(self, path="", username="", password="", settings=None):
         PulseDatabase.__init__(self, path, username, password, settings)
         self.connection = None
@@ -111,7 +110,6 @@ class Database(PulseDatabase):
         cmd = "INSERT INTO %s ( %s ) VALUES ( %s )" % ("Project", columns, placeholders)
         self.cursor.execute(cmd, list(data.values()))
         self.connection.commit()
-
 
     def delete_project(self, project_name):
         self.cursor.execute("DROP DATABASE IF EXISTS " + project_name)
