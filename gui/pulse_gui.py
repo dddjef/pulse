@@ -404,11 +404,15 @@ class MainWindow(QMainWindow):
         except Exception as ex:
             print_exception(ex, self)
             self.setWindowTitle("Disconnected")
+            self.createRepository_action.setEnabled(False)
+            self.createProject_action.setEnabled(False)
             return False
         self.setWindowTitle("Connected -- " + self.connection.path)
         self.project_list = self.connection.get_projects()
         self.update_project_list()
         self.message_user("Successful connection", "INFO")
+        self.createRepository_action.setEnabled(True)
+        self.createProject_action.setEnabled(True)
         return True
 
     def update_project_list(self):
@@ -433,8 +437,14 @@ class MainWindow(QMainWindow):
         if project_name != "":
             self.project = self.connection.get_project(project_name)
             self.update_treeview()
+            self.createResourceTemplate_action.setEnabled(True)
+            self.createResource_action.setEnabled(True)
+            self.localProducts_action.setEnabled(True)
         else:
             self.project = None
+            self.createResourceTemplate_action.setEnabled(False)
+            self.createResource_action.setEnabled(False)
+            self.localProducts_action.setEnabled(False)
 
     def update_treeview(self):
         if not self.project:
