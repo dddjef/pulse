@@ -87,6 +87,7 @@ class Product:
             "product_type": product_type,
             "version": parent.version
         })
+        self.abstract_uri = uri_standards.remove_version_from_uri(self.uri)
         self.parent = parent
         self.product_type = product_type
         self.directory = os.path.join(parent.get_products_directory(), product_type)
@@ -273,24 +274,34 @@ class WorkNode:
 
     def get_inputs(self):
         """
-        return a list of products used by this local work or product
+        return a list of products uri used by this local work or product
 
         :return: products uri list
         """
-        return [self.project.get_product(uri) for uri in fu.json_list_get(self.products_inputs_file)]
+        return fu.json_list_get(self.products_inputs_file)
 
-    def add_input(self, commit_product):
+    def add_input(self, uri):
         """
-        add a commit_product to work or work_product inputs list
+        add a product to work or work_product inputs list
 
-        :param commit_product: the new input used by this work node
+        :param uri: the product's uri
         """
-        if not isinstance(commit_product, CommitProduct):
-            raise PulseError("add_input needs a commit product")
-        if not os.path.exists(commit_product.directory):
-            commit_product.download()
-        fu.json_list_append(self.products_inputs_file, commit_product.uri)
-        commit_product.add_product_user(self.directory)
+        if uri in self.get_inputs():
+            raise PulseError("input already registered for this work")
+
+        product = self.project.get_product(uri)
+
+        if not os.path.exists(product.directory):
+            product.download()
+
+        # TODO : save mutable uri related to the resolved uri
+        fu.json_list_append(self.products_inputs_file, uri)
+
+        fu.make_directory_link(
+            os.path.join(self.directory, cfg.work_input_dir, uri),
+            product.directory)
+
+        product.add_product_user(self.directory)
 
     def remove_input(self, local_product):
         """
@@ -337,8 +348,9 @@ class Work(WorkNode):
 
     def _get_work_files(self):
         files_dict = {}
+        excluded_path = [cfg.work_output_dir, cfg.work_input_dir]
         for root, dirs, files in os.walk(self.directory, topdown=True):
-            dirs[:] = [d for d in dirs if d != cfg.work_product_dir]
+            dirs[:] = [d for d in dirs if d not in excluded_path]
             for f in files:
                 filepath = os.path.join(root, f)
                 relative_path = filepath[len(self.directory):]
@@ -411,7 +423,8 @@ class Work(WorkNode):
             raise PulseError("work can't be trashed if its product is used : " + users[0])
 
         # unregister from products
-        for input_product in product.get_inputs():
+        for input_product_uri in product.get_inputs():
+            input_product = self.project.get_product(input_product_uri)
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(product.directory)
 
@@ -458,15 +471,14 @@ class Work(WorkNode):
         os.makedirs(work_product_directory)
 
         # create junction point to the product directory
-        work_output_path = os.path.join(self.directory, cfg.work_product_dir)
-        # remove old junction if needed
-        if os.path.exists(work_output_path):
-            subprocess.call('rmdir /s /q "' + work_output_path + '"', shell=True)
-        # if system is windows make a junction to current product (symlink requires admin privileges)
-        if sys.platform == "win32":
-            cmd = ('mklink /j "' + work_output_path + '" "' + work_product_directory + '"')
-            with open(os.devnull, 'wb') as none_file:
-                subprocess.call(cmd.replace("\\", "/"), shell=True, stdout=none_file, stderr=none_file)
+        work_output_path = os.path.join(self.directory, cfg.work_output_dir)
+
+        # link work output directory to its current output product directory
+        fu.make_directory_link(work_output_path, work_product_directory)
+
+        work_input_path = os.path.join(self.directory, cfg.work_input_dir)
+        if not os.path.exists(work_input_path):
+            os.makedirs(work_input_path)
 
     def read(self):
         """
@@ -522,7 +534,7 @@ class Work(WorkNode):
 
         # register changes to database
         commit.comment = comment
-        commit.products_inputs = [x.uri for x in self.get_inputs()]
+        commit.products_inputs = self.get_inputs()
         commit.products = self.list_products()
 
         # convert work products to commit products
@@ -531,7 +543,7 @@ class Work(WorkNode):
                 work_product = self.get_product(product_type)
 
                 commit_product = CommitProduct(commit, product_type)
-                commit_product.products_inputs = [x.uri for x in work_product.get_inputs()]
+                commit_product.products_inputs = work_product.get_inputs()
                 commit_product.db_create()
 
                 if not keep_products_in_cache:
@@ -604,7 +616,8 @@ class Work(WorkNode):
             self.trash_product(product_type)
 
         # unregister from products
-        for input_product in self.get_inputs():
+        for input_product_uri in self.get_inputs():
+            input_product = self.project.get_product(input_product_uri)
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(self.directory)
 
@@ -614,9 +627,9 @@ class Work(WorkNode):
             os.makedirs(trash_directory)
 
         # remove work output link
-        work_output = os.path.join(self.directory, cfg.work_product_dir)
+        work_output = os.path.join(self.directory, cfg.work_output_dir)
         if os.path.exists(work_output):
-            subprocess.call('rmdir /s /q "' + work_output, shell=True)
+            os.remove(work_output)
 
         # move work product directory
         if os.path.exists(products_directory):
@@ -842,7 +855,8 @@ class Resource(PulseDbObject):
                 work.create_product(product)
 
         # download requested input products if needed
-        for product in work.get_inputs():
+        for product_uri in work.get_inputs():
+            product = self.project.get_product(product_uri)
             product.download()
             product.add_product_user(self.sandbox_path)
 

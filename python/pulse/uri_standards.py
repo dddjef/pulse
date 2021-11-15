@@ -71,3 +71,8 @@ def path_to_uri(path):
         raise PulseError("can't convert path to uri, malformed path")
 
     return convert_from_dict(uri_dict)
+
+
+def remove_version_from_uri(uri):
+    split = uri.split("@")
+    return split[0]

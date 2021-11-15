@@ -67,7 +67,7 @@ class TestProjectSettings(unittest.TestCase):
         surf_resource = prj.create_resource("ch_anna", "surfacing")
         surf_work = surf_resource.checkout()
         # require this product
-        surf_work.add_input(abc_product)
+        surf_work.add_input(abc_product.uri)
         # test the product location
         self.assertTrue(os.path.exists(os.path.join(
             utils.test_data_output_path,
@@ -138,7 +138,7 @@ class TestResources(unittest.TestCase):
         # test product currently in use can't be purged
         self.anna_surf = self.prj.create_resource("anna", "surfacing")
         self.anna_surf_work = self.anna_surf.checkout()
-        self.anna_surf_work.add_input(self.anna_abc_product)
+        self.anna_surf_work.add_input(self.anna_abc_product.uri)
         self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), [])
 
         # test the normal mode
@@ -153,7 +153,7 @@ class TestResources(unittest.TestCase):
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
         # add a trashed product
         with self.assertRaises(PulseError):
-            anna_surf_work.add_input(wip_product)
+            anna_surf_work.add_input(wip_product.uri)
         # create product on a trashed work
         with self.assertRaises(PulseMissingNode):
             self.anna_mdl_work.create_product("abc")
@@ -241,12 +241,10 @@ class TestResources(unittest.TestCase):
         froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
         froga_mdl_abc = froga_mdl_work.create_product("abc")
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
-        # adding a work product as input is not supported, it has to be a commit product
-        with self.assertRaises(PulseError):
-            anna_surf_work.add_input(froga_mdl_abc)
+        anna_surf_work.add_input(froga_mdl_abc.uri)
 
         # trashing a product used by another resource is forbidden
-        anna_surf_work.add_input(self.anna_abc_product)
+        anna_surf_work.add_input(self.anna_abc_product.uri)
         with self.assertRaises(PulseError):
             self.anna_abc_product.remove_from_local_products()
 
@@ -259,7 +257,7 @@ class TestResources(unittest.TestCase):
         anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_surf_textures = commit.get_product("textures")
-        anna_rig_work.add_input(anna_surf_textures)
+        anna_rig_work.add_input(anna_surf_textures.uri)
         anna_rig_work.commit("comment test")
         anna_rig_work.trash()
         anna_surf_work.trash()
@@ -280,7 +278,7 @@ class TestResources(unittest.TestCase):
         anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(anna_surf_textures)
+        anna_rig_actor.add_input(anna_surf_textures.uri)
         commit = anna_rig_work.commit()
         anna_rig_actor = commit.get_product("actor_anim")
         anna_rig_work.trash()
@@ -289,7 +287,7 @@ class TestResources(unittest.TestCase):
         self.assertFalse(os.path.exists(anna_surf_textures.directory))
         anim_resource = self.prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
-        anim_work.add_input(anna_rig_actor)
+        anim_work.add_input(anna_rig_actor.uri)
         self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
     def test_complete_scenario(self):
@@ -327,9 +325,9 @@ class TestResources(unittest.TestCase):
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 
-        hat_mdl_work.add_input(anna_mdl_v2_abc)
+        hat_mdl_work.add_input(anna_mdl_v2_abc.uri)
         # test the product registration
-        self.assertEqual(hat_mdl_work.get_inputs()[0].uri, "ch_anna-modeling.ABC@2")
+        self.assertEqual(hat_mdl_work.get_inputs()[0], "ch_anna-modeling.ABC@2")
         # check the work registration to product
 
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
@@ -466,7 +464,7 @@ class TestResources(unittest.TestCase):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(self.anna_abc_product)
+        anna_rig_actor.add_input(self.anna_abc_product.uri)
         anna_rig_work.trash_product("actor_anim")
 
     def test_product_download(self):
@@ -486,7 +484,7 @@ class TestResources(unittest.TestCase):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(self.anna_abc_product)
+        anna_rig_actor.add_input(self.anna_abc_product.uri)
         anna_rig_work.commit()
         self.assertTrue(len(self.prj.list_products("anna*")) == 2)
         self.assertTrue(len(self.prj.list_products("an?a*")) == 2)
@@ -500,15 +498,39 @@ class TestResources(unittest.TestCase):
         project = get_project_from_path(self.anna_mdl_work.directory)
         self.assertEqual(project.get_local_works(), ['anna-mdl'])
 
-    def test_junction_point_work_product(self):
+    def test_junction_point_work_output(self):
         # ensure a resource got its output directory by default
         resource = self.prj.create_resource("toto", "model")
         work = resource.checkout()
-        self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_product_dir)))
+        self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_output_dir)))
         # ensure the output directory point to the current work product
         work.create_product("export")
-        self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_product_dir, "export")))
+        self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_output_dir, "export")))
 
+    def test_work_add_input(self):
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_work.add_input(self.anna_abc_product.uri)
+        # test input directory content is the same as the product content
+        self.assertEqual(os.listdir(os.path.join(
+            anna_rig_work.directory,
+            cfg.work_input_dir,
+            self.anna_abc_product.uri
+        )), os.listdir(self.anna_abc_product.directory))
+        anna_rig_work.commit()
+        # test the input already exists in work inputs
+        # test the input is a non existing product
+        # test the input has to be downloaded
+        # test the downloaded product is purged
+        # test the input is a work product
+        # test the work product is trashed
 
+    def test_work_remove_input(self):
+        # test remove product
+        pass
+
+    def test_product_add_input(self):
+        # TODO
+        pass
 if __name__ == '__main__':
     unittest.main()
