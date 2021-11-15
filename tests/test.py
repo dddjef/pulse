@@ -510,20 +510,45 @@ class TestResources(unittest.TestCase):
     def test_work_add_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
+
+        # test linked directory content is the same as the product content after add input
         anna_rig_work.add_input(self.anna_abc_product.uri)
-        # test input directory content is the same as the product content
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
             self.anna_abc_product.uri
         )), os.listdir(self.anna_abc_product.directory))
-        anna_rig_work.commit()
-        # test the input already exists in work inputs
+
+        # test if the input already exists in work inputs
+        with self.assertRaises(PulseError):
+            anna_rig_work.add_input(self.anna_abc_product.uri)
+
         # test the input is a non existing product
-        # test the input has to be downloaded
-        # test the downloaded product is purged
+        with self.assertRaises(PulseDatabaseMissingObject):
+            anna_rig_work.add_input("unknown-product.uri")
+
+        # test where the input has to be downloaded
+        lowtexture = self.anna_mdl_work.create_product("low_texture")
+        utils.add_file_to_directory(lowtexture.directory, "tex.jpg")
+        self.anna_mdl_work.commit()
+        self.prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(lowtexture.directory))
+        anna_rig_work.add_input(lowtexture.uri)
+        self.assertTrue(os.path.exists(os.path.join(lowtexture.directory, "tex.jpg")))
+
+        # test if downloaded product used as input is not purged
+        self.prj.purge_unused_user_products()
+        self.assertTrue(os.path.exists(os.path.join(lowtexture.directory, "tex.jpg")))
+
         # test the input is a work product
+        high_geo = self.anna_mdl_work.create_product("high_geo")
+        utils.add_file_to_directory(high_geo.directory, "hi.abc")
+        anna_rig_work.add_input(high_geo.uri)
+        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", high_geo.uri, "hi.abc")))
+
+
         # test the work product is trashed
+
 
     def test_work_remove_input(self):
         # test remove product
