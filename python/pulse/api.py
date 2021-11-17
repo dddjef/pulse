@@ -311,7 +311,10 @@ class WorkNode:
         :param uri: input uri
         """
         product = self.project.get_product(uri)
-        fu.json_list_remove(self.products_inputs_file, product.uri)
+        try:
+            fu.json_list_remove(self.products_inputs_file, product.uri)
+        except ValueError:
+            raise PulseError("input does not exist : " + uri)
         product.remove_product_user(self.directory)
         os.remove(os.path.join(self.directory, cfg.work_input_dir, uri))
 

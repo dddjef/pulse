@@ -565,7 +565,9 @@ class TestResources(unittest.TestCase):
         anna_rig_work.remove_input(self.anna_abc_product.uri)
         self.assertFalse(os.path.exists(os.path.join(anna_rig_work.directory, "input", self.anna_abc_product.uri)))
 
-        # test remove a missing product
+        # test remove a missing input
+        with self.assertRaises(PulseError):
+            anna_rig_work.remove_input(self.anna_abc_product.uri)
         pass
 
     def test_product_add_input(self):
