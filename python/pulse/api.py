@@ -297,20 +297,23 @@ class WorkNode:
         # TODO : save mutable uri related to the resolved uri
         fu.json_list_append(self.products_inputs_file, uri)
 
-        fu.make_directory_link(
-            os.path.join(self.directory, cfg.work_input_dir, uri),
-            product.directory)
+        if self.__class__.__name__ == "Work":
+            fu.make_directory_link(
+                os.path.join(self.directory, cfg.work_input_dir, uri),
+                product.directory)
 
         product.add_product_user(self.directory)
 
-    def remove_input(self, local_product):
+    def remove_input(self, uri):
         """
         remove a product from object's inputs list
 
-        :param local_product: local product object
+        :param uri: input uri
         """
-        fu.json_list_remove(self.products_inputs_file, local_product.uri)
-        local_product.remove_product_user(self.directory)
+        product = self.project.get_product(uri)
+        fu.json_list_remove(self.products_inputs_file, product.uri)
+        product.remove_product_user(self.directory)
+        os.remove(os.path.join(self.directory, cfg.work_input_dir, uri))
 
 
 class WorkProduct(Product, WorkNode):
@@ -517,7 +520,8 @@ class Work(WorkNode):
             raise PulseError("no file change to commit")
 
         # check all inputs are registered
-        for product in self.get_inputs():
+        for uri in self.get_inputs():
+            product = self.project.get_product(uri)
             if isinstance(product, WorkProduct):
                 raise PulseError("Work can't be committed, it uses an unpublished product : " + product.uri)
 

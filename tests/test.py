@@ -234,8 +234,9 @@ class TestResources(unittest.TestCase):
         anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=source_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
-        self.assertFalse(os.path.exists(os.path.join(anna_shd_work.get_product("shader").directory,
-                                                    shader_product_file)))
+        self.assertFalse(os.path.exists(os.path.join(
+            anna_shd_work.get_product("shader").directory,
+            shader_product_file)))
 
     def test_trashing_work_errors(self):
         froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
@@ -373,9 +374,14 @@ class TestResources(unittest.TestCase):
         self.assertTrue(os.path.exists(clean_product.directory))
         self.assertFalse(os.path.exists(clean_product.directory + "/export.txt"))
 
+        # TODO : test a commit using a uncommit input product will fail
 
-
-
+        anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
+        anna_surf_work = anna_surf_resource.checkout()
+        wip_product = mdl_work.create_product("hidef")
+        anna_surf_work.add_input(wip_product.uri)
+        with self.assertRaises(PulseError):
+            anna_surf_work.commit()
 
     def test_get_unknown_resource_index(self):
         # test get an unknown tag raise a pulseError
@@ -460,6 +466,10 @@ class TestResources(unittest.TestCase):
         commit = anna_rig_resource.get_commit("last")
         self.assertEqual(list(commit.files.keys())[0], '/work_file.txt')
 
+    def test_work_create_product(self):
+        # TODO : test work create product failed from a trash work
+        pass
+
     def test_product_trash(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
@@ -528,17 +538,17 @@ class TestResources(unittest.TestCase):
             anna_rig_work.add_input("unknown-product.uri")
 
         # test where the input has to be downloaded
-        lowtexture = self.anna_mdl_work.create_product("low_texture")
-        utils.add_file_to_directory(lowtexture.directory, "tex.jpg")
+        low_texture = self.anna_mdl_work.create_product("low_texture")
+        utils.add_file_to_directory(low_texture.directory, "tex.jpg")
         self.anna_mdl_work.commit()
         self.prj.purge_unused_user_products()
-        self.assertFalse(os.path.exists(lowtexture.directory))
-        anna_rig_work.add_input(lowtexture.uri)
+        self.assertFalse(os.path.exists(low_texture.directory))
+        anna_rig_work.add_input(low_texture.uri)
         self.assertTrue(os.path.exists(os.path.join(lowtexture.directory, "tex.jpg")))
 
         # test if downloaded product used as input is not purged
         self.prj.purge_unused_user_products()
-        self.assertTrue(os.path.exists(os.path.join(lowtexture.directory, "tex.jpg")))
+        self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
 
         # test the input is a work product
         high_geo = self.anna_mdl_work.create_product("high_geo")
@@ -546,16 +556,28 @@ class TestResources(unittest.TestCase):
         anna_rig_work.add_input(high_geo.uri)
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", high_geo.uri, "hi.abc")))
 
-
-        # test the work product is trashed
-
-
     def test_work_remove_input(self):
         # test remove product
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_work.add_input(self.anna_abc_product.uri)
+        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", self.anna_abc_product.uri)))
+        anna_rig_work.remove_input(self.anna_abc_product.uri)
+        self.assertFalse(os.path.exists(os.path.join(anna_rig_work.directory, "input", self.anna_abc_product.uri)))
+
+        # test remove a missing product
         pass
 
     def test_product_add_input(self):
-        # TODO
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_hd = anna_rig_work.create_product("hd")
+        anna_rig_hd.add_input(self.anna_abc_product.uri)
+        # test products don't have a "input" linked directory
+        self.assertFalse(os.path.exists(os.path.join(anna_rig_hd.directory, "input")))
+        # TODO : should raise an error if the input is mutable
         pass
+
+
 if __name__ == '__main__':
     unittest.main()
