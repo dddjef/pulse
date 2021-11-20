@@ -289,13 +289,20 @@ class WorkNode:
         if uri in self.get_inputs():
             raise PulseError("input already registered for this work")
 
+        # TODO : save mutable uri related to the resolved uri
+        fu.json_list_append(self.products_inputs_file, uri)
+        self._set_input_product(uri)
+
+    def _set_input_product(self, uri):
+        """
+        download product directory if needed, link its directory in work inputs and register the work as a user
+
+        :param uri: the product's uri
+        """
         product = self.project.get_product(uri)
 
         if not os.path.exists(product.directory):
             product.download()
-
-        # TODO : save mutable uri related to the resolved uri
-        fu.json_list_append(self.products_inputs_file, uri)
 
         if self.__class__.__name__ == "Work":
             fu.make_directory_link(
@@ -316,6 +323,8 @@ class WorkNode:
         except ValueError:
             raise PulseError("input does not exist : " + uri)
         product.remove_product_user(self.directory)
+
+        # remove linked input directory
         os.remove(os.path.join(self.directory, cfg.work_input_dir, uri))
 
 
@@ -863,9 +872,7 @@ class Resource(PulseDbObject):
 
         # download requested input products if needed
         for product_uri in work.get_inputs():
-            product = self.project.get_product(product_uri)
-            product.download()
-            product.add_product_user(self.sandbox_path)
+            work._set_input_product(product_uri)
 
         return work
 

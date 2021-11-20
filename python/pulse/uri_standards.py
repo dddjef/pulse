@@ -9,20 +9,28 @@ def convert_to_dict(uri_string):
     :param uri_string:
     :return uri dict:
     """
-    uri_split_main = uri_string.split("@")
-    uri_split = uri_split_main[0].split("-")
-    entity = uri_split[0]
-    category_split = uri_split[1].split(".")
-    product_type = ""
-    version = None
 
-    if len(category_split) > 1:
-        product_type = category_split[1]
+    # REGEX alternative but it fails when version is not present
+    # pat = re.compile("(?P<entity>.+)\-(?P<resource_type>.+)\.(?P<product_type>.+)\@(?P<version>.+)")
+    # return pat.match(text).groupdict()
 
-    if len(uri_split_main) > 1:
-        version = uri_split_main[1]
+    uri_split = uri_string.split("@")
+    product_split = uri_split[0].split(".")
+    resource_split = product_split[0].split("-")
+    entity = resource_split[0]
+    resource_type = resource_split[1]
 
-    return {"entity": entity, "resource_type": category_split[0], "version": version, "product_type": product_type}
+    if len(product_split) > 1:
+        product_type = product_split[1]
+    else:
+        product_type = None
+
+    if len(uri_split) > 1:
+        version = uri_split[1]
+    else:
+        version = None
+
+    return {"entity": entity, "resource_type": resource_type, "version": version, "product_type": product_type}
 
 
 def convert_from_dict(uri_dict):

@@ -348,7 +348,7 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
-        hat_mdl_work.remove_input(anna_mdl_v2_abc)
+        hat_mdl_work.remove_input(anna_mdl_v2_abc.uri)
         anna_mdl_work.trash()
         # test uri_standard
         self.assertEqual(uri.path_to_uri(hat_mdl_work.directory), hat_mdl_resource.uri)
@@ -544,7 +544,7 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(low_texture.directory))
         anna_rig_work.add_input(low_texture.uri)
-        self.assertTrue(os.path.exists(os.path.join(lowtexture.directory, "tex.jpg")))
+        self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
 
         # test if downloaded product used as input is not purged
         self.prj.purge_unused_user_products()
@@ -556,7 +556,54 @@ class TestResources(unittest.TestCase):
         anna_rig_work.add_input(high_geo.uri)
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", high_geo.uri, "hi.abc")))
 
+    def test_work_add_mutable_input(self):
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+
+        # test linked directory content is the same as the product content after add input
+        anna_rig_work.add_input("anna-mdl.abc")
+        self.assertEqual(os.listdir(os.path.join(
+            anna_rig_work.directory,
+            cfg.work_input_dir,
+            "anna-mdl.abc"
+        )), os.listdir(self.anna_abc_product.directory))
+
+        # test if the input already exists in work inputs
+        with self.assertRaises(PulseError):
+            anna_rig_work.add_input("anna-mdl.abc")
+
+        # test the input is a non existing product
+        with self.assertRaises(PulseDatabaseMissingObject):
+            anna_rig_work.add_input("unknown-product.uri")
+
+        # test where the input has to be downloaded
+        low_texture = self.anna_mdl_work.create_product("low_texture")
+        utils.add_file_to_directory(low_texture.directory, "tex.jpg")
+        self.anna_mdl_work.commit()
+        self.prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(low_texture.directory))
+        anna_rig_work.add_input("anna-mdl.low_texture")
+        self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
+
+        # test if downloaded product used as input is not purged
+        self.prj.purge_unused_user_products()
+        self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
+
+        # test the input is a work product
+        high_geo = self.anna_mdl_work.create_product("high_geo")
+        utils.add_file_to_directory(high_geo.directory, "hi.abc")
+        anna_rig_work.add_input("anna-mdl.high_geo")
+        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
+
+    def test_work_update_input(self):
+        # test update input with mutable uri
+        # test update input when there's no new version
+        # test update input with unmutable uri only download a new version
+        # test update a missing input
+        pass
+
     def test_work_remove_input(self):
+        # TODO : test remove mutable input
         # test remove product
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
@@ -568,7 +615,6 @@ class TestResources(unittest.TestCase):
         # test remove a missing input
         with self.assertRaises(PulseError):
             anna_rig_work.remove_input(self.anna_abc_product.uri)
-        pass
 
     def test_product_add_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
