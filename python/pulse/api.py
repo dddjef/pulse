@@ -278,22 +278,38 @@ class WorkNode:
 
         :return: products uri list
         """
-        return fu.json_list_get(self.products_inputs_file)
+        if not os.path.exists(self.products_inputs_file):
+            return {}
+        with open(self.products_inputs_file, "r") as read_file:
+            return json.load(read_file)
 
-    def add_input(self, uri):
+    def add_input(self, uri, link_unmutable_uri=False):
         """
-        add a product to work or work_product inputs list
+        add a product to work inputs list
 
         :param uri: the product's uri
+        :param link_unmutable_uri: the input linked directory will be an unmutable uri
         """
+        inputs = self.get_inputs()
+
         if uri in self.get_inputs():
             raise PulseError("input already registered for this work")
 
-        # TODO : save mutable uri related to the resolved uri
-        fu.json_list_append(self.products_inputs_file, uri)
-        self._set_input_product(uri)
+        # transform given uri to unmutable uri by creating a product object
+        product = self.project.get_product(uri)
+        if link_unmutable_uri:
+            linked_uri = product.uri
+        else:
+            linked_uri = uri_standards.remove_version_from_uri(uri)
 
-    def _set_input_product(self, uri):
+        # save mutable uri related to the resolved uri
+        inputs[linked_uri] = product.uri
+        with open(self.products_inputs_file, "w") as write_file:
+            json.dump(inputs, write_file, indent=4, sort_keys=True)
+
+        self._set_input_product(linked_uri, uri)
+
+    def _set_input_product(self, linked_uri, uri):
         """
         download product directory if needed, link its directory in work inputs and register the work as a user
 
@@ -306,7 +322,7 @@ class WorkNode:
 
         if self.__class__.__name__ == "Work":
             fu.make_directory_link(
-                os.path.join(self.directory, cfg.work_input_dir, uri),
+                os.path.join(self.directory, cfg.work_input_dir, linked_uri),
                 product.directory)
 
         product.add_product_user(self.directory)
@@ -317,11 +333,15 @@ class WorkNode:
 
         :param uri: input uri
         """
-        product = self.project.get_product(uri)
-        try:
-            fu.json_list_remove(self.products_inputs_file, product.uri)
-        except ValueError:
+        inputs = self.get_inputs()
+        if uri not in inputs:
             raise PulseError("input does not exist : " + uri)
+
+        inputs.pop(uri, None)
+        with open(self.products_inputs_file, "w") as write_file:
+            json.dump(inputs, write_file, indent=4, sort_keys=True)
+
+        product = self.project.get_product(uri)
         product.remove_product_user(self.directory)
 
         # remove linked input directory
@@ -532,10 +552,11 @@ class Work(WorkNode):
             raise PulseError("no file change to commit")
 
         # check all inputs are registered
-        for uri in self.get_inputs():
-            product = self.project.get_product(uri)
-            if isinstance(product, WorkProduct):
-                raise PulseError("Work can't be committed, it uses an unpublished product : " + product.uri)
+        for linked_uri, uri in self.get_inputs().items():
+            try:
+                product = self.project.get_product(uri)
+            except PulseDatabaseMissingObject:
+                raise PulseError("Input should be commit first : " + uri)
 
         # lock the resource to prevent concurrent commit
         lock_state = self.resource.lock_state
@@ -803,11 +824,14 @@ class Resource(PulseDbObject):
     def get_work(self):
         """
         get the Work object associated to the resource.
-        IF there's no current work in user work space, raise a pulse error
+        IF there's no current work in user work space, return None
 
         :return:
         """
-        return Work(self).read()
+        try:
+            return Work(self).read()
+        except PulseError:
+            return None
 
     def checkout(self, index="last", destination_folder=None, recreate_products=True):
         """
@@ -871,8 +895,8 @@ class Resource(PulseDbObject):
                 work.create_product(product)
 
         # download requested input products if needed
-        for product_uri in work.get_inputs():
-            work._set_input_product(product_uri)
+        for linked_uri, uri in work.get_inputs().items():
+            work._set_input_product(linked_uri, uri)
 
         return work
 
@@ -971,6 +995,8 @@ class Project:
     def get_product(self, uri_string):
         """
         return the product corresponding of the given uri
+        @last return the last version
+        @work return the local work version
         raise a PulseError if the uri is not found in the project
 
         :param uri_string: a pulse product uri
@@ -981,13 +1007,13 @@ class Project:
         resource.db_read()
         if not uri_dict['version']:
             uri_dict['version'] = "last"
-        index = resource.get_index(uri_dict['version'])
-        try:
-            product_parent = resource.get_commit(index)
-        except PulseDatabaseMissingObject:
+
+        if uri_dict['version'] == "work":
             product_parent = resource.get_work()
-        if product_parent.version != index:
-            raise PulseError("Unknown product : " + uri_string)
+        else:
+            index = resource.get_index(uri_dict['version'])
+            product_parent = resource.get_commit(index)
+
         return product_parent.get_product(uri_dict["product_type"])
 
     def list_products(self, uri_pattern):

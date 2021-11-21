@@ -152,7 +152,7 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_user_products()
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
         # add a trashed product
-        with self.assertRaises(PulseError):
+        with self.assertRaises(PulseDatabaseMissingObject):
             anna_surf_work.add_input(wip_product.uri)
         # create product on a trashed work
         with self.assertRaises(PulseMissingNode):
@@ -240,9 +240,9 @@ class TestResources(unittest.TestCase):
 
     def test_trashing_work_errors(self):
         froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
-        froga_mdl_abc = froga_mdl_work.create_product("abc")
+        froga_mdl_work.create_product("abc")
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
-        anna_surf_work.add_input(froga_mdl_abc.uri)
+        anna_surf_work.add_input("froga-mdl.abc@work")
 
         # trashing a product used by another resource is forbidden
         anna_surf_work.add_input(self.anna_abc_product.uri)
@@ -265,7 +265,7 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(anna_surf_textures.directory))
         rig_v01 = anna_rig_resource.get_commit(1)
-        self.assertEqual(rig_v01.products_inputs[0], 'ch_anna-surfacing.textures@1')
+        self.assertTrue('ch_anna-surfacing.textures' in rig_v01.products_inputs)
         anna_rig_resource.checkout()
         self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
@@ -328,7 +328,7 @@ class TestResources(unittest.TestCase):
 
         hat_mdl_work.add_input(anna_mdl_v2_abc.uri)
         # test the product registration
-        self.assertEqual(hat_mdl_work.get_inputs()[0], "ch_anna-modeling.ABC@2")
+        self.assertTrue("ch_anna-modeling.ABC" in hat_mdl_work.get_inputs())
         # check the work registration to product
 
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
@@ -348,7 +348,7 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_user_products()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
-        hat_mdl_work.remove_input(anna_mdl_v2_abc.uri)
+        hat_mdl_work.remove_input("ch_anna-modeling.ABC")
         anna_mdl_work.trash()
         # test uri_standard
         self.assertEqual(uri.path_to_uri(hat_mdl_work.directory), hat_mdl_resource.uri)
@@ -374,14 +374,15 @@ class TestResources(unittest.TestCase):
         self.assertTrue(os.path.exists(clean_product.directory))
         self.assertFalse(os.path.exists(clean_product.directory + "/export.txt"))
 
-        # TODO : test a commit using a uncommit input product will fail
-
+        # test a commit using a uncommit input product will fail
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
-        wip_product = mdl_work.create_product("hidef")
-        anna_surf_work.add_input(wip_product.uri)
+        mdl_work.create_product("hidef")
+        anna_surf_work.add_input("anna-mdl.hidef@work")
         with self.assertRaises(PulseError):
             anna_surf_work.commit()
+
+        # but when the input product is commit, the work can be commit too
 
     def test_get_unknown_resource_index(self):
         # test get an unknown tag raise a pulseError
@@ -526,12 +527,12 @@ class TestResources(unittest.TestCase):
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
-            self.anna_abc_product.uri
+            "anna-mdl.abc"
         )), os.listdir(self.anna_abc_product.directory))
 
         # test if the input already exists in work inputs
         with self.assertRaises(PulseError):
-            anna_rig_work.add_input(self.anna_abc_product.uri)
+            anna_rig_work.add_input("anna-mdl.abc")
 
         # test the input is a non existing product
         with self.assertRaises(PulseDatabaseMissingObject):
@@ -553,8 +554,8 @@ class TestResources(unittest.TestCase):
         # test the input is a work product
         high_geo = self.anna_mdl_work.create_product("high_geo")
         utils.add_file_to_directory(high_geo.directory, "hi.abc")
-        anna_rig_work.add_input(high_geo.uri)
-        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", high_geo.uri, "hi.abc")))
+        anna_rig_work.add_input("anna-mdl.high_geo@work")
+        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
 
     def test_work_add_mutable_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
@@ -592,7 +593,7 @@ class TestResources(unittest.TestCase):
         # test the input is a work product
         high_geo = self.anna_mdl_work.create_product("high_geo")
         utils.add_file_to_directory(high_geo.directory, "hi.abc")
-        anna_rig_work.add_input("anna-mdl.high_geo")
+        anna_rig_work.add_input("anna-mdl.high_geo@work")
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
 
     def test_work_update_input(self):
@@ -603,13 +604,12 @@ class TestResources(unittest.TestCase):
         pass
 
     def test_work_remove_input(self):
-        # TODO : test remove mutable input
         # test remove product
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_work.add_input(self.anna_abc_product.uri)
-        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", self.anna_abc_product.uri)))
-        anna_rig_work.remove_input(self.anna_abc_product.uri)
+        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.abc")))
+        anna_rig_work.remove_input("anna-mdl.abc")
         self.assertFalse(os.path.exists(os.path.join(anna_rig_work.directory, "input", self.anna_abc_product.uri)))
 
         # test remove a missing input
