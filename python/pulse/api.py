@@ -244,7 +244,6 @@ class Commit(PulseDbObject):
         """
         return CommitProduct(self, product_type).db_read()
 
-    # TODO: this function seems not use, and return empty list anyway
     def get_products(self):
         """
         return the commit's products list
@@ -554,7 +553,7 @@ class Work(WorkNode):
         # check all inputs are registered
         for linked_uri, uri in self.get_inputs().items():
             try:
-                product = self.project.get_product(uri)
+                self.project.get_product(uri)
             except PulseDatabaseMissingObject:
                 raise PulseError("Input should be commit first : " + uri)
 
@@ -740,7 +739,6 @@ class Resource(PulseDbObject):
         self.last_version = 0
         self.resource_type = resource_type
         self.entity = entity
-        # TODO : repository doesn't seem to be written at creation
         self.repository = None
         self.resource_template = ''
         PulseDbObject.__init__(
@@ -844,7 +842,6 @@ class Resource(PulseDbObject):
         if not os.path.exists(self.project.cfg.get_work_user_root()):
             self.project.initialize_sandbox()
 
-        # TODO : checkout raise an error if it's the first checkout and the template did not have a first version
         work = Work(self)
 
         # abort checkout if the work already exists in user sandbox, just rebuild its data
@@ -1153,8 +1150,6 @@ class Connection:
         self.repositories = self.get_repositories()
         self._adapter = adapter
         self._settings = settings
-        # TODO : add a get projects fn
-        # TODO : remove repositories var and keep only the method (multi user friendly)
 
     def get_settings(self):
         return {'path': self.path, 'settings': self._settings, 'adapter': self._adapter}
@@ -1173,7 +1168,6 @@ class Connection:
     def get_projects(self):
         return self.db.get_projects()
 
-# TODO : work user root should be renamed pulse_sandbox_path and product_user_root pulse_products_path
     def create_project(self,
                        project_name,
                        work_user_root,

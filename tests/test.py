@@ -623,8 +623,6 @@ class TestResources(unittest.TestCase):
         anna_rig_hd.add_input(self.anna_abc_product.uri)
         # test products don't have a "input" linked directory
         self.assertFalse(os.path.exists(os.path.join(anna_rig_hd.directory, "input")))
-        # TODO : should raise an error if the input is mutable
-        pass
 
 
 if __name__ == '__main__':
