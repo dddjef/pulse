@@ -519,6 +519,7 @@ class TestResources(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_output_dir, "export")))
 
     def test_work_add_input(self):
+        #TODO : test add a custom input name and remove mutable test
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
 
@@ -597,6 +598,7 @@ class TestResources(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
 
     def test_work_update_input(self):
+        #TODO add all methods for this
         # test update input with mutable uri
         # test update input when there's no new version
         # test update input with unmutable uri only download a new version

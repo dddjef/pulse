@@ -282,12 +282,12 @@ class WorkNode:
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def add_input(self, uri, link_unmutable_uri=False):
+    def add_input(self, uri, custom_input_name=None):
         """
         add a product to work inputs list
 
         :param uri: the product's uri
-        :param link_unmutable_uri: the input linked directory will be an unmutable uri
+        :param custom_input_name: the input linked directory will be named. If not set, the mutable uri will be used
         """
         inputs = self.get_inputs()
 
@@ -296,8 +296,8 @@ class WorkNode:
 
         # transform given uri to unmutable uri by creating a product object
         product = self.project.get_product(uri)
-        if link_unmutable_uri:
-            linked_uri = product.uri
+        if custom_input_name:
+            linked_uri = custom_input_name
         else:
             linked_uri = uri_standards.remove_version_from_uri(uri)
 
