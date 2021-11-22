@@ -605,6 +605,25 @@ class TestResources(unittest.TestCase):
         # test update a missing input
         pass
 
+    def test_uri_validate(self):
+        # test a product uri
+        self.assertTrue(uri_standards.is_valid("anna-mdl.abc@2"))
+        # test a commit uri
+        self.assertTrue(uri_standards.is_valid("anna-mdl@2"))
+        # test a resource uri
+        self.assertTrue(uri_standards.is_valid("anna-mdl"))
+        # test a nested resource uri
+        self.assertTrue(uri_standards.is_valid("char.anna-mdl"))
+        # test a mutable uri
+        self.assertTrue(uri_standards.is_valid("anna-mdl.abc"))
+
+        # test various malformed uri
+        self.assertFalse(uri_standards.is_valid("an#na-mdl.abc@2"))
+        self.assertFalse(uri_standards.is_valid("anna--mdl.abc"))
+        self.assertFalse(uri_standards.is_valid("-annamdl.abc"))
+        self.assertFalse(uri_standards.is_valid("anna.mdl@2"))
+
+
     def test_work_remove_input(self):
         # test remove product
         anna_rig_resource = self.prj.create_resource("anna", "rigging")

@@ -1,6 +1,14 @@
 import os
 from pulse.exception import *
 import pulse.config as cfg
+import re
+
+
+def is_valid(uri):
+    if re.match(r'[A-Za-z0-9._]+-[A-Za-z0-9._]+@*[A-Za-z0-9._]*', uri):
+        return True
+    return False
+
 
 def convert_to_dict(uri_string):
     """
@@ -9,10 +17,8 @@ def convert_to_dict(uri_string):
     :param uri_string:
     :return uri dict:
     """
-
-    # REGEX alternative but it fails when version is not present
-    # pat = re.compile("(?P<entity>.+)\-(?P<resource_type>.+)\.(?P<product_type>.+)\@(?P<version>.+)")
-    # return pat.match(text).groupdict()
+    if not is_valid(uri_string):
+        raise PulseUriError("Uri not valid : " + uri_string)
 
     uri_split = uri_string.split("@")
     product_split = uri_split[0].split(".")
@@ -82,5 +88,7 @@ def path_to_uri(path):
 
 
 def remove_version_from_uri(uri):
+    if not is_valid(uri):
+        raise PulseUriError("Uri not valid : " + uri)
     split = uri.split("@")
     return split[0]

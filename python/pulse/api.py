@@ -159,10 +159,13 @@ class CommitProduct(PulseDbObject, Product):
 
     def download(self):
         """
-        download the product to local pulse cache
+        download the product to local pulse cache if needed
 
         :return: the product's local filepath
         """
+        if os.path.exists(self.directory):
+            return self.directory
+
         self.project.cnx.repositories[self.parent.resource.repository].download_product(self)
         if not os.path.exists(self.parent.pulse_filepath):
             open(self.parent.pulse_filepath, 'a').close()
@@ -282,46 +285,52 @@ class WorkNode:
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def add_input(self, uri, custom_input_name=None):
+    def add_input(self, uri, input_name=None):
         """
         add a product to work inputs list
+        if an input name is set, then the input won't be considered as mutable
 
         :param uri: the product's uri
-        :param custom_input_name: the input linked directory will be named. If not set, the mutable uri will be used
+        :param input_name: the input linked directory will be named. If not set, the mutable uri will be used
         """
         inputs = self.get_inputs()
+        if not input_name:
+            input_name = uri_standards.remove_version_from_uri(uri)
 
-        if uri in self.get_inputs():
-            raise PulseError("input already registered for this work")
+        if input_name in self.get_inputs():
+            return
 
         # transform given uri to unmutable uri by creating a product object
         product = self.project.get_product(uri)
-        if custom_input_name:
-            linked_uri = custom_input_name
-        else:
-            linked_uri = uri_standards.remove_version_from_uri(uri)
 
         # save mutable uri related to the resolved uri
-        inputs[linked_uri] = product.uri
+        inputs[input_name] = product.uri
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        self._set_input_product(linked_uri, uri)
+        self.update_input(input_name, uri)
 
-    def _set_input_product(self, linked_uri, uri):
+    def update_input(self, input_name, uri=None):
         """
-        download product directory if needed, link its directory in work inputs and register the work as a user
+        update a work input.
+        if an uri is set, the input will now point to this uri
+        if no uri is set, the input will look for a newer product version
+        the product is downloaded if needed
+        the input link is redirected to the new product
+        the product register the work as a user
+        :param input_name: the work's input name
+        :param uri: force to update to a defined uri
 
-        :param uri: the product's uri
         """
+        if not uri:
+            uri = None
+
         product = self.project.get_product(uri)
-
-        if not os.path.exists(product.directory):
-            product.download()
+        product.download()
 
         if self.__class__.__name__ == "Work":
             fu.make_directory_link(
-                os.path.join(self.directory, cfg.work_input_dir, linked_uri),
+                os.path.join(self.directory, cfg.work_input_dir, input_name),
                 product.directory)
 
         product.add_product_user(self.directory)
@@ -892,8 +901,8 @@ class Resource(PulseDbObject):
                 work.create_product(product)
 
         # download requested input products if needed
-        for linked_uri, uri in work.get_inputs().items():
-            work._set_input_product(linked_uri, uri)
+        for input_name, uri in work.get_inputs().items():
+            work.update_input(input_name, uri)
 
         return work
 
