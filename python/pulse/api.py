@@ -276,7 +276,8 @@ class WorkNode:
 
     def get_inputs(self):
         """
-        return a list of products uri used by this local work or product
+        return a dict of work node inputs in the form
+        {uri_input_name : immutable_uri}
 
         :return: products uri list
         """
@@ -285,53 +286,65 @@ class WorkNode:
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def add_input(self, uri, input_name=None):
+    def add_input(self, uri):
         """
         add a product to work inputs list
-        if an input name is set, then the input won't be considered as mutable
+        download it to local product if needed
+        uri can be mutable (ie: anna-mdl.abc) or not (ie : anna-mdl.abc@4)
+        if a mutable uri is given, the last version will be used
 
-        :param uri: the product's uri
-        :param input_name: the input linked directory will be named. If not set, the mutable uri will be used
+        :param uri: the product's uri, could be a mutable uri
         """
+        if not uri_standards.is_valid(uri):
+            raise PulseError("malformed uri : " + uri)
+
+        # if the uri is mutable, remove the version label. Labels are not supported
+        if uri_standards.is_mutable(uri):
+            uri = uri_standards.remove_version_from_uri(uri)
+
+        # check input already exists
         inputs = self.get_inputs()
-        if not input_name:
-            input_name = uri_standards.remove_version_from_uri(uri)
+        if uri in inputs:
+            raise PulseError("input already exists : " + uri)
 
-        if input_name in self.get_inputs():
-            return
+        # update input and register to it
+        if uri_standards.is_mutable(uri):
+            self.update_input(uri)
+        else:
+            self.update_input(uri, uri)
 
-        # transform given uri to unmutable uri by creating a product object
-        product = self.project.get_product(uri)
-
-        # save mutable uri related to the resolved uri
-        inputs[input_name] = product.uri
-        with open(self.products_inputs_file, "w") as write_file:
-            json.dump(inputs, write_file, indent=4, sort_keys=True)
-
-        self.update_input(input_name, uri)
-
-    def update_input(self, input_name, uri=None):
+    def update_input(self, uri, target_uri=None):
         """
         update a work input.
-        if an uri is set, the input will now point to this uri
-        if no uri is set, the input will look for a newer product version
+        if a target uri is set, the input will now point to this uri
+        if no target uri is set, the input will look for a newer product version
         the product is downloaded if needed
         the input link is redirected to the new product
-        the product register the work as a user
-        :param input_name: the work's input name
-        :param uri: force to update to a defined uri
+        the product register the work as a new user
+        :param uri: the work's input uri
+        :param target_uri: force the update to a defined uri
 
         """
-        if not uri:
-            uri = None
+        # if uri is not forced to a version, use the default uri
+        if not target_uri:
+            target_uri = uri
 
-        product = self.project.get_product(uri)
-        product.download()
+        product = self.project.get_product(target_uri)
+        if isinstance(product, CommitProduct):
+            product.download()
 
         if self.__class__.__name__ == "Work":
-            fu.make_directory_link(
-                os.path.join(self.directory, cfg.work_input_dir, input_name),
-                product.directory)
+            input_directory = os.path.join(self.directory, cfg.work_input_dir, uri)
+
+            if os.path.exists(input_directory):
+                os.remove(input_directory)
+            fu.make_directory_link(input_directory, product.directory)
+
+        # save updated input entry to disk
+        inputs = self.get_inputs()
+        inputs[uri] = product.uri
+        with open(self.products_inputs_file, "w") as write_file:
+            json.dump(inputs, write_file, indent=4, sort_keys=True)
 
         product.add_product_user(self.directory)
 
@@ -1014,9 +1027,28 @@ class Project:
         if not uri_dict['version']:
             uri_dict['version'] = "last"
 
-        if uri_dict['version'] == "work":
-            product_parent = resource.get_work()
+        # TODO : error here. If we find a commit V02 with the right product, it will be returned.
+        #  We should compare the work it could be a v03
+        if uri_dict['version'] == "last":
+            version = 0
+            products = self.cnx.db.find_uris(
+                self.name,
+                "CommitProduct",
+                uri_standards.remove_version_from_uri(uri_string) + "@*"
+            )
+            if products:
+                products.sort()
+                last_product_uri = products[-1]
+                version = uri_standards.convert_to_dict(last_product_uri)['version']
+            current_work = resource.get_work()
+            if current_work and current_work.version > int(version) and uri_dict["product_type"] in current_work.list_products():
+                product_parent = current_work
+            else:
+                product_parent = resource.get_commit(uri_standards.convert_to_dict(last_product_uri)['version'])
+            if version == 0:
+                raise PulseError("No product found for this resource :" + uri_string)
         else:
+            resource.get_index(uri_dict['version'])
             index = resource.get_index(uri_dict['version'])
             product_parent = resource.get_commit(index)
 

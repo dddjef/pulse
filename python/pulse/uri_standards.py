@@ -10,6 +10,13 @@ def is_valid(uri):
     return False
 
 
+def is_mutable(uri):
+    uri_dict = convert_to_dict(uri)
+    if not uri_dict["version"]:
+        return True
+    return uri_dict["version"].isalpha()
+
+
 def convert_to_dict(uri_string):
     """
     transform a string uri in a dict uri

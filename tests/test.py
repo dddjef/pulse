@@ -326,7 +326,7 @@ class TestResources(unittest.TestCase):
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
 
-        hat_mdl_work.add_input(anna_mdl_v2_abc.uri)
+        hat_mdl_work.add_input("ch_anna-modeling.ABC")
         # test the product registration
         self.assertTrue("ch_anna-modeling.ABC" in hat_mdl_work.get_inputs())
         # check the work registration to product
@@ -524,7 +524,7 @@ class TestResources(unittest.TestCase):
         anna_rig_work = anna_rig_resource.checkout()
 
         # test linked directory content is the same as the product content after add input
-        anna_rig_work.add_input(self.anna_abc_product.uri)
+        anna_rig_work.add_input("anna-mdl.abc")
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
@@ -555,6 +555,8 @@ class TestResources(unittest.TestCase):
         # test the input is a work product
         high_geo = self.anna_mdl_work.create_product("high_geo")
         utils.add_file_to_directory(high_geo.directory, "hi.abc")
+        # TODO : this way to add work input is not very elegant. I would expect to give a mutable url to get the local
+        # TODO : work, and I would set an option to get only the last commit
         anna_rig_work.add_input("anna-mdl.high_geo@work")
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
 
