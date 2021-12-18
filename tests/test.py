@@ -104,7 +104,7 @@ class TestResources(unittest.TestCase):
         self.anna_abc_work_product = self.anna_mdl_work.create_product("abc")
         utils.add_file_to_directory(self.anna_abc_work_product.directory, "anna.abc")
         self.anna_mdl_commit = self.anna_mdl_work.commit()
-        self.anna_abc_product = self.prj.get_product("anna-mdl.abc@1")
+        self.anna_abc_product = self.prj.get_commit_product("anna-mdl.abc@1")
 
     def test_delete_project(self):
         self.cnx.delete_project(test_project_name)
@@ -130,7 +130,7 @@ class TestResources(unittest.TestCase):
 
     def test_purged_product(self):
         # test the dry mode
-        self.anna_abc_product = self.prj.get_product("anna-mdl.abc@1")
+        self.anna_abc_product = self.prj.get_commit_product("anna-mdl.abc@1")
         self.assertTrue(os.path.exists(self.anna_abc_product.directory))
         self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), ['anna-mdl.abc@1'])
         self.assertTrue(os.path.exists(self.anna_abc_product.directory))
@@ -242,7 +242,7 @@ class TestResources(unittest.TestCase):
         froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
         froga_mdl_work.create_product("abc")
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
-        anna_surf_work.add_input("froga-mdl.abc@work")
+        anna_surf_work.add_input("froga-mdl.abc")
 
         # trashing a product used by another resource is forbidden
         anna_surf_work.add_input(self.anna_abc_product.uri)
@@ -265,7 +265,7 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(anna_surf_textures.directory))
         rig_v01 = anna_rig_resource.get_commit(1)
-        self.assertTrue('ch_anna-surfacing.textures' in rig_v01.products_inputs)
+        self.assertTrue('ch_anna-surfacing.textures@1' in rig_v01.products_inputs)
         anna_rig_resource.checkout()
         self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
@@ -325,13 +325,14 @@ class TestResources(unittest.TestCase):
         hat_mdl_resource = self.prj.create_resource("hat", "modeling")
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
+        hat_mdl_work.add_input("ch_anna-modeling.ABC", ignore_work_product=True)
 
-        hat_mdl_work.add_input("ch_anna-modeling.ABC")
         # test the product registration
         self.assertTrue("ch_anna-modeling.ABC" in hat_mdl_work.get_inputs())
-        # check the work registration to product
 
+        # check the work registration to product
         self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
+
         # check you can't remove a product if it's used by a work
         with self.assertRaises(Exception):
             anna_mdl_v2_abc.remove_from_local_products()
@@ -378,7 +379,7 @@ class TestResources(unittest.TestCase):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         mdl_work.create_product("hidef")
-        anna_surf_work.add_input("anna-mdl.hidef@work")
+        anna_surf_work.add_input("anna-mdl.hidef")
         with self.assertRaises(PulseError):
             anna_surf_work.commit()
 
@@ -481,7 +482,7 @@ class TestResources(unittest.TestCase):
     def test_product_download(self):
         self.anna_mdl_work.trash()
         self.prj.purge_unused_user_products()
-        product = self.prj.get_product("anna-mdl.abc@1")
+        product = self.prj.get_commit_product("anna-mdl.abc@1")
         self.assertFalse(os.path.exists(product.directory))
         self.assertFalse(os.path.exists(product.product_users_file))
         product.download()
@@ -524,7 +525,7 @@ class TestResources(unittest.TestCase):
         anna_rig_work = anna_rig_resource.checkout()
 
         # test linked directory content is the same as the product content after add input
-        anna_rig_work.add_input("anna-mdl.abc")
+        anna_rig_work.add_input("anna-mdl.abc", ignore_work_product=True)
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
@@ -543,6 +544,7 @@ class TestResources(unittest.TestCase):
         low_texture = self.anna_mdl_work.create_product("low_texture")
         utils.add_file_to_directory(low_texture.directory, "tex.jpg")
         self.anna_mdl_work.commit()
+        self.anna_mdl_work.trash()
         self.prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(low_texture.directory))
         anna_rig_work.add_input(low_texture.uri)
@@ -553,11 +555,10 @@ class TestResources(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
 
         # test the input is a work product
+        self.anna_mdl_work = self.anna_mdl.checkout()
         high_geo = self.anna_mdl_work.create_product("high_geo")
         utils.add_file_to_directory(high_geo.directory, "hi.abc")
-        # TODO : this way to add work input is not very elegant. I would expect to give a mutable url to get the local
-        # TODO : work, and I would set an option to get only the last commit
-        anna_rig_work.add_input("anna-mdl.high_geo@work")
+        anna_rig_work.add_input("anna-mdl.high_geo")
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
 
     def test_work_add_mutable_input(self):
@@ -565,7 +566,7 @@ class TestResources(unittest.TestCase):
         anna_rig_work = anna_rig_resource.checkout()
 
         # test linked directory content is the same as the product content after add input
-        anna_rig_work.add_input("anna-mdl.abc")
+        anna_rig_work.add_input("anna-mdl.abc", ignore_work_product=True)
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
@@ -586,7 +587,7 @@ class TestResources(unittest.TestCase):
         self.anna_mdl_work.commit()
         self.prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(low_texture.directory))
-        anna_rig_work.add_input("anna-mdl.low_texture")
+        anna_rig_work.add_input("anna-mdl.low_texture", ignore_work_product=True)
         self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
 
         # test if downloaded product used as input is not purged
@@ -596,7 +597,7 @@ class TestResources(unittest.TestCase):
         # test the input is a work product
         high_geo = self.anna_mdl_work.create_product("high_geo")
         utils.add_file_to_directory(high_geo.directory, "hi.abc")
-        anna_rig_work.add_input("anna-mdl.high_geo@work")
+        anna_rig_work.add_input("anna-mdl.high_geo")
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
 
     def test_work_update_input(self):
@@ -625,15 +626,14 @@ class TestResources(unittest.TestCase):
         self.assertFalse(uri_standards.is_valid("-annamdl.abc"))
         self.assertFalse(uri_standards.is_valid("anna.mdl@2"))
 
-
     def test_work_remove_input(self):
         # test remove product
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_work.add_input(self.anna_abc_product.uri)
+        anna_rig_work.add_input("anna-mdl.abc")
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.abc")))
         anna_rig_work.remove_input("anna-mdl.abc")
-        self.assertFalse(os.path.exists(os.path.join(anna_rig_work.directory, "input", self.anna_abc_product.uri)))
+        self.assertFalse(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.abc")))
 
         # test remove a missing input
         with self.assertRaises(PulseError):

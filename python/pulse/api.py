@@ -174,7 +174,7 @@ class CommitProduct(PulseDbObject, Product):
 
         fu.write_data(self.product_users_file, [])
         for uri in self.products_inputs:
-            product = self.project.get_product(uri)
+            product = self.project.get_commit_product(uri)
             product.download()
             product.add_product_user(self.directory)
         return self.directory
@@ -200,7 +200,7 @@ class CommitProduct(PulseDbObject, Product):
 
         # unregister from its inputs
         for uri in self.products_inputs:
-            product_input = self.project.get_product(uri)
+            product_input = self.project.get_commit_product(uri)
             product_input.remove_product_user(self.directory)
             if recursive_clean:
                 try:
@@ -286,7 +286,7 @@ class WorkNode:
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def add_input(self, uri):
+    def add_input(self, uri, input_name=None, ignore_work_product=False):
         """
         add a product to work inputs list
         download it to local product if needed
@@ -298,22 +298,22 @@ class WorkNode:
         if not uri_standards.is_valid(uri):
             raise PulseError("malformed uri : " + uri)
 
-        # if the uri is mutable, remove the version label. Labels are not supported
-        if uri_standards.is_mutable(uri):
-            uri = uri_standards.remove_version_from_uri(uri)
+        if not input_name:
+            input_name = uri
 
-        # check input already exists
+        # abort if input already exists
         inputs = self.get_inputs()
-        if uri in inputs:
-            raise PulseError("input already exists : " + uri)
+        if input_name in inputs:
+            raise PulseError("input already exists : " + input_name)
 
-        # update input and register to it
-        if uri_standards.is_mutable(uri):
-            self.update_input(uri)
-        else:
-            self.update_input(uri, uri)
+        # save input entry to disk
+        inputs[input_name] = {"uri": uri, "resolved_uri": None}
+        with open(self.products_inputs_file, "w") as write_file:
+            json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-    def update_input(self, uri, target_uri=None):
+        self.update_input(input_name, uri, ignore_work_product)
+
+    def update_input(self, input_name, uri=None, ignore_work_product=True):
         """
         update a work input.
         if a target uri is set, the input will now point to this uri
@@ -322,51 +322,84 @@ class WorkNode:
         the input link is redirected to the new product
         the product register the work as a new user
         :param uri: the work's input uri
-        :param target_uri: force the update to a defined uri
+        :param version: force the update to a defined version
 
         """
-        # if uri is not forced to a version, use the default uri
-        if not target_uri:
-            target_uri = uri
+        # abort if input doesn't exist
+        inputs = self.get_inputs()
+        if input_name not in inputs:
+            raise PulseError("unknown input : " + input_name)
 
-        product = self.project.get_product(target_uri)
+        input_data = inputs[input_name]
+
+        # if uri is not forced to a specific version, get the uri registered for this input
+        if not uri:
+            uri = input_data[uri]
+
+        # get the work product version if needed
+        product_version = 0
+        product = None
+        if not ignore_work_product:
+            try:
+                product = self.project.get_work_product(uri)
+                product_version = product.parent.version
+            except PulseError:
+                pass
+
+        # get the commit product, and compare to work product version to get the last one
+        try:
+            commit_product = self.project.get_commit_product(uri)
+            if commit_product.parent.version >= product_version:
+                product = commit_product
+        except PulseError:
+            pass
+
+        if not product:
+            raise PulseError("No product found for :" + uri)
+
+        # if it's a commit product, try to download it
         if isinstance(product, CommitProduct):
             product.download()
 
+        # if we are in a work input, add a linked directory
         if self.__class__.__name__ == "Work":
-            input_directory = os.path.join(self.directory, cfg.work_input_dir, uri)
+            input_directory = os.path.join(self.directory, cfg.work_input_dir, input_name)
 
             if os.path.exists(input_directory):
                 os.remove(input_directory)
             fu.make_directory_link(input_directory, product.directory)
 
         # save updated input entry to disk
-        inputs = self.get_inputs()
-        inputs[uri] = product.uri
+        inputs[input_name] = {"uri": uri, "resolved_uri": product.uri}
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
         product.add_product_user(self.directory)
 
-    def remove_input(self, uri):
+    def remove_input(self, input_name):
         """
-        remove a product from object's inputs list
+        remove a product from inputs list
 
-        :param uri: input uri
+        :param input_name: input_name
         """
         inputs = self.get_inputs()
-        if uri not in inputs:
-            raise PulseError("input does not exist : " + uri)
+        if input_name not in inputs:
+            raise PulseError("input does not exist : " + input_name)
 
-        inputs.pop(uri, None)
+        input_data = inputs[input_name]
+        inputs.pop(input_name, None)
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        product = self.project.get_product(uri)
+        try:
+            product = self.project.get_work_product(input_data["resolved_uri"])
+        except PulseError:
+            product = self.project.get_commit_product(input_data["resolved_uri"])
+
         product.remove_product_user(self.directory)
 
         # remove linked input directory
-        os.remove(os.path.join(self.directory, cfg.work_input_dir, uri))
+        os.remove(os.path.join(self.directory, cfg.work_input_dir, input_name))
 
 
 class WorkProduct(Product, WorkNode):
@@ -480,7 +513,7 @@ class Work(WorkNode):
 
         # unregister from products
         for input_product_uri in product.get_inputs():
-            input_product = self.project.get_product(input_product_uri)
+            input_product = self.project.get_commit_product(input_product_uri)
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(product.directory)
 
@@ -573,11 +606,11 @@ class Work(WorkNode):
             raise PulseError("no file change to commit")
 
         # check all inputs are registered
-        for linked_uri, uri in self.get_inputs().items():
+        for input_name, data in self.get_inputs().items():
             try:
-                self.project.get_product(uri)
+                self.project.get_commit_product(data["resolved_uri"])
             except PulseDatabaseMissingObject:
-                raise PulseError("Input should be commit first : " + uri)
+                raise PulseError("Input should be commit first : " + data["resolved_uri"])
 
         # lock the resource to prevent concurrent commit
         lock_state = self.resource.lock_state
@@ -675,7 +708,7 @@ class Work(WorkNode):
 
         # unregister from products
         for input_product_uri in self.get_inputs():
-            input_product = self.project.get_product(input_product_uri)
+            input_product = self.project.get_commit_product(input_product_uri)
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(self.directory)
 
@@ -914,8 +947,8 @@ class Resource(PulseDbObject):
                 work.create_product(product)
 
         # download requested input products if needed
-        for input_name, uri in work.get_inputs().items():
-            work.update_input(input_name, uri)
+        for input_name, data in work.get_inputs().items():
+            work.update_input(input_name, data["resolved_uri"])
 
         return work
 
@@ -1011,11 +1044,23 @@ class Project:
         self.commit_product_data_directory = None
         self.work_product_data_directory = None
 
-    def get_product(self, uri_string):
+    def get_work_product(self, uri_string):
+        uri_dict = uri_standards.convert_to_dict(uri_string)
+        resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
+        work = resource.get_work()
+        if work:
+            product = work.get_product(uri_dict['product_type'])
+            if uri_dict['version']:
+                if product.parent.version == int(uri_dict['version']):
+                    return product
+            else:
+                return product
+        raise PulseError("No product found for :" + uri_string)
+
+    def get_commit_product(self, uri_string):
         """
         return the product corresponding of the given uri
-        @last return the last version
-        @work return the local work version
+        @last or no version return the last version
         raise a PulseError if the uri is not found in the project
 
         :param uri_string: a pulse product uri
@@ -1024,29 +1069,20 @@ class Project:
         uri_dict = uri_standards.convert_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         resource.db_read()
-        if not uri_dict['version']:
-            uri_dict['version'] = "last"
 
-        # TODO : error here. If we find a commit V02 with the right product, it will be returned.
-        #  We should compare the work it could be a v03
-        if uri_dict['version'] == "last":
-            version = 0
+        if not uri_dict['version'] or uri_dict['version'] == "last":
             products = self.cnx.db.find_uris(
                 self.name,
                 "CommitProduct",
                 uri_standards.remove_version_from_uri(uri_string) + "@*"
             )
-            if products:
-                products.sort()
-                last_product_uri = products[-1]
-                version = uri_standards.convert_to_dict(last_product_uri)['version']
-            current_work = resource.get_work()
-            if current_work and current_work.version > int(version) and uri_dict["product_type"] in current_work.list_products():
-                product_parent = current_work
-            else:
-                product_parent = resource.get_commit(uri_standards.convert_to_dict(last_product_uri)['version'])
-            if version == 0:
-                raise PulseError("No product found for this resource :" + uri_string)
+            if not products:
+                raise PulseError("No product found for :" + uri_string)
+            products.sort()
+            last_product_uri = products[-1]
+            version = uri_standards.convert_to_dict(last_product_uri)['version']
+            product_parent = resource.get_commit(version)
+
         else:
             resource.get_index(uri_dict['version'])
             index = resource.get_index(uri_dict['version'])
@@ -1062,7 +1098,7 @@ class Project:
         :param uri_pattern: string
         :return: a Products list
         """
-        return [self.get_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
+        return [self.get_commit_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
 
     def get_local_commit_products(self):
         """
@@ -1100,7 +1136,7 @@ class Project:
                 if not uri.startswith(resource_filter.uri):
                     continue
 
-            product = self.get_product(uri)
+            product = self.get_commit_product(uri)
             if product.get_unused_time() > (unused_days*86400):
                 purged_products.append(product.uri)
                 if not dry_mode:

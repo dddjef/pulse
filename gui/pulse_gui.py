@@ -67,7 +67,7 @@ class LocalProductsWindow(QDialog):
         self.products_listWidget.clear()
         for uri in self.project.get_local_commit_products():
             print(uri)
-            product = self.project.get_product(uri)
+            product = self.project.get_commit_product(uri)
             if self.showUnused_checkBox.isChecked():
                 if product.get_unused_time() < (self.unusedDays_spinBox.value()*86400):
                     continue
@@ -465,7 +465,7 @@ class MainWindow(QMainWindow):
                     resource_item = PulseItem([resource_uri], work)
                     self.treeWidget.addTopLevelItem(resource_item)
                     for product_type in work.list_products():
-                        product = work.get_product(product_type)
+                        product = work.get_commit_product(product_type)
                         product_item = PulseItem([product_type], product)
                         resource_item.addChild(product_item)
             except Exception as ex:
