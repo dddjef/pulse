@@ -334,7 +334,7 @@ class WorkNode:
 
         # if uri is not forced to a specific version, get the uri registered for this input
         if not uri:
-            uri = input_data[uri]
+            uri = input_data["uri"]
 
         # get the work product version if needed
         product_version = 0
