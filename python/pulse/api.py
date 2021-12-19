@@ -276,10 +276,10 @@ class WorkNode:
 
     def get_inputs(self):
         """
-        return a dict of work node inputs in the form
-        {uri_input_name : immutable_uri}
+        return a dict of inputs in the form
+        {uri_input_name : {uri, resolved_uri}}
 
-        :return: products uri list
+        :return: inputs dict
         """
         if not os.path.exists(self.products_inputs_file):
             return {}
@@ -313,7 +313,7 @@ class WorkNode:
 
         self.update_input(input_name, uri, ignore_work_product)
 
-    def update_input(self, input_name, uri=None, ignore_work_product=True):
+    def update_input(self, input_name, uri=None, ignore_work_product=True, update_input_dict=True):
         """
         update a work input.
         if a target uri is set, the input will now point to this uri
@@ -369,10 +369,11 @@ class WorkNode:
                 os.remove(input_directory)
             fu.make_directory_link(input_directory, product.directory)
 
-        # save updated input entry to disk
-        inputs[input_name] = {"uri": uri, "resolved_uri": product.uri}
-        with open(self.products_inputs_file, "w") as write_file:
-            json.dump(inputs, write_file, indent=4, sort_keys=True)
+        # updated input data entry to disk
+        if update_input_dict:
+            inputs[input_name] = {"uri": uri, "resolved_uri": product.uri}
+            with open(self.products_inputs_file, "w") as write_file:
+                json.dump(inputs, write_file, indent=4, sort_keys=True)
 
         product.add_product_user(self.directory)
 
@@ -948,7 +949,7 @@ class Resource(PulseDbObject):
 
         # download requested input products if needed
         for input_name, data in work.get_inputs().items():
-            work.update_input(input_name, data["resolved_uri"])
+            work.update_input(input_name, uri=data["resolved_uri"], update_input_dict=False)
 
         return work
 

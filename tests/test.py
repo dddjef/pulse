@@ -104,7 +104,7 @@ class TestResources(unittest.TestCase):
         self.anna_abc_work_product = self.anna_mdl_work.create_product("abc")
         utils.add_file_to_directory(self.anna_abc_work_product.directory, "anna.abc")
         self.anna_mdl_commit = self.anna_mdl_work.commit()
-        self.anna_abc_product = self.prj.get_commit_product("anna-mdl.abc@1")
+        self.anna_abc_product_v1 = self.prj.get_commit_product("anna-mdl.abc@1")
 
     def test_delete_project(self):
         self.cnx.delete_project(test_project_name)
@@ -130,21 +130,21 @@ class TestResources(unittest.TestCase):
 
     def test_purged_product(self):
         # test the dry mode
-        self.anna_abc_product = self.prj.get_commit_product("anna-mdl.abc@1")
-        self.assertTrue(os.path.exists(self.anna_abc_product.directory))
+        self.anna_abc_product_v1 = self.prj.get_commit_product("anna-mdl.abc@1")
+        self.assertTrue(os.path.exists(self.anna_abc_product_v1.directory))
         self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), ['anna-mdl.abc@1'])
-        self.assertTrue(os.path.exists(self.anna_abc_product.directory))
+        self.assertTrue(os.path.exists(self.anna_abc_product_v1.directory))
 
         # test product currently in use can't be purged
         self.anna_surf = self.prj.create_resource("anna", "surfacing")
         self.anna_surf_work = self.anna_surf.checkout()
-        self.anna_surf_work.add_input(self.anna_abc_product.uri)
+        self.anna_surf_work.add_input(self.anna_abc_product_v1.uri)
         self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), [])
 
         # test the normal mode
         self.anna_surf_work.trash()
         self.assertEqual(self.prj.purge_unused_user_products(dry_mode=False), ['anna-mdl.abc@1'])
-        self.assertFalse(os.path.exists(self.anna_abc_product.directory))
+        self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
 
     def test_manipulating_trashed_work(self):
         wip_product = self.anna_mdl_work.create_product("wip")
@@ -188,7 +188,7 @@ class TestResources(unittest.TestCase):
         self.anna_mdl_work.trash()
         self.prj.purge_unused_user_products()
         # ensure the product directory is missing
-        self.assertFalse(os.path.exists(self.anna_abc_product.directory))
+        self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
         # checkout the resource again
         work = self.anna_mdl.checkout()
         # test the empty product has been restored
@@ -245,9 +245,9 @@ class TestResources(unittest.TestCase):
         anna_surf_work.add_input("froga-mdl.abc")
 
         # trashing a product used by another resource is forbidden
-        anna_surf_work.add_input(self.anna_abc_product.uri)
+        anna_surf_work.add_input(self.anna_abc_product_v1.uri)
         with self.assertRaises(PulseError):
-            self.anna_abc_product.remove_from_local_products()
+            self.anna_abc_product_v1.remove_from_local_products()
 
     def test_work_dependencies_download(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
@@ -476,7 +476,7 @@ class TestResources(unittest.TestCase):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(self.anna_abc_product.uri)
+        anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
         anna_rig_work.trash_product("actor_anim")
 
     def test_product_download(self):
@@ -496,7 +496,7 @@ class TestResources(unittest.TestCase):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(self.anna_abc_product.uri)
+        anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
         anna_rig_work.commit()
         self.assertTrue(len(self.prj.list_products("anna*")) == 2)
         self.assertTrue(len(self.prj.list_products("an?a*")) == 2)
@@ -529,7 +529,7 @@ class TestResources(unittest.TestCase):
             anna_rig_work.directory,
             cfg.work_input_dir,
             "anna-mdl.abc"
-        )), os.listdir(self.anna_abc_product.directory))
+        )), os.listdir(self.anna_abc_product_v1.directory))
 
         # test if the input already exists in work inputs
         with self.assertRaises(PulseError):
@@ -570,27 +570,72 @@ class TestResources(unittest.TestCase):
             anna_rig_work.directory,
             cfg.work_input_dir,
             "modeling"
-        )), os.listdir(self.anna_abc_product.directory))
-
+        )), os.listdir(self.anna_abc_product_v1.directory))
 
     def test_work_update_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         input_dir = os.path.join(anna_rig_work.directory, cfg.work_input_dir, "anna-mdl.abc")
 
-        # test input does update with mutable uri
         anna_rig_work.add_input("anna-mdl.abc", ignore_work_product=True)
-        utils.add_file_to_directory(self.anna_abc_product.directory, "V2.txt")
+        abc_v2 = self.anna_mdl_work.get_product("abc")
+        utils.add_file_to_directory(abc_v2.directory, "V2.txt")
+        # test ignore work product with mutable input
         anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
-        self.assertEqual(os.listdir(input_dir), os.listdir(self.anna_abc_product.directory))
+        self.assertFalse("V2.txt" in os.listdir(input_dir))
+
+        self.anna_mdl_work.commit()
+        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
+        self.assertTrue("V2.txt" in os.listdir(input_dir))
+
+        abc_v3 = self.anna_mdl_work.get_product("abc")
+        utils.add_file_to_directory(abc_v3.directory, "V3.txt")
+        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=False)
+        self.assertTrue("V3.txt" in os.listdir(input_dir))
 
         # test input does not update with unmutable uri
+        anna_rig_work.remove_input("anna-mdl.abc")
+        anna_rig_work.add_input(uri="anna-mdl.abc@2", input_name="anna-mdl.abc")
+        self.anna_mdl_work.commit()
+        anna_rig_work.update_input("anna-mdl.abc")
+        self.assertTrue("V2.txt" in os.listdir(input_dir))
 
-        # test a work with mutable uri keep the last product version used when checkout
+        # test update input can change the input uri
+        anna_rig_work.update_input("anna-mdl.abc", uri="anna-mdl.abc")
+        self.assertTrue("V3.txt" in os.listdir(input_dir))
+
+        # test the input uri change is permanent
+        abc_v4 = self.anna_mdl_work.get_product("abc")
+        utils.add_file_to_directory(abc_v4.directory, "V4.txt")
+        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=False)
+        self.assertTrue("V4.txt" in os.listdir(input_dir))
+
+        # test an input with mutable uri keep the last product version used when checkout
+        anna_rig_work.remove_input("anna-mdl.abc")
+        anna_rig_work.add_input(uri="anna-mdl.abc", ignore_work_product=True)
+        self.assertTrue("V3.txt" in os.listdir(input_dir))
+        anna_rig_work.commit()
+        anna_rig_work.trash()
+        self.anna_mdl_work.commit()
+        anna_rig_work = anna_rig_resource.checkout()
+        self.assertTrue("V3.txt" in os.listdir(input_dir))
+        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
+        self.assertTrue("V4.txt" in os.listdir(input_dir))
+
         # test update input when there's no new version
-        # test update input with unmutable uri only download a new version
+        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
+        self.assertTrue("V4.txt" in os.listdir(input_dir))
+
         # test update a missing input
-        pass
+        with self.assertRaises(PulseError):
+            anna_rig_work.update_input("missing-input")
+
+        # test update input can download missing product
+        anna_rig_work.commit()
+        anna_rig_work.trash()
+        self.prj.purge_unused_user_products()
+        anna_rig_resource.checkout()
+        self.assertTrue("V4.txt" in os.listdir(input_dir))
 
     def test_uri_validate(self):
         # test a product uri
@@ -621,13 +666,13 @@ class TestResources(unittest.TestCase):
 
         # test remove a missing input
         with self.assertRaises(PulseError):
-            anna_rig_work.remove_input(self.anna_abc_product.uri)
+            anna_rig_work.remove_input(self.anna_abc_product_v1.uri)
 
     def test_product_add_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_hd = anna_rig_work.create_product("hd")
-        anna_rig_hd.add_input(self.anna_abc_product.uri)
+        anna_rig_hd.add_input(self.anna_abc_product_v1.uri)
         # test products don't have a "input" linked directory
         self.assertFalse(os.path.exists(os.path.join(anna_rig_hd.directory, "input")))
 
