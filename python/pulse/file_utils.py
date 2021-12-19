@@ -157,3 +157,5 @@ def make_directory_link(source, destination):
         cmd = ('mklink /j "' + source + '" "' + destination + '"')
         with open(os.devnull, 'wb') as none_file:
             subprocess.call(cmd.replace("\\", "/"), shell=True, stdout=none_file, stderr=none_file)
+    else:
+        os.symlink(destination, source)
