@@ -20,7 +20,10 @@ def reset_test_data(root=test_data_output_path):
                     if platform == "win32":
                         os.chmod(filepath, 0o777)
 
-        subprocess.call('rmdir /s /q "' + root + '"', shell=True)
+        if platform == "win32":
+            subprocess.call('rmdir /s /q "' + root + '"', shell=True)
+        else:
+            shutil.rmtree(root)
     os.mkdir(root)
 
 
