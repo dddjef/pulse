@@ -288,12 +288,14 @@ class WorkNode:
 
     def add_input(self, uri, input_name=None, ignore_work_product=False):
         """
-        add a product to work inputs list
+        add a product to the work inputs list
         download it to local product if needed
         uri can be mutable (ie: anna-mdl.abc) or not (ie : anna-mdl.abc@4)
         if a mutable uri is given, the last version will be used
 
-        :param uri: the product's uri, could be a mutable uri
+        :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
+        :param uri: the product uri, can be mutable
+        :param ignore_work_product: if set to True, Pulse won't look in local work product to add the input
         """
         if not uri_standards.is_valid(uri):
             raise PulseError("malformed uri : " + uri)
@@ -313,16 +315,18 @@ class WorkNode:
 
         self.update_input(input_name, uri, ignore_work_product)
 
-    def update_input(self, input_name, uri=None, ignore_work_product=True, update_input_dict=True):
+    def update_input(self, input_name, uri=None, ignore_work_product=True, update_input_uri=True):
         """
         update a work input.
-        if a target uri is set, the input will now point to this uri
-        if no target uri is set, the input will look for a newer product version
-        the product is downloaded if needed
-        the input link is redirected to the new product
+        the input name is an alias, used for creating linked directory in {work}/inputs/
+        if no uri is set, the last registered uri will be used to find a new product.
+        the new product is downloaded if needed
+        the input directory link is redirected to the new product
         the product register the work as a new user
-        :param uri: the work's input uri
-        :param version: force the update to a defined version
+        :param input_name: the input to update
+        :param uri: if set, give a new uri for the input. If not, used the last registered uri
+        :param update_input_uri: if set to False, the input uri won't be updated
+        :param ignore_work_product: if set to True, update won't look for local work product
 
         """
         # abort if input doesn't exist
@@ -369,11 +373,14 @@ class WorkNode:
                 os.remove(input_directory)
             fu.make_directory_link(input_directory, product.directory)
 
+        # if input uri should not be updated, restore it from the saved data
+        if not update_input_uri:
+            uri = input_data["uri"]
+
         # updated input data entry to disk
-        if update_input_dict:
-            inputs[input_name] = {"uri": uri, "resolved_uri": product.uri}
-            with open(self.products_inputs_file, "w") as write_file:
-                json.dump(inputs, write_file, indent=4, sort_keys=True)
+        inputs[input_name] = {"uri": uri, "resolved_uri": product.uri}
+        with open(self.products_inputs_file, "w") as write_file:
+            json.dump(inputs, write_file, indent=4, sort_keys=True)
 
         product.add_product_user(self.directory)
 
@@ -401,6 +408,7 @@ class WorkNode:
 
         # remove linked input directory
         os.remove(os.path.join(self.directory, cfg.work_input_dir, input_name))
+
 
 
 class WorkProduct(Product, WorkNode):
@@ -949,7 +957,7 @@ class Resource(PulseDbObject):
 
         # download requested input products if needed
         for input_name, data in work.get_inputs().items():
-            work.update_input(input_name, uri=data["resolved_uri"], update_input_dict=False)
+            work.update_input(input_name, uri=data["resolved_uri"], update_input_uri=False)
 
         return work
 
