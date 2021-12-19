@@ -1,6 +1,21 @@
 import os
 from pulse.exception import *
 import pulse.config as cfg
+import re
+
+
+def is_valid(uri):
+    if re.match(r'[A-Za-z0-9._]+-[A-Za-z0-9._]+@*[A-Za-z0-9._]*', uri):
+        return True
+    return False
+
+
+def is_mutable(uri):
+    uri_dict = convert_to_dict(uri)
+    if not uri_dict["version"]:
+        return True
+    return uri_dict["version"].isalpha()
+
 
 def convert_to_dict(uri_string):
     """
@@ -9,20 +24,26 @@ def convert_to_dict(uri_string):
     :param uri_string:
     :return uri dict:
     """
-    uri_split_main = uri_string.split("@")
-    uri_split = uri_split_main[0].split("-")
-    entity = uri_split[0]
-    category_split = uri_split[1].split(".")
-    product_type = ""
-    version = None
+    if not is_valid(uri_string):
+        raise PulseUriError("Uri not valid : " + uri_string)
 
-    if len(category_split) > 1:
-        product_type = category_split[1]
+    uri_split = uri_string.split("@")
+    product_split = uri_split[0].split(".")
+    resource_split = product_split[0].split("-")
+    entity = resource_split[0]
+    resource_type = resource_split[1]
 
-    if len(uri_split_main) > 1:
-        version = uri_split_main[1]
+    if len(product_split) > 1:
+        product_type = product_split[1]
+    else:
+        product_type = None
 
-    return {"entity": entity, "resource_type": category_split[0], "version": version, "product_type": product_type}
+    if len(uri_split) > 1:
+        version = uri_split[1]
+    else:
+        version = None
+
+    return {"entity": entity, "resource_type": resource_type, "version": version, "product_type": product_type}
 
 
 def convert_from_dict(uri_dict):
@@ -71,3 +92,10 @@ def path_to_uri(path):
         raise PulseError("can't convert path to uri, malformed path")
 
     return convert_from_dict(uri_dict)
+
+
+def remove_version_from_uri(uri):
+    if not is_valid(uri):
+        raise PulseUriError("Uri not valid : " + uri)
+    split = uri.split("@")
+    return split[0]

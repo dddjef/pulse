@@ -25,7 +25,7 @@ shot_anim = prj.create_resource("shot_99", "animation")
 shot_anim_work = shot_anim.checkout()
 
 >>> # add the last Joe's proxy rig to this shot (download it to user space if needed)
-shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last").get_product("proxy_rig"))
+shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last").get_commit_product("proxy_rig"))
 
 >>> # Create a product folder to receive an alembic export
 shot_anim_work.create_product("alembic")

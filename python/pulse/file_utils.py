@@ -2,6 +2,8 @@ import os
 import json
 import hashlib
 import shutil
+import sys
+import subprocess
 
 
 def md5(filepath):
@@ -144,3 +146,16 @@ def move_file(src_path, dst_path):
     if not os.path.isdir(new_dir):
         os.makedirs(new_dir)
     shutil.move(src_path, dst_path)
+
+
+def make_directory_link(source, destination):
+    # remove old source directory if needed
+    if os.path.exists(source):
+        os.remove(source)
+    # if system is windows make a junction (symlink requires admin privileges)
+    if sys.platform == "win32":
+        cmd = ('mklink /j "' + source + '" "' + destination + '"')
+        with open(os.devnull, 'wb') as none_file:
+            subprocess.call(cmd.replace("\\", "/"), shell=True, stdout=none_file, stderr=none_file)
+    else:
+        os.symlink(destination, source)

@@ -24,10 +24,12 @@ class PulseItem(QTreeWidgetItem):
         self.pulse_node = pulse_node
 
 
-class ProductItem(QListWidgetItem):
-    def __init__(self, parent, pulse_node):
-        super(ProductItem, self).__init__(parent)
-        self.pulse_node = pulse_node
+class InputItem(QListWidgetItem):
+    def __init__(self, parent, data):
+        super(InputItem, self).__init__(parent)
+        self.input_name = parent
+        self.uri = data['uri']
+        self.resolved_uri = data['resolved_uri']
 
 
 def text_settings_to_dict(text):
@@ -66,8 +68,7 @@ class LocalProductsWindow(QDialog):
     def update_inputs_list(self):
         self.products_listWidget.clear()
         for uri in self.project.get_local_commit_products():
-            print(uri)
-            product = self.project.get_product(uri)
+            product = self.project.get_commit_product(uri)
             if self.showUnused_checkBox.isChecked():
                 if product.get_unused_time() < (self.unusedDays_spinBox.value()*86400):
                     continue
@@ -131,7 +132,7 @@ class InputsWindow(QDialog):
         QDialog.__init__(self, main_window)
         loadUi("edit_inputs.ui", self)
         self.mainWindow = main_window
-        self.pulse_node = pulse_node
+        self.pulse_work_node = pulse_node
         self.setWindowTitle(self.mainWindow.treeWidget.currentItem().text(0) + " inputs")
         self.addInput_pushButton.clicked.connect(self.add_input)
         self.removeInput_pushButton.clicked.connect(self.remove_input)
@@ -140,8 +141,8 @@ class InputsWindow(QDialog):
 
     def update_inputs_list(self):
         self.inputs_listWidget.clear()
-        for product in self.pulse_node.get_inputs():
-            item = ProductItem(product.uri, pulse_node=product)
+        for input_name, input_data in self.pulse_work_node.get_inputs().items():
+            item = InputItem(input_name, input_data)
             self.inputs_listWidget.addItem(item)
 
     def add_input(self):
@@ -151,7 +152,7 @@ class InputsWindow(QDialog):
         elif not isinstance(current_item.pulse_node, pulse.CommitProduct):
             self.mainWindow.message_user("the selected item should be a commit product only", "ERROR")
         else:
-            self.pulse_node.add_input(current_item.pulse_node)
+            self.pulse_work_node.add_input(current_item.pulse_node.uri)
             self.mainWindow.message_user("Added to inputs : " + current_item.pulse_node.uri)
             self.update_inputs_list()
             # TODO : refresh the current tree view to show the downloaded product icon if needed
@@ -163,7 +164,7 @@ class InputsWindow(QDialog):
         except IndexError:
             self.mainWindow.message_user("Select an input to remove", "ERROR")
             return
-        self.pulse_node.remove_input(selected.pulse_node)
+        self.pulse_work_node.remove_input(selected.input_name)
         self.update_inputs_list()
 
 
@@ -217,7 +218,8 @@ class CreateResourceWindow(QDialog):
             print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
-        self.mainWindow.treeWidget.addTopLevelItem(resource_item)
+        if not self.mainWindow.sandbox_pushButton.isChecked():
+            self.mainWindow.treeWidget.addTopLevelItem(resource_item)
         self.close()
 
     def type_from_template_checked(self):
@@ -564,7 +566,7 @@ class MainWindow(QMainWindow):
                 }
                 input_index = 1
                 for product in item.pulse_node.get_inputs():
-                    properties["product input " + str(input_index)] = product.uri
+                    properties["product input " + str(input_index)] = product
                     input_index += 1
                 self.show_details(properties)
 
@@ -766,7 +768,6 @@ class MainWindow(QMainWindow):
         dialog = CreateResourceWindow(self, entity_name)
         dialog.exec_()
 
-
     def purge_products(self, item=None):
         dialog = LocalProductsWindow(self)
         dialog.exec_()
@@ -783,6 +784,7 @@ class MainWindow(QMainWindow):
             self.settings.setValue('filter_visible', self.filter_groupBox.isChecked())
         except Exception as ex:
             print_exception(ex, self)
+
 
 app = QApplication(sys.argv)
 main_window_app = MainWindow()
