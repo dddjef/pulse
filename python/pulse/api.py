@@ -1162,6 +1162,7 @@ class Project:
         product_root = os.path.join(self.cfg.get_product_user_root(), self.name)
         self.commit_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "commit_products")
         self.work_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "work_products")
+        self.initialize_sandbox()
 
     def initialize_sandbox(self):
         # create local data directories
