@@ -665,6 +665,7 @@ class MainWindow(QMainWindow):
         except Exception as ex:
             print_exception(ex, self)
             return
+
     def explore(self, item):
         if not os.path.exists(item.pulse_node.directory):
             self.message_user("Directory missing : " + item.pulse_node.directory, message_type="ERROR")
