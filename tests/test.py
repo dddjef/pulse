@@ -242,7 +242,7 @@ class TestResources(unittest.TestCase):
         froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
         froga_mdl_work.create_product("abc")
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
-        anna_surf_work.add_input("froga-mdl.abc")
+        anna_surf_work.add_input("froga-mdl.abc", consider_work_product=True)
 
         # trashing a product used by another resource is forbidden
         anna_surf_work.add_input(self.anna_abc_product_v1.uri)
@@ -325,7 +325,7 @@ class TestResources(unittest.TestCase):
         hat_mdl_resource = self.prj.create_resource("hat", "modeling")
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
-        hat_mdl_work.add_input("ch_anna-modeling.ABC", ignore_work_product=True)
+        hat_mdl_work.add_input("ch_anna-modeling.ABC")
 
         # test the product registration
         self.assertTrue("ch_anna-modeling.ABC" in hat_mdl_work.get_inputs())
@@ -379,7 +379,7 @@ class TestResources(unittest.TestCase):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
         mdl_work.create_product("hidef")
-        anna_surf_work.add_input("anna-mdl.hidef")
+        anna_surf_work.add_input("anna-mdl.hidef", consider_work_product=True)
         with self.assertRaises(PulseError):
             anna_surf_work.commit()
 
@@ -524,7 +524,7 @@ class TestResources(unittest.TestCase):
         anna_rig_work = anna_rig_resource.checkout()
 
         # test linked directory content is the same as the product content after add input
-        anna_rig_work.add_input("anna-mdl.abc", ignore_work_product=True)
+        anna_rig_work.add_input("anna-mdl.abc")
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
@@ -557,7 +557,7 @@ class TestResources(unittest.TestCase):
         self.anna_mdl_work = self.anna_mdl.checkout()
         high_geo = self.anna_mdl_work.create_product("high_geo")
         utils.add_file_to_directory(high_geo.directory, "hi.abc")
-        anna_rig_work.add_input("anna-mdl.high_geo")
+        anna_rig_work.add_input("anna-mdl.high_geo", consider_work_product=True)
         self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
 
     def test_work_add_input_with_custom_name(self):
@@ -565,7 +565,7 @@ class TestResources(unittest.TestCase):
         anna_rig_work = anna_rig_resource.checkout()
 
         # test linked directory content is the same as the product content after add input
-        anna_rig_work.add_input("anna-mdl.abc", input_name="modeling", ignore_work_product=True)
+        anna_rig_work.add_input("anna-mdl.abc", input_name="modeling")
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
@@ -577,20 +577,20 @@ class TestResources(unittest.TestCase):
         anna_rig_work = anna_rig_resource.checkout()
         input_dir = os.path.join(anna_rig_work.directory, cfg.work_input_dir, "anna-mdl.abc")
 
-        anna_rig_work.add_input("anna-mdl.abc", ignore_work_product=True)
+        anna_rig_work.add_input("anna-mdl.abc")
         abc_v2 = self.anna_mdl_work.get_product("abc")
         utils.add_file_to_directory(abc_v2.directory, "V2.txt")
         # ignore work product with mutable input
-        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
+        anna_rig_work.update_input("anna-mdl.abc")
         self.assertFalse("V2.txt" in os.listdir(input_dir))
 
         self.anna_mdl_work.commit()
-        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
+        anna_rig_work.update_input("anna-mdl.abc")
         self.assertTrue("V2.txt" in os.listdir(input_dir))
 
         abc_v3 = self.anna_mdl_work.get_product("abc")
         utils.add_file_to_directory(abc_v3.directory, "V3.txt")
-        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=False)
+        anna_rig_work.update_input("anna-mdl.abc", consider_work_product=True)
         self.assertTrue("V3.txt" in os.listdir(input_dir))
 
         # input does update even if a mutable uri was given first
@@ -607,23 +607,23 @@ class TestResources(unittest.TestCase):
         # input uri change is permanent
         abc_v4 = self.anna_mdl_work.get_product("abc")
         utils.add_file_to_directory(abc_v4.directory, "V4.txt")
-        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=False)
+        anna_rig_work.update_input("anna-mdl.abc", consider_work_product=True)
         self.assertTrue("V4.txt" in os.listdir(input_dir))
 
         # test an input with mutable uri keep the last product version used when checkout
         anna_rig_work.remove_input("anna-mdl.abc")
-        anna_rig_work.add_input(uri="anna-mdl.abc", ignore_work_product=True)
+        anna_rig_work.add_input(uri="anna-mdl.abc")
         self.assertTrue("V3.txt" in os.listdir(input_dir))
         anna_rig_work.commit()
         anna_rig_work.trash()
         self.anna_mdl_work.commit()
         anna_rig_work = anna_rig_resource.checkout()
         self.assertTrue("V3.txt" in os.listdir(input_dir))
-        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
+        anna_rig_work.update_input("anna-mdl.abc")
         self.assertTrue("V4.txt" in os.listdir(input_dir))
 
         # test update input when there's no new version
-        anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
+        anna_rig_work.update_input("anna-mdl.abc")
         self.assertTrue("V4.txt" in os.listdir(input_dir))
 
         # test update a missing input

@@ -286,7 +286,7 @@ class WorkNode:
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def add_input(self, uri, input_name=None, ignore_work_product=False):
+    def add_input(self, uri, input_name=None, consider_work_product=False):
         """
         add a product to the work inputs list
         download it to local product if needed
@@ -295,7 +295,7 @@ class WorkNode:
 
         :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
         :param uri: the product uri, can be mutable
-        :param ignore_work_product: if set to True, Pulse won't look in local work product to add the input
+        :param consider_work_product: if set to True, Pulse will look in local work product to add the input
         """
         if not uri_standards.is_valid(uri):
             raise PulseError("malformed uri : " + uri)
@@ -313,9 +313,9 @@ class WorkNode:
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        self.update_input(input_name, uri, ignore_work_product)
+        self.update_input(input_name, uri, consider_work_product)
 
-    def update_input(self, input_name, uri=None, ignore_work_product=True):
+    def update_input(self, input_name, uri=None, consider_work_product=False):
         """
         update a work input.
         the input name is an alias, used for creating linked directory in {work}/inputs/
@@ -326,14 +326,13 @@ class WorkNode:
         the product register the work as a new user
         :param input_name: the input to update
         :param uri: if set, give a new uri for the input. If not, used the last registered uri
-        :param ignore_work_product: if set to True, update won't look for local work product
+        :param consider_work_product: if set to True, update will look for local work product
 
         """
         # abort if input doesn't exist
         inputs = self.get_inputs()
         if input_name not in inputs:
             raise PulseError("unknown input : " + input_name)
-
 
         # if uri is not forced to a specific version, get the uri registered for this input as mutable
         if not uri:
@@ -342,7 +341,7 @@ class WorkNode:
         # get the work product version if needed
         product_version = 0
         product = None
-        if not ignore_work_product:
+        if consider_work_product:
             try:
                 product = self.project.get_work_product(uri)
                 product_version = product.parent.version
@@ -371,7 +370,6 @@ class WorkNode:
             if os.path.exists(input_directory):
                 os.remove(input_directory)
             fu.make_directory_link(input_directory, product.directory)
-
 
         # updated input data entry to disk
         inputs[input_name] = product.uri
@@ -404,7 +402,6 @@ class WorkNode:
 
         # remove linked input directory
         os.remove(os.path.join(self.directory, cfg.work_input_dir, input_name))
-
 
 
 class WorkProduct(Product, WorkNode):
