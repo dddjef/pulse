@@ -138,19 +138,15 @@ class InputsWindow(QDialog):
         self.removeInput_pushButton.clicked.connect(self.remove_input)
         self.close_pushButton.clicked.connect(self.close)
         self.inputs_tableWidget.setColumnWidth(0, 180)
-        self.inputs_tableWidget.setColumnWidth(1, 180)
-        # self.inputs_tableWidget.setColumnWidth(2, 50)
         self.update_inputs_list()
 
     def update_inputs_list(self):
         inputs = self.pulse_work_node.get_inputs()
         self.inputs_tableWidget.setRowCount(len(inputs))
         property_index = 0
-        for input_name, data in inputs.items():
-            version = pulse.uri_standards.convert_to_dict(data["resolved_uri"])["version"]
+        for input_name, uri in inputs.items():
             self.inputs_tableWidget.setItem(property_index, 0, QtWidgets.QTableWidgetItem(input_name))
-            self.inputs_tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(data["uri"]))
-            self.inputs_tableWidget.setItem(property_index, 2, QtWidgets.QTableWidgetItem(str(version)))
+            self.inputs_tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(uri))
             property_index += 1
         # Table will fit the screen horizontally
         self.inputs_tableWidget.horizontalHeader().setStretchLastSection(True)
@@ -172,11 +168,12 @@ class InputsWindow(QDialog):
 
     def remove_input(self):
         try:
-            selected = self.inputs_listWidget.selectedItems()[0]
+            row = self.inputs_tableWidget.currentRow()
+            input_name = self.inputs_tableWidget.item(row, 0).text()
         except IndexError:
             self.mainWindow.message_user("Select an input to remove", "ERROR")
             return
-        self.pulse_work_node.remove_input(selected.input_name)
+        self.pulse_work_node.remove_input(input_name)
         self.update_inputs_list()
 
 
@@ -668,6 +665,7 @@ class MainWindow(QMainWindow):
         except Exception as ex:
             print_exception(ex, self)
             return
+
     def explore(self, item):
         if not os.path.exists(item.pulse_node.directory):
             self.message_user("Directory missing : " + item.pulse_node.directory, message_type="ERROR")
