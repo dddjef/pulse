@@ -580,7 +580,7 @@ class TestResources(unittest.TestCase):
         anna_rig_work.add_input("anna-mdl.abc", ignore_work_product=True)
         abc_v2 = self.anna_mdl_work.get_product("abc")
         utils.add_file_to_directory(abc_v2.directory, "V2.txt")
-        # test ignore work product with mutable input
+        # ignore work product with mutable input
         anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=True)
         self.assertFalse("V2.txt" in os.listdir(input_dir))
 
@@ -593,18 +593,18 @@ class TestResources(unittest.TestCase):
         anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=False)
         self.assertTrue("V3.txt" in os.listdir(input_dir))
 
-        # test input does not update with unmutable uri
+        # input does update even if a mutable uri was given first
         anna_rig_work.remove_input("anna-mdl.abc")
         anna_rig_work.add_input(uri="anna-mdl.abc@2", input_name="anna-mdl.abc")
         self.anna_mdl_work.commit()
         anna_rig_work.update_input("anna-mdl.abc")
-        self.assertTrue("V2.txt" in os.listdir(input_dir))
-
-        # test update input can change the input uri
-        anna_rig_work.update_input("anna-mdl.abc", uri="anna-mdl.abc")
         self.assertTrue("V3.txt" in os.listdir(input_dir))
 
-        # test the input uri change is permanent
+        # update input can change the input uri
+        anna_rig_work.update_input("anna-mdl.abc", uri="anna-mdl.abc@2")
+        self.assertTrue("V2.txt" in os.listdir(input_dir))
+
+        # input uri change is permanent
         abc_v4 = self.anna_mdl_work.get_product("abc")
         utils.add_file_to_directory(abc_v4.directory, "V4.txt")
         anna_rig_work.update_input("anna-mdl.abc", ignore_work_product=False)
