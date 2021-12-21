@@ -46,11 +46,6 @@
          <string>URI</string>
         </property>
        </column>
-       <column>
-        <property name="text">
-         <string>Current Version</string>
-        </property>
-       </column>
       </widget>
      </item>
      <item>
