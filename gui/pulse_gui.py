@@ -127,7 +127,7 @@ class CreateResourceTemplateWindow(QDialog):
 
 class InputsWindow(QDialog):
     # TODO : should propose to enter manually an URI
-    # TODO : should be placed upper than the treeview, to help the user to focus directly on the right part
+    # TODO : add update input
     def __init__(self, main_window, pulse_node):
         QDialog.__init__(self, main_window)
         loadUi("edit_inputs.ui", self)
@@ -137,13 +137,25 @@ class InputsWindow(QDialog):
         self.addInput_pushButton.clicked.connect(self.add_input)
         self.removeInput_pushButton.clicked.connect(self.remove_input)
         self.close_pushButton.clicked.connect(self.close)
+        self.inputs_tableWidget.setColumnWidth(0, 180)
+        self.inputs_tableWidget.setColumnWidth(1, 180)
+        # self.inputs_tableWidget.setColumnWidth(2, 50)
         self.update_inputs_list()
 
     def update_inputs_list(self):
-        self.inputs_listWidget.clear()
-        for input_name, input_data in self.pulse_work_node.get_inputs().items():
-            item = InputItem(input_name, input_data)
-            self.inputs_listWidget.addItem(item)
+        inputs = self.pulse_work_node.get_inputs()
+        self.inputs_tableWidget.setRowCount(len(inputs))
+        property_index = 0
+        for input_name, data in inputs.items():
+            version = pulse.uri_standards.convert_to_dict(data["resolved_uri"])["version"]
+            self.inputs_tableWidget.setItem(property_index, 0, QtWidgets.QTableWidgetItem(input_name))
+            self.inputs_tableWidget.setItem(property_index, 1, QtWidgets.QTableWidgetItem(data["uri"]))
+            self.inputs_tableWidget.setItem(property_index, 2, QtWidgets.QTableWidgetItem(str(version)))
+            property_index += 1
+        # Table will fit the screen horizontally
+        self.inputs_tableWidget.horizontalHeader().setStretchLastSection(True)
+        self.inputs_tableWidget.horizontalHeader().setSectionResizeMode(
+           QtWidgets.QHeaderView.Interactive)
 
     def add_input(self):
         current_item = self.mainWindow.treeWidget.currentItem()
