@@ -58,9 +58,16 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="update_pushButton">
+         <property name="text">
+          <string>Update</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="removeInput_pushButton">
          <property name="text">
-          <string>Remove Input</string>
+          <string>Remove</string>
          </property>
         </widget>
        </item>
