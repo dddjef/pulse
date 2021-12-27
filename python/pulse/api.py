@@ -296,6 +296,7 @@ class WorkNode:
         :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
         :param uri: the product uri, can be mutable
         :param consider_work_product: if set to True, Pulse will look in local work product to add the input
+        :return: return the product used for the input
         """
         if not uri_standards.is_valid(uri):
             raise PulseError("malformed uri : " + uri)
@@ -313,7 +314,7 @@ class WorkNode:
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        self.update_input(input_name, uri, consider_work_product)
+        return self.update_input(input_name, uri, consider_work_product)
 
     def update_input(self, input_name, uri=None, consider_work_product=False):
         """
@@ -327,6 +328,7 @@ class WorkNode:
         :param input_name: the input to update
         :param uri: if set, give a new uri for the input. If not, used the last registered uri
         :param consider_work_product: if set to True, update will look for local work product
+        :return: return the new product found for the input
 
         """
         # abort if input doesn't exist
@@ -377,6 +379,7 @@ class WorkNode:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
         product.add_product_user(self.directory)
+        return product
 
     def remove_input(self, input_name):
         """
