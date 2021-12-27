@@ -136,6 +136,7 @@ class InputsWindow(QDialog):
         self.setWindowTitle(self.mainWindow.treeWidget.currentItem().text(0) + " inputs")
         self.addInput_pushButton.clicked.connect(self.add_input)
         self.removeInput_pushButton.clicked.connect(self.remove_input)
+        self.update_pushButton.clicked.connect(self.update_input)
         self.close_pushButton.clicked.connect(self.close)
         self.inputs_tableWidget.setColumnWidth(0, 180)
         self.update_inputs_list()
@@ -160,22 +161,38 @@ class InputsWindow(QDialog):
         elif not isinstance(current_item.pulse_node, pulse.CommitProduct):
             self.mainWindow.message_user("the selected item should be a commit product only", "ERROR")
         else:
-            self.pulse_work_node.add_input(current_item.pulse_node.uri)
-            self.mainWindow.message_user("Added to inputs : " + current_item.pulse_node.uri)
-            self.update_inputs_list()
+            try:
+                self.pulse_work_node.add_input(current_item.pulse_node.uri)
+                self.mainWindow.message_user("Added to inputs : " + current_item.pulse_node.uri)
+                self.update_inputs_list()
+            except Exception as ex:
+                print_exception(ex, self.mainWindow)
             # TODO : refresh the current tree view to show the downloaded product icon if needed
             # TODO : refresh current details
 
-    def remove_input(self):
+    def get_selected_input(self):
         try:
             row = self.inputs_tableWidget.currentRow()
-            input_name = self.inputs_tableWidget.item(row, 0).text()
-        except IndexError:
-            self.mainWindow.message_user("Select an input to remove", "ERROR")
+            return self.inputs_tableWidget.item(row, 0).text()
+        except Exception:
+            self.mainWindow.message_user("Select an input", "ERROR")
+            return None
+
+    def remove_input(self):
+        input_name = self.get_selected_input()
+        if not input_name:
             return
         self.pulse_work_node.remove_input(input_name)
+        self.mainWindow.message_user("Input removed : " + input_name)
         self.update_inputs_list()
 
+    def update_input(self):
+        input_name = self.get_selected_input()
+        if not input_name:
+            return
+        product = self.pulse_work_node.update_input(input_name)
+        self.mainWindow.message_user("Input updated to : " + product.uri)
+        self.update_inputs_list()
 
 # TODO : add the create from another resource feature
 class CreateResourceWindow(QDialog):
