@@ -162,7 +162,10 @@ class InputsWindow(QDialog):
             self.mainWindow.message_user("the selected item should be a commit product only", "ERROR")
         else:
             try:
-                self.pulse_work_node.add_input(current_item.pulse_node.uri)
+                input_name = self.customInputName_lineEdit.text()
+                if input_name == "":
+                    input_name = pulse_uri.remove_version_from_uri(current_item.pulse_node.uri)
+                self.pulse_work_node.add_input(current_item.pulse_node.uri, input_name=input_name)
                 self.mainWindow.message_user("Added to inputs : " + current_item.pulse_node.uri)
                 self.update_inputs_list()
             except Exception as ex:
@@ -173,13 +176,13 @@ class InputsWindow(QDialog):
     def get_selected_input(self):
         try:
             row = self.inputs_tableWidget.currentRow()
-            return self.inputs_tableWidget.item(row, 0).text()
+            return self.inputs_tableWidget.item(row, 0).text(), self.inputs_tableWidget.item(row, 1).text()
         except Exception:
             self.mainWindow.message_user("Select an input", "ERROR")
             return None
 
     def remove_input(self):
-        input_name = self.get_selected_input()
+        input_name, uri = self.get_selected_input()
         if not input_name:
             return
         self.pulse_work_node.remove_input(input_name)
@@ -187,12 +190,16 @@ class InputsWindow(QDialog):
         self.update_inputs_list()
 
     def update_input(self):
-        input_name = self.get_selected_input()
+        input_name, uri = self.get_selected_input()
         if not input_name:
             return
         product = self.pulse_work_node.update_input(input_name)
-        self.mainWindow.message_user("Input updated to : " + product.uri)
-        self.update_inputs_list()
+        if uri != product.uri:
+            self.mainWindow.message_user("Input updated to : " + product.uri)
+            self.update_inputs_list()
+        else:
+            self.mainWindow.message_user("Version already up to date")
+
 
 # TODO : add the create from another resource feature
 class CreateResourceWindow(QDialog):

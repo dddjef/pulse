@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>505</width>
-    <height>260</height>
+    <height>401</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -49,14 +49,37 @@
       </widget>
      </item>
      <item>
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>Add</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLineEdit" name="customInputName_lineEdit">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>Custom Input Name</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="addInput_pushButton">
+          <property name="text">
+           <string>Add Input From Selected Product</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QPushButton" name="addInput_pushButton">
-         <property name="text">
-          <string>Add Selected Product</string>
-         </property>
-        </widget>
-       </item>
        <item>
         <widget class="QPushButton" name="update_pushButton">
          <property name="text">
