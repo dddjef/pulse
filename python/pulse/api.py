@@ -286,6 +286,25 @@ class WorkNode:
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
+    def get_input_product(self, input_name):
+        """
+        return the product used by the given input
+
+        :return: Product
+        """
+        inputs = self.get_inputs()
+        if input_name not in inputs:
+            raise PulseError("input does not exist : " + input_name)
+
+        uri = inputs[input_name]
+
+        try:
+            product = self.project.get_work_product(uri)
+        except PulseError:
+            product = self.project.get_commit_product(uri)
+
+        return product
+
     def add_input(self, uri, input_name=None, consider_work_product=False):
         """
         add a product to the work inputs list
@@ -1260,6 +1279,7 @@ class Connection:
         """
         create a new project in the connexion database
         work user root and product user root have to be independent
+        environment variables can be used to define path. It should follow this convention : my_path/${MY_ENV_VAR}/
 
         :param project_name:
         :param work_user_root: user work space path where the project directory will be created
