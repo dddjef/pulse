@@ -910,13 +910,16 @@ class Resource(PulseDbObject):
         except PulseError:
             return None
 
-    def checkout(self, index="last", destination_folder=None, recreate_products=True):
+    def checkout(self, index="last", destination_folder=None, recreate_products=True, resolve_conflict="error"):
         """
         Download the resource work files in the user work space.
         Download related dependencies if they are not available in user products space
+        If the incoming work have input product, those product can be in conflict with local product, by default the
+        checkout process will fail with no consequence.
         :param recreate_products: recreate the products from the source commit
         :param destination_folder: where the resource will be checkout, if not set, project config is used
         :param index: the commit index to checkout. If not set, the last one will be used
+        :param resolve_conflict: can be "error", "mine", or "theirs" depending how Pulse should resolve the conflict.
         """
         if not os.path.exists(self.project.cfg.get_work_user_root()):
             self.project.initialize_sandbox()
@@ -963,6 +966,19 @@ class Resource(PulseDbObject):
         else:
             self.project.cnx.repositories[source_resource.repository].download_work(source_commit, destination_folder)
             out_product_list = source_commit.products
+
+            # test for local work product in conflict with incoming work input product
+            if resolve_conflict != "mine":
+                for input_name, uri in source_commit.products_inputs.items():
+                    try:
+                        work_product = self.project.get_work_product(uri)
+                    except PulseError:
+                        continue
+                    if work_product:
+                        if resolve_conflict == "error":
+                            raise PulseWorkConflict("Conflict with local work product : " + uri)
+                        if resolve_conflict == "theirs":
+                            work_product.parent.trash_product(work_product.product_type)
 
         work.write()
         # recreate empty output products

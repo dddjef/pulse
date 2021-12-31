@@ -200,42 +200,47 @@ class TestResources(unittest.TestCase):
 
     def test_work_checkout_product_conflict(self):
         os.environ["USER_VAR"] = "userA"
-        prj = self.cnx.create_project(
+        prj_a = self.cnx.create_project(
             "project_conflict",
             utils.sandbox_work_path + "_${USER_VAR}",
             default_repository="main_storage",
             product_user_root=utils.sandbox_products_path + "_${USER_VAR}"
         )
-        resource = prj.create_resource("joe", "model")
+
         # userA checkout a modeling, he creates a abc product in V001
-        work_model = resource.checkout()
-        work_model.create_product("abc")
+        work_model_a = prj_a.create_resource("joe", "model").checkout()
+        work_model_a.create_product("abc")
 
         # userB does the exact same thing, but he commits first
         os.environ["USER_VAR"] = "userB"
-        proj_B = self.cnx.get_project("project_conflict")
-        work_model_B = proj_B.get_resource("joe", "model").checkout()
-        abc_product_B = work_model_B.create_product("abc")
-        utils.add_file_to_directory(abc_product_B.directory, "userB_was_here.txt")
-        work_model_B.commit()
+        proj_b = self.cnx.get_project("project_conflict")
+        work_model_b = proj_b.get_resource("joe", "model").checkout()
+        abc_product_b = work_model_b.create_product("abc")
+        utils.add_file_to_directory(abc_product_b.directory, "userB_was_here.txt")
+        work_model_b.commit()
+
         # userB use this product for a surfacing. he commits the surfacing
-        surf_work_b = proj_B.create_resource("joe", "surfacing").checkout()
+        surf_work_b = proj_b.create_resource("joe", "surfacing").checkout()
         surf_work_b.add_input("joe-model.abc")
         surf_work_b.commit()
+
         # User A checkout the surfacing
         os.environ["USER_VAR"] = "userA"
-        surf_work_A = prj.get_resource("joe", "surfacing").checkout()
-        abc_input_product = surf_work_A.get_input_product("joe-model.abc")
+        surf_a = prj_a.get_resource("joe", "surfacing")
 
-        # userA don't download the userB commit file
-        self.assertFalse(os.path.exists(os.path.join("abc_input_product", "userB_was_here.txt")))
+        # an error is raised by default
+        with self.assertRaises(PulseWorkConflict):
+            surf_a.checkout()
 
-        #TODO : an error is raised by default
+        # if the resolve argument is turn to "mine", user A version is kept
+        surf_work_a = surf_a.checkout(resolve_conflict="mine")
+        abc_product_a = surf_work_a.get_input_product("joe-model.abc")
+        self.assertFalse(os.path.exists(os.path.join(abc_product_a.directory, "userB_was_here.txt")))
 
-        #TODO :  if the resolve argument is turn to "mine", user A version is kept
-
-        #TODO :  if the resolve argument is turn to "theirs", user B version is kept
-
+        # if the resolve argument is turn to "theirs", user B version is kept
+        surf_work_a.trash()
+        surf_a.checkout(resolve_conflict="theirs")
+        self.assertTrue(os.path.exists(os.path.join(abc_product_a.directory, "userB_was_here.txt")))
 
     def test_check_out_from_template(self):
         # if no template exists
@@ -530,6 +535,33 @@ class TestResources(unittest.TestCase):
         product.remove_from_local_products()
         self.assertFalse(os.path.exists(product.directory))
         self.assertFalse(os.path.exists(product.product_users_file))
+
+    def test_product_donwload_conflict(self):
+        os.environ["USER_VAR"] = "userA"
+        prj_a = self.cnx.create_project(
+            "project_conflict",
+            utils.sandbox_work_path + "_${USER_VAR}",
+            default_repository="main_storage",
+            product_user_root=utils.sandbox_products_path + "_${USER_VAR}"
+        )
+
+        # userA checkout a modeling, he creates a abc product in V001, and commit it
+        work_model_a = prj_a.create_resource("joe", "model").checkout()
+        abc_product_a = work_model_a.create_product("abc")
+        utils.add_file_to_directory(abc_product_a.directory, "userA_was_here.txt")
+        work_model_a.commit()
+
+        # userB does the exact same thing, but he do not commit
+        os.environ["USER_VAR"] = "userB"
+        proj_b = self.cnx.get_project("project_conflict")
+        work_model_b = proj_b.get_resource("joe", "model").checkout()
+        work_model_b.create_product("abc")
+
+        # then he try to download the last abc product, this should raise an error by default
+        with self.assertRaises(PulseWorkConflict):
+            surf_a.checkout()
+
+
 
     def test_project_list_products(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
