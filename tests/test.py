@@ -536,7 +536,7 @@ class TestResources(unittest.TestCase):
         self.assertFalse(os.path.exists(product.directory))
         self.assertFalse(os.path.exists(product.product_users_file))
 
-    def test_product_donwload_conflict(self):
+    def test_product_download_conflict(self):
         os.environ["USER_VAR"] = "userA"
         prj_a = self.cnx.create_project(
             "project_conflict",
@@ -545,11 +545,10 @@ class TestResources(unittest.TestCase):
             product_user_root=utils.sandbox_products_path + "_${USER_VAR}"
         )
 
-        # userA checkout a modeling, he creates a abc product in V001, and commit it
+        # userA checkout a modeling, he creates a abc product in V001
         work_model_a = prj_a.create_resource("joe", "model").checkout()
         abc_product_a = work_model_a.create_product("abc")
         utils.add_file_to_directory(abc_product_a.directory, "userA_was_here.txt")
-        work_model_a.commit()
 
         # userB does the exact same thing, but he do not commit
         os.environ["USER_VAR"] = "userB"
@@ -557,11 +556,15 @@ class TestResources(unittest.TestCase):
         work_model_b = proj_b.get_resource("joe", "model").checkout()
         work_model_b.create_product("abc")
 
-        # then he try to download the last abc product, this should raise an error by default
+        # userA commit
+        os.environ["USER_VAR"] = "userA"
+        work_model_a.commit()
+
+        # then userB try to download the last abc product, this should raise an error by default
         with self.assertRaises(PulseWorkConflict):
-            surf_a.checkout()
-
-
+            os.environ["USER_VAR"] = "userB"
+            commit_product = proj_b.get_commit_product("joe-model.abc@1")
+            commit_product.download()
 
     def test_project_list_products(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
