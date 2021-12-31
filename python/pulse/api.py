@@ -157,12 +157,17 @@ class CommitProduct(PulseDbObject, Product):
             fu.uri_to_json_filename(self.uri)
         ))
 
-    def download(self):
+    def download(self, resolve_conflict="error"):
         """
         download the product to local pulse cache if needed
+        resolve conflict could be "error", "mine", and "theirs".
 
         :return: the product's local filepath
+        :param resolve_conflict: behaviour if there's already a local work product with the same uri
         """
+
+        self.project.resolve_local_product_conflict(self.uri, resolve_conflict)
+
         if os.path.exists(self.directory):
             return self.directory
 
@@ -286,6 +291,25 @@ class WorkNode:
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
+    def get_input_product(self, input_name):
+        """
+        return the product used by the given input
+
+        :return: Product
+        """
+        inputs = self.get_inputs()
+        if input_name not in inputs:
+            raise PulseError("input does not exist : " + input_name)
+
+        uri = inputs[input_name]
+
+        try:
+            product = self.project.get_work_product(uri)
+        except PulseError:
+            product = self.project.get_commit_product(uri)
+
+        return product
+
     def add_input(self, uri, input_name=None, consider_work_product=False):
         """
         add a product to the work inputs list
@@ -316,7 +340,7 @@ class WorkNode:
 
         return self.update_input(input_name, uri, consider_work_product)
 
-    def update_input(self, input_name, uri=None, consider_work_product=False):
+    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error"):
         """
         update a work input.
         the input name is an alias, used for creating linked directory in {work}/inputs/
@@ -325,9 +349,11 @@ class WorkNode:
         the new product is downloaded if needed
         the input directory link is redirected to the new product
         the product register the work as a new user
+        resolve conflict strategy can be either : error, mine or theirs
         :param input_name: the input to update
         :param uri: if set, give a new uri for the input. If not, used the last registered uri
         :param consider_work_product: if set to True, update will look for local work product
+        :param resolve_conflict: if the new product already exists as a local work, will give the resolve strategy
         :return: return the new product found for the input
 
         """
@@ -363,7 +389,7 @@ class WorkNode:
 
         # if it's a commit product, try to download it
         if isinstance(product, CommitProduct):
-            product.download()
+            product.download(resolve_conflict)
 
         # if we are in a work input, add a linked directory
         if self.__class__.__name__ == "Work":
@@ -891,13 +917,16 @@ class Resource(PulseDbObject):
         except PulseError:
             return None
 
-    def checkout(self, index="last", destination_folder=None, recreate_products=True):
+    def checkout(self, index="last", destination_folder=None, recreate_products=True, resolve_conflict="error"):
         """
         Download the resource work files in the user work space.
         Download related dependencies if they are not available in user products space
+        If the incoming work have input product, those product can be in conflict with local product, by default the
+        checkout process will fail with no consequence.
         :param recreate_products: recreate the products from the source commit
         :param destination_folder: where the resource will be checkout, if not set, project config is used
         :param index: the commit index to checkout. If not set, the last one will be used
+        :param resolve_conflict: can be "error", "mine", or "theirs" depending how Pulse should resolve the conflict.
         """
         if not os.path.exists(self.project.cfg.get_work_user_root()):
             self.project.initialize_sandbox()
@@ -945,6 +974,10 @@ class Resource(PulseDbObject):
             self.project.cnx.repositories[source_resource.repository].download_work(source_commit, destination_folder)
             out_product_list = source_commit.products
 
+            # test for local work product in conflict with incoming work input product
+            for input_name, uri in source_commit.products_inputs.items():
+                self.project.resolve_local_product_conflict(uri, resolve_conflict)
+
         work.write()
         # recreate empty output products
         if recreate_products:
@@ -953,7 +986,7 @@ class Resource(PulseDbObject):
 
         # download requested input products if needed
         for input_name, input_uri in work.get_inputs().items():
-            work.update_input(input_name, uri=input_uri)
+            work.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
 
         return work
 
@@ -1221,6 +1254,21 @@ class Project:
 
         return resource
 
+    def resolve_local_product_conflict(self, uri, strategy="error"):
+        if strategy == "mine":
+            return
+
+        try:
+            work_product = self.get_work_product(uri)
+        except PulseError:
+            return
+
+        if work_product:
+            if strategy == "error":
+                raise PulseWorkConflict("Conflict with local work product : " + uri)
+            if strategy == "theirs":
+                work_product.parent.trash_product(work_product.product_type)
+
 
 class Connection:
     """
@@ -1260,6 +1308,7 @@ class Connection:
         """
         create a new project in the connexion database
         work user root and product user root have to be independent
+        environment variables can be used to define path. It should follow this convention : my_path/${MY_ENV_VAR}/
 
         :param project_name:
         :param work_user_root: user work space path where the project directory will be created
