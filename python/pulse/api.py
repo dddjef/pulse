@@ -177,6 +177,9 @@ class CommitProduct(PulseDbObject, Product):
 
         self.init_local_data_file()
 
+        # lock files
+        fu.lock_directory_content(self.directory)
+
         fu.write_data(self.product_users_file, [])
         for uri in self.products_inputs:
             product = self.project.get_commit_product(uri)
@@ -212,6 +215,9 @@ class CommitProduct(PulseDbObject, Product):
                     product_input.remove_from_local_products(recursive_clean=True)
                 except PulseError:
                     pass
+
+        # make all files writable
+        fu.lock_directory_content(self.directory, lock=False)
 
         shutil.rmtree(self.directory)
         # remove also the version directory if it's empty now
@@ -671,8 +677,9 @@ class Work(WorkNode):
                 if not keep_products_in_cache:
                     commit_product.remove_from_local_products()
                 else:
-                    # change the work product data file to a commit product file
+                    # change the work product data file to a commit product file, and lock files
                     os.rename(work_product.product_users_file, commit_product.product_users_file)
+                    fu.lock_directory_content(commit_product.directory)
 
         commit.db_create()
         self.resource.set_last_version(self.version)

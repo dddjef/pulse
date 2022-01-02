@@ -4,6 +4,7 @@ import hashlib
 import shutil
 import sys
 import subprocess
+from stat import S_IREAD, S_IRGRP, S_IROTH, S_IWUSR
 
 
 def md5(filepath):
@@ -159,3 +160,12 @@ def make_directory_link(source, destination):
             subprocess.call(cmd.replace("\\", "/"), shell=True, stdout=none_file, stderr=none_file)
     else:
         os.symlink(destination, source)
+
+
+def lock_directory_content(directory, lock=True):
+    for root, directories, files in os.walk(directory):
+        for f in files:
+            if lock:
+                os.chmod(os.path.join(root, f), S_IREAD | S_IRGRP | S_IROTH)
+            else:
+                os.chmod(os.path.join(root, f), S_IWUSR | S_IREAD)
