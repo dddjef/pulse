@@ -47,9 +47,11 @@ def print_exception(exception, window=None):
         traceback.print_exc()
 
 
-def set_tree_item_style(item, style):
+def set_tree_item_style(item, style="default"):
     if style == "downloaded":
         item.setIcon(0, QIcon(r'icons\folder.png'))
+    elif style == "locked":
+        item.setIcon(0, QIcon(r'icons\lock.png'))
     else:
         item.setIcon(0, QIcon())
 
@@ -521,6 +523,8 @@ class MainWindow(QMainWindow):
                     resource = self.project.get_resource(uri_dict["entity"], uri_dict["resource_type"])
                     resource_item = PulseItem([resource_uri], resource)
                     self.treeWidget.addTopLevelItem(resource_item)
+                    if resource.lock_state:
+                        set_tree_item_style(resource_item, "locked")
 
                     # TODO : get commit products should an api method
                     for commit_uri in self.connection.db.find_uris(project_name, "Commit", resource_uri + "@*"):
@@ -650,6 +654,11 @@ class MainWindow(QMainWindow):
             action.triggered.connect(partial(self.create_resource, item))
             action2 = rc_menu.addAction(self.tr("Check out last version"))
             action2.triggered.connect(partial(self.checkout, item))
+            if item.pulse_node.lock_state:
+                action3 = rc_menu.addAction(self.tr("Unlock"))
+            else:
+                action3 = rc_menu.addAction(self.tr("Lock"))
+            action3.triggered.connect(partial(self.toggle_lock, item))
 
         elif isinstance(item.pulse_node, pulse.Commit):
             pass
@@ -789,6 +798,21 @@ class MainWindow(QMainWindow):
                 if item.pulse_node.resource.uri == work.resource.uri:
                     self.treeWidget.setCurrentItem(item, 0)
                     break
+            self.show_current_item_details()
+        except Exception as ex:
+            print_exception(ex, self)
+            return
+
+    def toggle_lock(self, item):
+        try:
+            new_lock_state = not item.pulse_node.lock_state
+            item.pulse_node.set_lock(new_lock_state, steal=True)
+            self.message_user("Lock state toggled to :" + str(new_lock_state))
+            if new_lock_state:
+                set_tree_item_style(item, "locked")
+            else:
+                set_tree_item_style(item)
+
             self.show_current_item_details()
         except Exception as ex:
             print_exception(ex, self)
