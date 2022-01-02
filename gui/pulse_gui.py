@@ -613,7 +613,7 @@ class MainWindow(QMainWindow):
                 }
                 input_index = 1
                 for product in item.pulse_node.get_inputs():
-                    properties["product input " + str(input_index)] = product.uri
+                    properties["product input " + str(input_index)] = product
                     input_index += 1
                 self.show_details(properties)
         except Exception as ex:
