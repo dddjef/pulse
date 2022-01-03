@@ -2,7 +2,7 @@ Pulse
 =====
 
 Pulse is a version control system designed for creative projects.
-It allows artists to work locally, even remotely, and maintains a coherence in path and versionning.
+It allows artists to work locally, even from home, but ensure a coherence in path and versionning.
 
 Why would you need Pulse?
 
