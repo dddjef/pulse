@@ -1,10 +1,8 @@
 Pulse
 =====
 
-Pulse is a file manager and version control system for animation film,
-it is designed to produce a project at multiple locations and give
-the artist the ability to work locally.
-
+Pulse is a version control system designed for creative projects.
+It allows artists to work locally, even remotely, and maintains a coherence in path and versionning.
 
 Why would you need Pulse?
 
@@ -13,7 +11,7 @@ Why would you need Pulse?
 - to guarantee your data integrity, by freezing and versionning every published file
 - to split the data between storage according to your needs and transparently for the artist
 
-How does this api look likes?
+How does this python library look like?
 
 >>> # connect to a pulse database and get a project from it
 prj = pulse.Connection({"host": "127.0.0.1", "user":"John", "password":"Snow"}).get_project("GOT")
@@ -33,7 +31,7 @@ shot_anim_work.create_product("alembic")
 >>> # commit the new resource version and its related products
 shot_anim_work.commit()
 
-Pulse is just an api, it's up to you to automatize and configure it to your needs. You will find a example CLI
+Pulse is just an api, it's up to you to automatize and configure it to your needs. You will find a example CLI and a GUI
 provided with this project
 
 
