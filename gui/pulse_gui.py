@@ -112,7 +112,6 @@ class CreateResourceTemplateWindow(QDialog):
         self.repository_comboBox.setCurrentIndex(default_repository_index)
         self.create_pushButton.clicked.connect(self.create_template)
 
-    # TODO : create template did crash with a vanilla app session
     def create_template(self):
         try:
             new_resource = self.mainWindow.project.create_template(
@@ -123,7 +122,8 @@ class CreateResourceTemplateWindow(QDialog):
             print_exception(ex, self.mainWindow)
             return
         resource_item = PulseItem([new_resource.uri], new_resource)
-        self.mainWindow.treeWidget.addTopLevelItem(resource_item)
+        # turn the "show templates" filter on, to see the created template
+        self.mainWindow.filterTemplates_checkBox.setChecked(True)
         self.close()
 
 
