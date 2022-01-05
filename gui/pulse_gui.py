@@ -276,6 +276,7 @@ class ProjectWindow(QDialog):
         self.repository_comboBox.clear()
         self.repository_comboBox.addItems(repositories)
         self.sandboxPath_lineEdit.setText(os.path.join(os.path.expanduser("~"), "pulse_sandbox"))
+        self.productsPath_lineEdit.setText(os.path.join(os.path.expanduser("~"), "pulse_products"))
 
     def create_project(self):
         try:
