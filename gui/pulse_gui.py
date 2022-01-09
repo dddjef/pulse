@@ -160,14 +160,23 @@ class InputsWindow(QDialog):
         current_item = self.mainWindow.treeWidget.currentItem()
         if not current_item:
             self.mainWindow.message_user("You have to select an item in the treeview", "ERROR")
-        elif not isinstance(current_item.pulse_node, pulse.CommitProduct):
-            self.mainWindow.message_user("the selected item should be a commit product only", "ERROR")
+        elif not isinstance(current_item.pulse_node, pulse.Product):
+            self.mainWindow.message_user("the selected item should be a product only", "ERROR")
         else:
             try:
                 input_name = self.customInputName_lineEdit.text()
                 if input_name == "":
                     input_name = pulse_uri.remove_version_from_uri(current_item.pulse_node.uri)
-                self.pulse_work_node.add_input(current_item.pulse_node.uri, input_name=input_name)
+
+                if isinstance(current_item.pulse_node, pulse.WorkProduct):
+                    self.pulse_work_node.add_input(
+                        current_item.pulse_node.uri,
+                        input_name=input_name,
+                        consider_work_product=True
+                    )
+                else:
+                    self.pulse_work_node.add_input(current_item.pulse_node.uri, input_name=input_name)
+
                 self.mainWindow.message_user("Added to inputs : " + current_item.pulse_node.uri)
                 self.update_inputs_list()
             except Exception as ex:
