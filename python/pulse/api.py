@@ -387,11 +387,11 @@ class WorkNode:
             commit_product = self.project.get_commit_product(uri)
             if commit_product.parent.version >= product_version:
                 product = commit_product
-        except PulseDatabaseMissingObject:
+        except PulseMissingNode:
             pass
 
         if not product:
-            raise PulseDatabaseMissingObject("No product found for :" + uri)
+            raise PulseMissingNode("No product found for :" + uri)
 
         # if it's a commit product, try to download it
         if isinstance(product, CommitProduct):
@@ -1122,7 +1122,7 @@ class Project:
                 uri_standards.remove_version_from_uri(uri_string) + "@*"
             )
             if not products:
-                raise PulseDatabaseMissingObject("No product found for :" + uri_string)
+                raise PulseMissingNode("No product found for :" + uri_string)
             products.sort()
             last_product_uri = products[-1]
             version = uri_standards.convert_to_dict(last_product_uri)['version']
