@@ -85,6 +85,31 @@ create or remove a database. The ftp account needs to write and delete in the ro
 
 .. automodule:: pulse.api
 
+Linked Directories
+=================================
+By default Pulse will create linked directories inside your work directory :
+
+::
+
+   user_sandbox/{resource}/output -> user_products/{resource}/{current version}
+   user_sandbox/{resource}/input/{input product} ->  user_products/{resource}/{chosen version}/{product}
+
+It is very handy, since you won't have to browse the user products directory to find the right one.
+And since the product path is abstracted, you can update any input very easily without the need to modify the work file.
+
+But "With great power comes great responsibility".
+You have to be very careful if you generate products which uses inputs (aka "not self contained products").
+
+In example, let's say you're working on a rig, you have texture input and its path uses the input linked directory.
+When you will generate the rig, if you don't change the path you will refer to something like :
+user_sandbox/joe-rig/input/joe-texture.viewport
+
+This directory won't exists for anybody will use the rig product as input. When the rig product will be downloaded,
+it will also download the texture, but the product path will be user_products/joe_texture/v005/viewport. So you should
+always think to remap product path if you use the linked directories
+
+
+
 Indices and tables
 ==================
 

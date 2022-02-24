@@ -398,7 +398,7 @@ class WorkNode:
             product.download(resolve_conflict)
 
         # if we are in a work input, add a linked directory
-        if self.__class__.__name__ == "Work":
+        if self.project.cfg.use_linked_input_directories and self.__class__.__name__ == "Work":
             input_directory = os.path.join(self.directory, cfg.work_input_dir, input_name)
 
             if os.path.exists(input_directory):
@@ -436,7 +436,9 @@ class WorkNode:
         product.remove_product_user(self.directory)
 
         # remove linked input directory
-        os.remove(os.path.join(self.directory, cfg.work_input_dir, input_name))
+        input_directory = (os.path.join(self.directory, cfg.work_input_dir, input_name))
+        if os.path.exists(input_directory):
+            os.remove(input_directory)
 
 
 class WorkProduct(Product, WorkNode):
@@ -596,15 +598,18 @@ class Work(WorkNode):
         work_product_directory = self.get_products_directory()
         os.makedirs(work_product_directory)
 
-        # create junction point to the product directory
-        work_output_path = os.path.join(self.directory, cfg.work_output_dir)
+        # create junction point to the output directory if needed
+        if self.project.cfg.use_linked_output_directory:
+            work_output_path = os.path.join(self.directory, cfg.work_output_dir)
 
-        # link work output directory to its current output product directory
-        fu.make_directory_link(work_output_path, work_product_directory)
+            # link work output directory to its current output product directory
+            fu.make_directory_link(work_output_path, work_product_directory)
 
-        work_input_path = os.path.join(self.directory, cfg.work_input_dir)
-        if not os.path.exists(work_input_path):
-            os.makedirs(work_input_path)
+        # create input directory if needed
+        if self.project.cfg.use_linked_input_directories:
+            work_input_path = os.path.join(self.directory, cfg.work_input_dir)
+            if not os.path.exists(work_input_path):
+                os.makedirs(work_input_path)
 
     def read(self):
         """
@@ -1055,12 +1060,16 @@ class Config(PulseDbObject):
         self.work_user_root = None
         self.product_user_root = None
         self.default_repository = None
+        self.use_linked_output_directory = True
+        self.use_linked_input_directories = True
         self._storage_vars = vars(self).keys()
         PulseDbObject.__init__(self, project, "config")
         self._storage_vars = [
             "work_user_root",
             "product_user_root",
             "default_repository",
+            "use_linked_output_directory",
+            "use_linked_input_directories"
         ]
 
     def get_work_user_root(self):
@@ -1311,6 +1320,8 @@ class Connection:
                        work_user_root,
                        default_repository,
                        product_user_root,
+                       use_linked_output_directory=True,
+                       use_linked_input_directories=True
                        ):
         """
         create a new project in the connexion database
@@ -1321,6 +1332,10 @@ class Connection:
         :param work_user_root: user work space path where the project directory will be created
         :param product_user_root: user product space path where the project directory will be created
         :param default_repository: repository name use by default when a resource is created
+        :param use_linked_output_directory: create a linked directory in each work directory to the current output
+         product
+        :param use_linked_input_directories: create a input directory in each work directory containing
+         linked directories pointing to the input products
         :return: the new pulse Project
         """
         work_user_root = work_user_root.replace("\\", "/")
@@ -1333,6 +1348,8 @@ class Connection:
         project.cfg.default_repository = default_repository
         project.cfg.work_user_root = work_user_root
         project.cfg.product_user_root = product_user_root
+        project.cfg.use_linked_output_directory = use_linked_output_directory
+        project.cfg.use_linked_input_directories = use_linked_input_directories
         project.cfg.db_create()
         project.load_config()
         return project

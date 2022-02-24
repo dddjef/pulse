@@ -83,6 +83,41 @@ class TestProjectSettings(unittest.TestCase):
             with self.assertRaises(WindowsError):
                 self.cnx.add_repository(name="bad_path", adapter="file_storage", path="its:/invalid/path")
 
+    def test_cfg_without_linked_directories(self):
+        # set up env var
+        # create a project which use this variables in its work and product path
+        prj = self.cnx.create_project(
+            test_project_name,
+            utils.sandbox_work_path,
+            default_repository="local_test_storage",
+            product_user_root=utils.sandbox_products_path,
+            use_linked_output_directory=False,
+            use_linked_input_directories=False
+        )
+        # create a resource
+        resource = prj.create_resource("ch_anna", "model")
+        # check out the resource
+        work = resource.checkout()
+        # test there's no output directory
+        self.assertFalse(os.path.exists(os.path.join(work.directory, "output")))
+        # add an output product
+        work.create_product("abc")
+        # commit
+        utils.add_file_to_directory(work.directory)
+        commit = work.commit()
+        abc_product = commit.get_product("abc")
+        # trash
+        work.trash(no_backup=True)
+        prj.purge_unused_user_products()
+        # create another resource
+        surf_resource = prj.create_resource("ch_anna", "surfacing")
+        surf_work = surf_resource.checkout()
+        # require this product
+        surf_work.add_input(abc_product.uri)
+        # test the product location
+        self.assertFalse(os.path.exists(os.path.join(surf_work.directory, "input")))
+        surf_work.commit()
+
 
 class TestResources(unittest.TestCase):
     def setUp(self):
