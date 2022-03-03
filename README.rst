@@ -2,7 +2,7 @@ Pulse
 =====
 
 Pulse is a version control system designed for creative projects.
-It allows artists to work locally, even from home, but ensure a coherence in path and versionning.
+It allows artists to work locally, even from home, and ensure a coherence in path and versionning.
 
 Why would you need Pulse?
 
@@ -14,7 +14,7 @@ Why would you need Pulse?
 How does this python library look like?
 
 >>> # connect to a pulse database and get a project from it
-prj = pulse.Connection({"host": "127.0.0.1", "user":"John", "password":"Snow"}).get_project("GOT")
+prj = pulse.Connection("mysql", "127.0.0.1", login="John", password="Snow").get_project("GOT")
 
 >>> # create a new resource in this project, animation of shot 99
 shot_anim = prj.create_resource("shot_99", "animation")
@@ -23,7 +23,7 @@ shot_anim = prj.create_resource("shot_99", "animation")
 shot_anim_work = shot_anim.checkout()
 
 >>> # add the last Joe's proxy rig to this shot (download it to user space if needed)
-shot_anim_work.add_input(prj.get_resource("Joe", "rig").get_commit("last").get_commit_product("proxy_rig"))
+shot_anim_work.add_input("joe-rig.proxy")
 
 >>> # Create a product folder to receive an alembic export
 shot_anim_work.create_product("alembic")
@@ -31,9 +31,9 @@ shot_anim_work.create_product("alembic")
 >>> # commit the new resource version and its related products
 shot_anim_work.commit()
 
-Pulse is just an api, it's up to you to automatize and configure it to your needs. You will find a example CLI and a GUI
-provided with this project
-
+Pulse is just a library, it's up to you to automatize and configure it to your needs.
+You will find a example CLI and a GUI provided with this project
+Pulse library is written in pure python, compatible with 2.7 to 3.7, for Windows and Linux.
 
 Version Control System
 ======================
