@@ -391,48 +391,46 @@ class TestResources(unittest.TestCase):
         anna_mdl_work.commit("add a file")
         self.assertEqual(anna_mdl_resource.last_version, 1)
 
-        # create a product
-        abc_work_product = anna_mdl_work.create_product("ABC")
-        # now products directory should exists
-        self.assertTrue(os.path.exists(anna_mdl_work.get_products_directory()))
-        utils.add_file_to_directory(abc_work_product.directory, "test.abc")
+        # create a sub resource
+        abc_work_product = os.path.join(anna_mdl_work.directory, "abc")
+        os.makedirs(abc_work_product)
+        # now products directory should exists)
+        utils.add_file_to_directory(abc_work_product, "test.abc")
         # create a new commit
-        commit = anna_mdl_work.commit("some abc produced")
-        anna_mdl_v2_abc = commit.get_product("ABC")
+        anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
+
         self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
         hat_mdl_resource = self.prj.create_resource("hat", "modeling")
         self.assertEqual(hat_mdl_resource.last_version, 0)
         hat_mdl_work = hat_mdl_resource.checkout()
-        hat_mdl_work.add_input("ch_anna-modeling.ABC")
+        pulse.api.add_input(hat_mdl_work.directory, "ch_anna-modeling/ABC")
 
-        # test the product registration
-        self.assertTrue("ch_anna-modeling.ABC" in hat_mdl_work.get_inputs())
-
-        # check the work registration to product
-        self.assertTrue(hat_mdl_work.directory in anna_mdl_v2_abc.get_product_users())
-
+        # TODO : remove this check
         # check you can't remove a product if it's used by a work
-        with self.assertRaises(Exception):
-            anna_mdl_v2_abc.remove_from_local_products()
+        # with self.assertRaises(Exception):
+        #     anna_mdl_v2_abc.remove_from_local_products()
 
         hat_mdl_work.commit("with input")
         self.assertEqual(hat_mdl_resource.last_version, 1)
         # trash the hat
 
         hat_mdl_work.trash()
-        self.assertTrue(hat_mdl_work.directory not in anna_mdl_v2_abc.get_product_users())
+        # TODO : move the get_product_users function from product to commit
+        self.assertTrue(hat_mdl_work.directory not in anna_mdl_v2.get_product_users())
         # check the unused time for the product
-        self.assertTrue(anna_mdl_v2_abc.get_unused_time() > 0)
+        # TODO : move the get_unused_time function from product to commit
+        self.assertTrue(anna_mdl_v2.get_unused_time() > 0)
         # remove the product
-        self.prj.purge_unused_user_products()
+        # TODO : remove rename purge_unused_user_products() to purge_unused_resource()
+        self.prj.purge_unused_resource()
         # checkout the work
         hat_mdl_work = hat_mdl_resource.checkout()
-        hat_mdl_work.remove_input("ch_anna-modeling.ABC")
+        hat_mdl_work.remove_input("ch_anna-modeling/ABC")
         anna_mdl_work.trash()
         # test uri_standard
         self.assertEqual(uri.path_to_uri(hat_mdl_work.directory), hat_mdl_resource.uri)
-        self.assertEqual(uri.path_to_uri(anna_mdl_v2_abc.directory), anna_mdl_v2_abc.uri)
+        self.assertEqual(uri.path_to_uri(anna_mdl_v2.directory), anna_mdl_v2.uri)
 
     def test_work_commit(self):
         # test subdirectories are commit
