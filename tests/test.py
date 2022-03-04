@@ -48,16 +48,17 @@ class TestProjectSettings(unittest.TestCase):
         # test its location
         self.assertTrue(os.path.exists(os.path.join(utils.test_data_output_path, "works/env_var/ch_anna-model")))
         # add an output product
-        utils.add_file_to_directory(os.path.join(work.output_directory, "abc"), "model.abc")
+        work.create_product("abc")
         # test the product folder location
         self.assertTrue(
             os.path.exists(os.path.join(utils.test_data_output_path, "products/env_var/ch_anna-model/V001/abc")))
         # commit
         utils.add_file_to_directory(work.directory)
-        anna_model_v1 = work.commit()
+        commit = work.commit()
+        abc_product = commit.get_product("abc")
         # trash
         work.trash(no_backup=True)
-        prj.purge_unused_local_products()
+        prj.purge_unused_user_products()
         self.assertFalse(os.path.exists(os.path.join(
             utils.test_data_output_path,
             "works/env_var/ch_anna/model/V001/abc"
@@ -66,7 +67,7 @@ class TestProjectSettings(unittest.TestCase):
         surf_resource = prj.create_resource("ch_anna", "surfacing")
         surf_work = surf_resource.checkout()
         # require this product
-        surf_work.add_input(anna_model_v1.uri)
+        surf_work.add_input(abc_product.uri)
         # test the product location
         self.assertTrue(os.path.exists(os.path.join(
             utils.test_data_output_path,
@@ -98,24 +99,23 @@ class TestProjectSettings(unittest.TestCase):
         # check out the resource
         work = resource.checkout()
         # test there's no output directory
-        self.assertFalse(os.path.exists(work.output_directory))
-
+        self.assertFalse(os.path.exists(os.path.join(work.directory, "output")))
         # add an output product
-        os.makedirs(fu.path_join(work.output_directory, "abc"))
-
+        work.create_product("abc")
         # commit
         utils.add_file_to_directory(work.directory)
-        anna_mdl_v1 = work.commit()
+        commit = work.commit()
+        abc_product = commit.get_product("abc")
         # trash
         work.trash(no_backup=True)
-        prj.purge_unused_local_products()
+        prj.purge_unused_user_products()
         # create another resource
         surf_resource = prj.create_resource("ch_anna", "surfacing")
         surf_work = surf_resource.checkout()
         # require this product
-        surf_work.add_input(anna_mdl_v1.uri)
+        surf_work.add_input(abc_product.uri)
         # test the product location
-        self.assertFalse(os.path.exists(work.input_directory))
+        self.assertFalse(os.path.exists(os.path.join(surf_work.directory, "input")))
         surf_work.commit()
 
 
@@ -136,9 +136,10 @@ class TestResources(unittest.TestCase):
         self.anna_mdl = self.prj.create_resource("anna", "mdl")
         self.anna_mdl_work = self.anna_mdl.checkout()
         utils.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
-        self.anna_abc_work_product = os.path.join(self.anna_mdl_work.output_directory, "abc")
-        utils.add_file_to_directory(self.anna_abc_work_product, "anna.abc")
-        self.anna_mdl_v1 = self.anna_mdl_work.commit()
+        self.anna_abc_work_product = self.anna_mdl_work.create_product("abc")
+        utils.add_file_to_directory(self.anna_abc_work_product.directory, "anna.abc")
+        self.anna_mdl_commit = self.anna_mdl_work.commit()
+        self.anna_abc_product_v1 = self.prj.get_commit_product("anna-mdl.abc@1")
 
     def test_delete_project(self):
         self.cnx.delete_project(test_project_name)
@@ -148,51 +149,57 @@ class TestResources(unittest.TestCase):
     def test_template_resource(self):
         template_mdl = self.prj.create_template("mdl")
         template_mdl_work = template_mdl.checkout()
-        utils.add_file_to_directory(template_mdl_work.directory, "work.blend")
+        template_mdl_work.create_product("abc")
+        utils.add_file_to_directory(template_mdl_work.directory)
         template_mdl_work.commit()
         template_mdl_work.trash()
         froga_mdl = self.prj.create_resource("froga", "mdl")
         froga_mdl_work = froga_mdl.checkout()
-        self.assertTrue(os.path.exists(os.path.join(froga_mdl_work.directory, "work.blend")))
+        self.assertTrue(os.path.exists(os.path.join(froga_mdl_work.get_products_directory(), "abc")))
 
     def test_unused_time_on_purged_product(self):
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_local_products()
-        product = self.anna_mdl_v1
+        self.prj.purge_unused_user_products()
+        product = self.anna_mdl_commit.get_product("abc")
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_purged_product(self):
         # test the dry mode
-        self.anna_mdl_v1 = self.prj.get_commit("anna-mdl@1")
-        self.assertTrue(os.path.exists(self.anna_mdl_v1.directory))
-        # self.assertEqual(['anna-mdl@1'], self.prj.purge_unused_local_products(dry_mode=True))
-
-        # test dry mode don't remove the directory
-        self.assertTrue(os.path.exists(self.anna_mdl_v1.directory))
+        self.anna_abc_product_v1 = self.prj.get_commit_product("anna-mdl.abc@1")
+        self.assertTrue(os.path.exists(self.anna_abc_product_v1.directory))
+        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), ['anna-mdl.abc@1'])
+        self.assertTrue(os.path.exists(self.anna_abc_product_v1.directory))
 
         # test product currently in use can't be purged
         self.anna_surf = self.prj.create_resource("anna", "surfacing")
         self.anna_surf_work = self.anna_surf.checkout()
-        self.anna_surf_work.add_input(self.anna_mdl_v1.uri)
-        # self.assertEqual(self.prj.purge_unused_local_products(dry_mode=True), [])
+        self.anna_surf_work.add_input(self.anna_abc_product_v1.uri)
+        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), [])
 
         # test the normal mode
         self.anna_surf_work.trash()
-        self.assertEqual(['anna-mdl@1'], self.prj.purge_unused_local_products(dry_mode=False))
-        self.assertFalse(os.path.exists(self.anna_mdl_v1.directory))
+        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=False), ['anna-mdl.abc@1'])
+        self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
 
     def test_manipulating_trashed_work(self):
-        # ensure a file inside output won't be an issue when trashing the work
-        utils.add_file_to_directory(self.anna_mdl_work.output_directory, "wip.abc")
+        wip_product = self.anna_mdl_work.create_product("wip")
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_local_products()
+        self.prj.purge_unused_user_products()
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
-        # ensure trashed worked have no directory anymore
-        self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
+        # add a trashed product
+        with self.assertRaises(PulseDatabaseMissingObject):
+            anna_surf_work.add_input(wip_product.uri)
+        # create product on a trashed work
+        with self.assertRaises(PulseMissingNode):
+            self.anna_mdl_work.create_product("abc")
         # commit a trashed work
         with self.assertRaises(PulseMissingNode):
             self.anna_mdl_work.commit()
 
+    def test_trash_product(self):
+        wip_product = self.anna_mdl_work.create_product("wip")
+        self.anna_mdl_work.trash_product("wip")
+        self.assertFalse(os.path.exists(wip_product.directory))
 
     def test_metadata(self):
         pass
@@ -214,14 +221,17 @@ class TestResources(unittest.TestCase):
     def test_checkout(self):
         # remove a work with a commit product
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_local_products()
-        # ensure the absolute product directory is missing
-        self.assertFalse(os.path.exists(self.anna_mdl_work.get_products_directory()))
+        self.prj.purge_unused_user_products()
+        # ensure the product directory is missing
+        self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
         # checkout the resource again
         work = self.anna_mdl.checkout()
         # test the empty product has been restored
-        self.assertTrue(os.path.exists(self.anna_mdl_work.get_products_directory()))
-
+        product = work.get_product("abc")
+        self.assertTrue(os.path.exists(product.directory))
+        # test get a missing product raise an error
+        with self.assertRaises(PulseError):
+            work.get_product("abcd")
 
     def test_work_checkout_product_conflict(self):
         os.environ["USER_VAR"] = "userA"
@@ -281,12 +291,14 @@ class TestResources(unittest.TestCase):
         template = self.prj.create_template("shapes")
         template_work = template.checkout()
         utils.add_file_to_directory(template_work.directory)
-        utils.add_file_to_directory(template_work.output_directory, "test.abc")
+        product = template_work.create_product("abc")
+        utils.add_file_to_directory(product.directory, "test.abc")
         template_work.commit()
 
         resource = self.prj.create_resource("joe", "shapes")
         work = resource.checkout()
-        self.assertFalse(os.path.exists(work.output_directory + "/test.abc"))
+        work_abc = work.get_product("abc")
+        self.assertFalse(os.path.exists(work_abc.directory + "/test.abc"))
 
     def test_check_out_from_another_resource(self):
         shader_work_file = "shader_work_file.ma"
@@ -294,56 +306,69 @@ class TestResources(unittest.TestCase):
         source_resource = self.prj.create_resource("source", "surface")
         source_work = source_resource.checkout()
         utils.add_file_to_directory(source_work.directory, shader_work_file)
-        utils.add_file_to_directory(os.path.join(source_work.output_directory, "shader"), shader_product_file)
+        source_product = source_work.create_product("shader")
+        utils.add_file_to_directory(source_product.directory, shader_product_file)
         source_work.commit()
 
         anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=source_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
         self.assertFalse(os.path.exists(os.path.join(
-            anna_shd_work.output_directory, "shader",
+            anna_shd_work.get_product("shader").directory,
             shader_product_file)))
+
+    def test_trashing_work_errors(self):
+        froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
+        froga_mdl_work.create_product("abc")
+        anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
+        anna_surf_work.add_input("froga-mdl.abc", consider_work_product=True)
+
+        # trashing a product used by another resource is forbidden
+        anna_surf_work.add_input(self.anna_abc_product_v1.uri)
+        with self.assertRaises(PulseError):
+            self.anna_abc_product_v1.remove_from_local_products()
 
     def test_work_dependencies_download(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
-        anna_surf_textures_path = os.path.join(anna_surf_work.output_directory, "textures")
-        utils.add_file_to_directory(anna_surf_textures_path, "product_file.txt")
-        anna_surf_work.commit(comment="test generated product")
+        anna_surf_textures = anna_surf_work.create_product("textures")
+        utils.add_file_to_directory(anna_surf_textures.directory, "product_file.txt")
+        commit = anna_surf_work.commit(comment="test generated product")
         anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_work.add_input(anna_surf_work.uri + "/textures")
+        anna_surf_textures = commit.get_product("textures")
+        anna_rig_work.add_input(anna_surf_textures.uri)
         anna_rig_work.commit("comment test")
         anna_rig_work.trash()
         anna_surf_work.trash()
-        self.prj.purge_unused_local_products()
-        self.assertFalse(os.path.exists(anna_surf_textures_path))
+        self.prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(anna_surf_textures.directory))
         rig_v01 = anna_rig_resource.get_commit(1)
         self.assertTrue('ch_anna-surfacing.textures@1' in rig_v01.products_inputs)
         anna_rig_resource.checkout()
-        self.assertTrue(os.path.exists(anna_surf_textures_path))
+        self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
     def test_recursive_dependencies_download(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
-        utils.add_file_to_directory(anna_surf_work.output_directory + "/texture", "product_file.txt")
-        anna_surf_v1 = anna_surf_work.commit(comment="test generated product")
-        # anna_surf_textures = commit.get_product("textures")
+        textures_work_product = anna_surf_work.create_product("textures")
+        utils.add_file_to_directory(textures_work_product.directory, "product_file.txt")
+        commit = anna_surf_work.commit(comment="test generated product")
+        anna_surf_textures = commit.get_product("textures")
         anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        utils.add_file_to_directory(anna_rig_work.output_directory + "/actor_anim", "product_file.txt")
-        anna_rig_work.add_input(anna_surf_v1.uri + "/texture", product_path="actor_anim")
-        anna_rig_work_v1 = anna_rig_work.commit()
+        anna_rig_actor = anna_rig_work.create_product("actor_anim")
+        anna_rig_actor.add_input(anna_surf_textures.uri)
+        commit = anna_rig_work.commit()
+        anna_rig_actor = commit.get_product("actor_anim")
         anna_rig_work.trash()
         anna_surf_work.trash()
-        self.prj.purge_unused_local_products()
-        self.prj.purge_unused_local_products()
-        # rigV1 uses surf V1, but since rigV1 was purged, surf V1 should be deleted with the purge unused product
-        self.assertFalse(os.path.exists(anna_surf_v1.directory))
+        self.prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(anna_surf_textures.directory))
         anim_resource = self.prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
-        anim_work.add_input(anna_rig_work_v1.uri + "/actor_anim")
-        self.assertTrue(os.path.exists(anna_surf_v1.directory))
+        anim_work.add_input(anna_rig_actor.uri)
+        self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
     def test_complete_scenario(self):
         # create a resource based on this template
@@ -367,7 +392,7 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a sub resource
-        abc_work_product = os.path.join(anna_mdl_work.output_directory, "abc")
+        abc_work_product = os.path.join(anna_mdl_work.directory, "abc")
         os.makedirs(abc_work_product)
         # now products directory should exists)
         utils.add_file_to_directory(abc_work_product, "test.abc")
@@ -380,47 +405,34 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_srf_resource.last_version, 0)
         anna_srf_work = anna_srf_resource.checkout()
         anna_srf_work.add_input("ch_anna-modeling/ABC")
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
+
+        # TODO : remove this check
+        # check you can't remove a product if it's used by a work
+        # with self.assertRaises(Exception):
+        #     anna_mdl_v2_abc.remove_from_local_products()
 
         anna_srf_work.commit("with input")
-        self.assertEqual(anna_srf_resource.last_version, 1)
+        self.assertEqual(hat_mdl_resource.last_version, 1)
         # trash the hat
 
         anna_srf_work.trash()
+        # TODO : move the get_product_users function from product to commit
+        self.assertTrue(anna_srf_work.directory not in anna_mdl_v2.get_product_users())
+        # check the unused time for the product
+        # TODO : move the get_unused_time function from product to commit
+        self.assertTrue(anna_mdl_v2.get_unused_time() > 0)
         # remove the product
-        self.prj.purge_unused_local_products()
+        # TODO : remove rename purge_unused_user_products() to purge_unused_resource()
+        self.prj.purge_unused_resource()
         # checkout the work
         anna_srf_work = anna_srf_resource.checkout()
-        # test the input is restored
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
-
         anna_srf_work.remove_input("ch_anna-modeling/ABC")
         anna_mdl_work.trash()
-        # create a new output
-        os.makedirs(fu.path_join(anna_srf_work.output_directory, "ld"))
-        # test add an input to LD product
-        anna_srf_work.add_input("ch_anna-modeling@2/ABC", product_path="ld")
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.output_directory, "ld/input/ch_anna-modeling@2~ABC/test.abc")))
 
-        # commit surfacing
-        anna_srf_v2 = anna_srf_work.commit()
-        self.assertEqual(anna_srf_v2.version, 2)
-
-        # test work trash remove the work product directory
-        product_dir = anna_srf_work.get_products_directory()
-        anna_srf_work.trash()
-        self.assertFalse(os.path.exists(product_dir))
-
-        # trash and download last commit to test restore product inputs
-        anna_srf_v2.remove_from_local_products()
-        self.assertFalse(os.path.exists(anna_srf_v2.directory))
-
-        anna_srf_v2.download()
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_v2.directory, "ld/input/ch_anna-modeling@2~ABC/test.abc")))
-
-        # TODO : test work check out does recreate links in input, and not hard directories
+        os.makedirs(os.path.join(anna_srf_work.directory, "output/ld"))
+        # TODO : add_input should be disabled for products
+        anna_srf_work.add_input("ch_anna-modeling/ABC", output="/ld")
         # test uri_standard
-        # TODO : test adding missing product path is supported (or updating)
         self.assertEqual(uri.path_to_uri(anna_srf_work.directory), anna_srf_resource.uri)
         self.assertEqual(uri.path_to_uri(anna_mdl_v2.directory), anna_mdl_v2.uri)
 
@@ -541,19 +553,25 @@ class TestResources(unittest.TestCase):
         # TODO : test work create product failed from a trash work
         pass
 
-    # TODO : test download a product partially, then completly
+    def test_product_trash(self):
+        anna_rig_resource = self.prj.create_resource("anna", "rigging")
+        anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_actor = anna_rig_work.create_product("actor_anim")
+        anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
+        anna_rig_work.trash_product("actor_anim")
+
     def test_product_download(self):
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_local_products()
-        anna_mdl_V1 = self.prj.get_commit("anna-mdl@1")
-        self.assertFalse(os.path.exists(anna_mdl_V1.directory))
-        self.assertFalse(os.path.exists(anna_mdl_V1.product_users_file))
-        anna_mdl_V1.download()
-        self.assertTrue(os.path.exists(anna_mdl_V1.directory))
-        self.assertTrue(os.path.exists(anna_mdl_V1.product_users_file))
-        anna_mdl_V1.remove_from_local_products()
-        self.assertFalse(os.path.exists(anna_mdl_V1.directory))
-        self.assertFalse(os.path.exists(anna_mdl_V1.product_users_file))
+        self.prj.purge_unused_user_products()
+        product = self.prj.get_commit_product("anna-mdl.abc@1")
+        self.assertFalse(os.path.exists(product.directory))
+        self.assertFalse(os.path.exists(product.product_users_file))
+        product.download()
+        self.assertTrue(os.path.exists(product.directory))
+        self.assertTrue(os.path.exists(product.product_users_file))
+        product.remove_from_local_products()
+        self.assertFalse(os.path.exists(product.directory))
+        self.assertFalse(os.path.exists(product.product_users_file))
 
     def test_product_download_conflict(self):
         os.environ["USER_VAR"] = "userA"
@@ -566,31 +584,30 @@ class TestResources(unittest.TestCase):
 
         # userA checkout a modeling, he creates a abc product in V001
         work_model_a = prj_a.create_resource("joe", "model").checkout()
-        a_abc_product_directory = os.path.join(work_model_a.output_directory, "abc")
-        os.makedirs(a_abc_product_directory)
-        utils.add_file_to_directory(a_abc_product_directory, "userA_was_here.txt")
+        abc_product_a = work_model_a.create_product("abc")
+        utils.add_file_to_directory(abc_product_a.directory, "userA_was_here.txt")
 
-        # userB does the exact same thing, but he does not commit
+        # userB does the exact same thing, but he do not commit
         os.environ["USER_VAR"] = "userB"
         proj_b = self.cnx.get_project("project_conflict")
         work_model_b = proj_b.get_resource("joe", "model").checkout()
-        b_abc_product_directory = os.path.join(work_model_b.output_directory, "abc")
-        os.makedirs(b_abc_product_directory)
+        work_model_b.create_product("abc")
 
         # userA commit
         os.environ["USER_VAR"] = "userA"
         work_model_a.commit()
 
-        # then userB tries to download the last abc product, this should raise an error by default
+        # then userB try to download the last abc product, this should raise an error by default
         with self.assertRaises(PulseWorkConflict):
             os.environ["USER_VAR"] = "userB"
-            commit_product = proj_b.get_commit("joe-model@1/abc")
+            commit_product = proj_b.get_commit_product("joe-model.abc@1")
             commit_product.download()
 
     def test_project_list_products(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        utils.add_file_to_directory(anna_rig_work.output_directory + "/actor_anim", "actor.blend")
+        anna_rig_actor = anna_rig_work.create_product("actor_anim")
+        anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
         anna_rig_work.commit()
         self.assertTrue(len(self.prj.list_products("anna*")) == 2)
         self.assertTrue(len(self.prj.list_products("an?a*")) == 2)
@@ -610,50 +627,49 @@ class TestResources(unittest.TestCase):
         work = resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_output_dir)))
         # ensure the output directory point to the current work product
-        os.makedirs(os.path.join(work.output_directory, "export"))
-        self.assertTrue(os.path.exists(os.path.join(work.get_products_directory(), "export")))
+        work.create_product("export")
+        self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_output_dir, "export")))
 
     def test_work_add_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
 
         # test linked directory content is the same as the product content after add input
-        anna_rig_work.add_input("anna-mdl/abc")
+        anna_rig_work.add_input("anna-mdl.abc")
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
-            "anna-mdl~abc"
-        )), os.listdir(os.path.join(self.anna_mdl_v1.directory, "abc")))
+            "anna-mdl.abc"
+        )), os.listdir(self.anna_abc_product_v1.directory))
 
-        # test if the input already exists in current work inputs
+        # test if the input already exists in work inputs
         with self.assertRaises(PulseError):
-            anna_rig_work.add_input("anna-mdl/abc")
+            anna_rig_work.add_input("anna-mdl.abc")
 
         # test the input is a non existing product
         with self.assertRaises(PulseDatabaseMissingObject):
             anna_rig_work.add_input("unknown-product.uri")
 
-        # test when the input has to be downloaded
-        mdl_low_directory = os.path.join(self.anna_mdl_work.output_directory, "low")
-        utils.add_file_to_directory(mdl_low_directory, "tex.jpg")
-        anna_mdl_commit = self.anna_mdl_work.commit()
+        # test where the input has to be downloaded
+        low_texture = self.anna_mdl_work.create_product("low_texture")
+        utils.add_file_to_directory(low_texture.directory, "tex.jpg")
+        self.anna_mdl_work.commit()
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_local_products()
-        self.assertFalse(os.path.exists(mdl_low_directory))
-        anna_rig_work.add_input("anna-mdl@2/low")
-        tex_path = os.path.join(anna_mdl_commit.directory, "low", "tex.jpg")
-        self.assertTrue(os.path.exists(tex_path))
+        self.prj.purge_unused_user_products()
+        self.assertFalse(os.path.exists(low_texture.directory))
+        anna_rig_work.add_input(low_texture.uri)
+        self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
 
         # test if downloaded product used as input is not purged
-        self.prj.purge_unused_local_products()
-        self.assertTrue(os.path.exists(tex_path))
+        self.prj.purge_unused_user_products()
+        self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
 
-        # test when the input is a work product
+        # test the input is a work product
         self.anna_mdl_work = self.anna_mdl.checkout()
-        high_geo_directory = os.path.join(self.anna_mdl_work.output_directory, "high_geo")
-        utils.add_file_to_directory(high_geo_directory, "hi.abc")
-        anna_rig_work.add_input("anna-mdl/high_geo", consider_work_product=True)
-        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl~high_geo", "hi.abc")))
+        high_geo = self.anna_mdl_work.create_product("high_geo")
+        utils.add_file_to_directory(high_geo.directory, "hi.abc")
+        anna_rig_work.add_input("anna-mdl.high_geo", consider_work_product=True)
+        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
 
     def test_work_add_input_with_custom_name(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
@@ -728,7 +744,7 @@ class TestResources(unittest.TestCase):
         # test update input can download missing product
         anna_rig_work.commit()
         anna_rig_work.trash()
-        self.prj.purge_unused_local_products()
+        self.prj.purge_unused_user_products()
         anna_rig_resource.checkout()
         self.assertTrue("V4.txt" in os.listdir(input_dir))
 
@@ -766,24 +782,11 @@ class TestResources(unittest.TestCase):
     def test_product_add_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
+        anna_rig_hd = anna_rig_work.create_product("hd")
+        anna_rig_hd.add_input(self.anna_abc_product_v1.uri)
+        # test products don't have a "input" linked directory
+        self.assertFalse(os.path.exists(os.path.join(anna_rig_hd.directory, "input")))
 
-        # add an input to missing output subdirectory should raise an error
-        with self.assertRaises(PulseError):
-            anna_rig_work.add_input(self.anna_mdl_v1.uri + "/abc", product_path="hd")
-
-        # make the missing output subdirectory and test products have an "input" linked directory
-        os.makedirs(os.path.join(anna_rig_work.output_directory, "hd"))
-        anna_rig_work.add_input(self.anna_mdl_v1.uri + "/abc", product_path="hd")
-        self.assertTrue(os.path.exists(os.path.join(
-            anna_rig_work.output_directory,
-            "hd",
-            cfg.work_input_dir,
-            self.anna_mdl_v1.uri + "~abc"
-        )))
-
-        # add an existing input to a subdirectory should raise an error
-        with self.assertRaises(PulseError):
-            anna_rig_work.add_input(self.anna_mdl_v1.uri + "/abc", product_path="hd")
 
 if __name__ == '__main__':
     unittest.main()
