@@ -27,7 +27,8 @@ def convert_to_dict(uri_string):
     if not is_valid(uri_string):
         raise PulseUriError("Uri not valid : " + uri_string)
 
-    uri_split = uri_string.split("@")
+    subpath_split = uri_string.split("/", 1)
+    uri_split = subpath_split[0].split("@")
     product_split = uri_split[0].split(".")
     resource_split = product_split[0].split("-")
     entity = resource_split[0]
@@ -43,7 +44,13 @@ def convert_to_dict(uri_string):
     else:
         version = None
 
-    return {"entity": entity, "resource_type": resource_type, "version": version, "product_type": product_type}
+    return {
+        "entity": entity,
+        "resource_type": resource_type,
+        "version": version,
+        "product_type": product_type,
+        "subpath": subpath_split[-1]
+    }
 
 
 def convert_from_dict(uri_dict):

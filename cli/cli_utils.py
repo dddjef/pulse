@@ -120,7 +120,7 @@ def create_output(args):
 
 def add_input(args):
     project = pulse.get_project_from_path(os.getcwd())
-    product = project.get_commit_product(args.uri)
+    product = project.get_commit(args.uri)
     if not product:
         print('no product found for ' + args.uri)
         return

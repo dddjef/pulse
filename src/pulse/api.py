@@ -84,73 +84,6 @@ class PulseDbObject:
         self.project.cnx.db.create(self.project.name, self.__class__.__name__, self.uri, data)
 
 
-class Product:
-    """
-        abstract class for all products
-    """
-    def __init__(self, parent, product_type):
-        self.uri = uri_standards.convert_from_dict({
-            "entity": parent.resource.entity,
-            "resource_type": parent.resource.resource_type,
-            "product_type": product_type,
-            "version": parent.version
-        })
-        self.abstract_uri = uri_standards.remove_version_from_uri(self.uri)
-        self.parent = parent
-        self.product_type = product_type
-        self.directory = os.path.join(parent.get_products_directory(), product_type)
-        self.product_users_file = ""
-
-    def init_local_data_file(self):
-        """
-        create the local data file on user space
-        :return:
-        """
-        if not os.path.isfile(self.product_users_file):
-            fu.json_list_init(self.product_users_file)
-
-    def add_product_user(self, user_directory):
-        """
-        add a local resource or product as product's user
-
-        :param user_directory: the resource path
-        """
-        fu.json_list_append(self.product_users_file, user_directory)
-
-    def remove_product_user(self, user_directory):
-        """
-        remove the specified local resource or product from the product's user
-
-        :param user_directory: the resource path
-        """
-        fu.json_list_remove(self.product_users_file, user_directory)
-
-    def get_product_users(self):
-        """
-        return the list of local resources or product using this product
-
-        :return: resources filepath list
-        """
-        return fu.json_list_get(self.product_users_file)
-
-    def get_unused_time(self):
-        """
-        return the time since the local product has not been used by any resource or product.
-        Mainly used to purge local products from pulse's cache
-
-        :return: time value
-        """
-        if not os.path.exists(self.directory):
-            return -1
-        users = self.get_product_users()
-        if users:
-            return -1
-        if os.path.exists(self.product_users_file):
-            return time.time() - os.path.getmtime(self.product_users_file) + 0.01
-        else:
-            return time.time() - os.path.getctime(self.directory)
-
-
 class CommitProduct(PulseDbObject, Product):
     """
         Product which has been published to database
@@ -165,41 +98,32 @@ class CommitProduct(PulseDbObject, Product):
             fu.uri_to_json_filename(self.uri)
         ))
 
-    def download(self, resolve_conflict="error"):
-        """
-        download the product to local pulse cache if needed
-        resolve conflict could be "error", "mine", and "theirs".
-
-        :return: the product's local filepath
-        :param resolve_conflict: behaviour if there's already a local work product with the same uri
-        """
-
-        self.project.resolve_local_product_conflict(self.uri, resolve_conflict)
-
-        if os.path.exists(self.directory):
-            return self.directory
-
-        self.project.cnx.repositories[self.parent.resource.repository].download_product(self)
-        if not os.path.exists(self.parent.pulse_filepath):
-            open(self.parent.pulse_filepath, 'a').close()
-
-        self.init_local_data_file()
-
-        # lock files
-        fu.lock_directory_content(self.directory)
-
-        fu.write_data(self.product_users_file, [])
-        for uri in self.products_inputs:
-            product = self.project.get_commit_product(uri)
-            product.download()
-            product.add_product_user(self.directory)
-        return self.directory
-
     def unregister_to_user_products(self):
         """
         unregister the product to the user local products list
         """
         os.remove(self.product_users_file)
+
+class Commit(PulseDbObject):
+    """
+        Object created when a resource has been published to database
+        The commit is a versioned resource
+    """
+    def __init__(self, resource, version):
+        self.uri = resource.uri + "@" + str(version)
+        PulseDbObject.__init__(self, resource.project, self.uri)
+        self.resource = resource
+        self.comment = ""
+        self.files = {}
+        self.products_inputs = []
+        self.version = int(version)
+        self.products = []
+        self.pulse_filepath = os.path.join(self.get_products_directory(), cfg.pulse_filename)
+        """ list of product names"""
+        self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
+        self.directory = os.path.join(resource.get_products_directory(self.version))
+
+
 
     def remove_from_local_products(self, recursive_clean=False):
         """
@@ -216,7 +140,7 @@ class CommitProduct(PulseDbObject, Product):
 
         # unregister from its inputs
         for uri in self.products_inputs:
-            product_input = self.project.get_commit_product(uri)
+            product_input = self.project.get_commit(uri)
             product_input.remove_product_user(self.directory)
             if recursive_clean:
                 try:
@@ -238,23 +162,6 @@ class CommitProduct(PulseDbObject, Product):
         self.unregister_to_user_products()
 
 
-class Commit(PulseDbObject):
-    """
-        Object created when a resource has been published to database
-        The commit is a versioned resource
-    """
-    def __init__(self, resource, version):
-        self.uri = resource.uri + "@" + str(version)
-        PulseDbObject.__init__(self, resource.project, self.uri)
-        self.resource = resource
-        self.comment = ""
-        self.files = {}
-        self.products_inputs = []
-        self.version = int(version)
-        self.products = []
-        self.pulse_filepath = os.path.join(self.get_products_directory(), cfg.pulse_filename)
-        """ list of product names"""
-        self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
 
     def get_product(self, product_type):
         """
@@ -282,6 +189,39 @@ class Commit(PulseDbObject):
         :return: filepath
         """
         return self.resource.get_products_directory(self.version)
+
+    def download(self, resolve_conflict="error", subpath=""):
+        """
+        download the resource_version to local pulse cache if it doesn't already exists.
+        Since the downloaded version could be currently worked by the user, this could
+        raise a conflict. Pulse by default stop the process and raise an error.
+        resolve conflict could be "error", "mine", and "theirs".
+
+        :return: the product's local filepath
+        :param resolve_conflict: behaviour if there's already a local work product with the same uri
+        :param subpath: only download a part of the commit
+        """
+
+        self.project.resolve_local_product_conflict(self.uri, resolve_conflict)
+
+        if os.path.exists(self.directory):
+            return self.directory
+
+        self.project.cnx.repositories[self.parent.resource.repository].download_product(self)
+        if not os.path.exists(self.parent.pulse_filepath):
+            open(self.parent.pulse_filepath, 'a').close()
+
+        self.init_local_data_file()
+
+        # lock files
+        fu.lock_directory_content(self.directory)
+
+        fu.write_data(self.product_users_file, [])
+        for uri in self.products_inputs:
+            product = self.project.get_commit(uri)
+            product.download()
+            product.add_product_user(self.directory)
+        return self.directory
 
 
 class WorkNode:
@@ -361,46 +301,47 @@ class WorkNode:
         if not uri:
             uri = uri_standards.remove_version_from_uri(inputs[input_name])
 
-        # get the work product version if needed
-        product_version = 0
-        product = None
+        # get the work commit version if needed
+        work_version = 0
+        commit = None
         if consider_work_product:
             try:
-                product = self.project.get_work_product(uri)
-                product_version = product.parent.version
-            except PulseError:
+                work = self.project.get_work_version(uri)
+                work_version = work.version
+            except PulseMissingNode:
                 pass
 
         # get the commit product, and compare to work product version to get the last one
         try:
-            commit_product = self.project.get_commit_product(uri)
-            if commit_product.parent.version >= product_version:
-                product = commit_product
+            commit = self.project.get_commit(uri)
+            if commit.version < work_version:
+                commit = work
         except PulseMissingNode:
             pass
 
-        if not product:
+        if not commit:
             raise PulseMissingNode("No product found for :" + uri)
 
-        # if it's a commit product, try to download it
-        if isinstance(product, CommitProduct):
-            product.download(resolve_conflict)
+        # if it's a commit version, try to download it
+        if isinstance(commit, Commit):
+            commit.download(resolve_conflict, subpath=uri_standards.convert_to_dict(uri)["subpath"])
 
         # if we are in a work input, add a linked directory
+        subpath = uri_standards.convert_to_dict(uri)["subpath"]
         if self.project.cfg.use_linked_input_directories and self.__class__.__name__ == "Work":
             input_directory = os.path.join(self.directory, cfg.work_input_dir, input_name)
 
             if os.path.exists(input_directory):
                 os.remove(input_directory)
-            fu.make_directory_link(input_directory, product.directory)
+            fu.make_directory_link(input_directory, os.path.join(commit.directory, subpath))
 
         # updated input data entry to disk
-        inputs[input_name] = product.uri
+        inputs[input_name] = commit.uri
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        product.add_product_user(self.directory)
-        return product
+        #commit.add_product_user(self.directory)
+        return commit
 
     def remove_input(self, input_name):
         """
@@ -420,7 +361,7 @@ class WorkNode:
         try:
             product = self.project.get_work_product(uri)
         except PulseError:
-            product = self.project.get_commit_product(uri)
+            product = self.project.get_commit(uri)
 
         product.remove_product_user(self.directory)
 
@@ -541,7 +482,7 @@ class Work(WorkNode):
 
         # unregister from products
         for input_product_uri in product.get_inputs():
-            input_product = self.project.get_commit_product(input_product_uri)
+            input_product = self.project.get_commit(input_product_uri)
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(product.directory)
 
@@ -639,7 +580,7 @@ class Work(WorkNode):
         # check all inputs are registered
         for input_name, input_uri in self.get_inputs().items():
             try:
-                self.project.get_commit_product(input_uri)
+                self.project.get_commit(input_uri)
             except PulseDatabaseMissingObject:
                 raise PulseError("Input should be commit first : " + input_uri)
 
@@ -734,13 +675,10 @@ class Work(WorkNode):
             if os.path.exists(path) and not fu.test_path_write_access(path):
                 raise PulseError("can't move folder " + path)
 
-        # check workProducts are not in use
-        for product_type in self.list_products():
-            self.trash_product(product_type)
 
         # unregister from products
         for input_product_uri in self.get_inputs():
-            input_product = self.project.get_commit_product(input_product_uri)
+            input_product = self.project.get_commit(input_product_uri)
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(self.directory)
 
@@ -798,13 +736,13 @@ class Work(WorkNode):
             self._get_work_files(),
             fu.read_data(self.data_file)["work_files"]
         )
-        for product_name in self.list_products():
-            product_directory = os.path.join(self.get_products_directory(), product_name)
-            for root, subdirectories, files in os.walk(product_directory):
-                for f in files:
-                    filepath = os.path.join(root, f)
-                    relative_path = filepath[len(product_directory):]
-                    diff["product-" + product_name + relative_path] = "added"
+
+        products_directory = self.get_products_directory()
+        for root, subdirectories, files in os.walk(products_directory):
+            for f in files:
+                filepath = os.path.join(root, f)
+                relative_path = filepath[len(products_directory):]
+                diff["product-" + relative_path] = "added"
         return diff
 
     def get_products_directory(self):
@@ -909,14 +847,14 @@ class Resource(PulseDbObject):
     def get_work(self):
         """
         get the Work object associated to the resource.
-        IF there's no current work in user work space, return None
+        If there's no current work in user work space, return None
 
         :return:
         """
         try:
             return Work(self).read()
         except PulseError:
-            return None
+            return PulseMissingNode
 
     def checkout(self, index="last", destination_folder=None, recreate_products=True, resolve_conflict="error"):
         """
@@ -1092,51 +1030,44 @@ class Project:
         self.commit_product_data_directory = None
         self.work_product_data_directory = None
 
-    def get_work_product(self, uri_string):
+    def get_work_version(self, uri_string):
         uri_dict = uri_standards.convert_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         work = resource.get_work()
-        if work:
-            product = work.get_product(uri_dict['product_type'])
-            if uri_dict['version']:
-                if product.parent.version == int(uri_dict['version']):
-                    return product
-            else:
-                return product
-        raise PulseError("No product found for :" + uri_string)
+        if not work.version == uri_dict["version"]:
+            raise PulseMissingNode ("No Work for " + uri_string)
+        return work
 
-    def get_commit_product(self, uri_string):
+
+    def get_commit(self, uri_string):
         """
-        return the product corresponding of the given uri
+        return the resource version corresponding of the given uri
         @last or no version return the last version
         raise a PulseError if the uri is not found in the project
 
         :param uri_string: a pulse product uri
         :return: Product
         """
+        uri_string = uri_string.split("/", 1)[0]
         uri_dict = uri_standards.convert_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         resource.db_read()
 
         if not uri_dict['version'] or uri_dict['version'] == "last":
-            products = self.cnx.db.find_uris(
+            commits = self.cnx.db.find_uris(
                 self.name,
-                "CommitProduct",
+                "Commit",
                 uri_standards.remove_version_from_uri(uri_string) + "@*"
             )
-            if not products:
-                raise PulseMissingNode("No product found for :" + uri_string)
-            products.sort()
-            last_product_uri = products[-1]
-            version = uri_standards.convert_to_dict(last_product_uri)['version']
-            product_parent = resource.get_commit(version)
+            if not commits:
+                raise PulseMissingNode("No commit found for :" + uri_string)
+            commits.sort()
+            last_version = uri_standards.convert_to_dict(commits[-1])["version"]
+            return resource.get_commit(last_version)
 
         else:
-            resource.get_index(uri_dict['version'])
             index = resource.get_index(uri_dict['version'])
-            product_parent = resource.get_commit(index)
-
-        return product_parent.get_product(uri_dict["product_type"])
+            return resource.get_commit(index)
 
     def list_products(self, uri_pattern):
         """
@@ -1146,7 +1077,7 @@ class Project:
         :param uri_pattern: string
         :return: a Products list
         """
-        return [self.get_commit_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
+        return [self.get_commit(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
 
     def get_local_commit_products(self):
         """
@@ -1184,7 +1115,7 @@ class Project:
                 if not uri.startswith(resource_filter.uri):
                     continue
 
-            product = self.get_commit_product(uri)
+            product = self.get_commit(uri)
             if product.get_unused_time() > (unused_days*86400):
                 purged_products.append(product.uri)
                 if not dry_mode:
@@ -1269,15 +1200,15 @@ class Project:
             return
 
         try:
-            work_product = self.get_work_product(uri)
-        except PulseError:
+            work_version = self.get_work_version(uri)
+        except PulseMissingNode:
             return
 
-        if work_product:
+        if work_version:
             if strategy == "error":
-                raise PulseWorkConflict("Conflict with local work product : " + uri)
+                raise PulseWorkConflict("Conflict with local work version : " + uri)
             if strategy == "theirs":
-                work_product.parent.trash_product(work_product.product_type)
+                work_version.trash()
 
 
 class Connection:
