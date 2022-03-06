@@ -406,6 +406,7 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_srf_resource.last_version, 0)
         anna_srf_work = anna_srf_resource.checkout()
         anna_srf_work.add_input("ch_anna-modeling/ABC")
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "input/ch_anna-modeling~ABC/test.abc")))
 
         anna_srf_work.commit("with input")
         self.assertEqual(anna_srf_resource.last_version, 1)
