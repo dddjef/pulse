@@ -850,6 +850,7 @@ class Resource(PulseDbObject):
         Download related dependencies if they are not available in user products space
         If the incoming work have input product, those product can be in conflict with local product, by default the
         checkout process will fail with no consequence.
+        # TODO : manage if the checkout version is already in products cache
         :param recreate_products: recreate the products from the source commit
         :param destination_folder: where the resource will be checkout, if not set, project config is used
         :param index: the commit index to checkout. If not set, the last one will be used
