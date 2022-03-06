@@ -44,12 +44,17 @@ def convert_to_dict(uri_string):
     else:
         version = None
 
+    if len(subpath_split) > 1:
+        subpath = subpath_split[1]
+    else:
+        subpath = ""
+
     return {
         "entity": entity,
         "resource_type": resource_type,
         "version": version,
         "product_type": product_type,
-        "subpath": subpath_split[-1]
+        "subpath": subpath
     }
 
 

@@ -342,7 +342,8 @@ class Work():
             commit.download(resolve_conflict, subpath=uri_standards.convert_to_dict(uri)["subpath"])
 
         # add a linked directory
-        subpath = uri_standards.convert_to_dict(uri)["subpath"].replace("/", "~")
+        subpath = uri_standards.convert_to_dict(uri)["subpath"]
+
         if not input_directory:
             input_directory = self.directory
 
@@ -359,7 +360,7 @@ class Work():
             fu.make_directory_link(input_link_directory, os.path.join(commit.directory, subpath))
 
         # updated input data entry to disk
-        inputs[input_name] = commit.uri
+        inputs[input_name] = commit.uri + "/" + subpath
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
