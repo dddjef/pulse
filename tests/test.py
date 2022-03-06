@@ -425,7 +425,8 @@ class TestResources(unittest.TestCase):
         # TODO : add_input should be disabled for products
         # register the modeling as input for this output
         anna_srf_work.add_product_input("ch_anna-modeling@2/ABC", product_path="ld")
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "output/ld/input/ch_anna-modeling~ABC@2/test.abc")))
+        # TODO : add a test raise Pulse Error when one try to add an abstract input to a product
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "output/ld/input/ch_anna-modeling@2~ABC/test.abc")))
         # test uri_standard
         # TODO : test adding missing product path is supported (or updating)
         self.assertEqual(uri.path_to_uri(anna_srf_work.directory), anna_srf_resource.uri)

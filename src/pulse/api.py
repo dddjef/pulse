@@ -288,7 +288,7 @@ class Work():
 
         return self.update_input(input_name, uri, consider_work_product, input_directory=input_directory)
 
-    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error", input_directory=""):
+    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error", input_directory=None):
         """
         update a work input.
         the input name is an alias, used for creating linked directory in {work}/inputs/
@@ -341,14 +341,22 @@ class Work():
         if isinstance(commit, Commit):
             commit.download(resolve_conflict, subpath=uri_standards.convert_to_dict(uri)["subpath"])
 
-        # if we are in a work input, add a linked directory
+        # add a linked directory
         subpath = uri_standards.convert_to_dict(uri)["subpath"].replace("/", "~")
-        if self.project.cfg.use_linked_input_directories and self.__class__.__name__ == "Work":
-            input_directory = os.path.join(self.directory, cfg.work_input_dir, input_name.replace("/", "~"))
+        if not input_directory:
+            input_directory = self.directory
 
-            if os.path.exists(input_directory):
-                os.remove(input_directory)
-            fu.make_directory_link(input_directory, os.path.join(commit.directory, subpath))
+        input_directory = os.path.join(input_directory, cfg.work_input_dir)
+
+        if not os.path.exists(input_directory):
+            os.makedirs(input_directory)
+
+        if self.project.cfg.use_linked_input_directories and self.__class__.__name__ == "Work":
+            input_link_directory = os.path.join(input_directory, input_name.replace("/", "~"))
+
+            if os.path.exists(input_link_directory):
+                os.remove(input_link_directory)
+            fu.make_directory_link(input_link_directory, os.path.join(commit.directory, subpath))
 
         # updated input data entry to disk
         inputs[input_name] = commit.uri
