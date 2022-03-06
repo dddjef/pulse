@@ -84,26 +84,6 @@ class PulseDbObject:
         self.project.cnx.db.create(self.project.name, self.__class__.__name__, self.uri, data)
 
 
-class CommitProduct(PulseDbObject, Product):
-    """
-        Product which has been published to database
-    """
-    def __init__(self, parent, product_type):
-        Product.__init__(self, parent, product_type)
-        PulseDbObject.__init__(self, parent.project, self.uri)
-        self.products_inputs = []
-        self._storage_vars = ['product_type', 'products_inputs', 'uri']
-        self.product_users_file = os.path.normpath(os.path.join(
-            self.parent.project.commit_product_data_directory,
-            fu.uri_to_json_filename(self.uri)
-        ))
-
-    def unregister_to_user_products(self):
-        """
-        unregister the product to the user local products list
-        """
-        os.remove(self.product_users_file)
-
 class Commit(PulseDbObject):
     """
         Object created when a resource has been published to database
@@ -224,14 +204,35 @@ class Commit(PulseDbObject):
         return self.directory
 
 
-class WorkNode:
+class Work():
     """
-        abstract class for unpublished data (work or product)
+        Resource downloaded locally to be modified
     """
-    def __init__(self, project, directory):
-        self.directory = directory
-        self.products_inputs_file = os.path.join(directory, "product_inputs.json")
-        self.project = project
+    def __init__(self, resource):
+        self.project = resource.project
+        self.resource = resource
+        self.version = None
+        # TODO : this seems redundant and incoherent in wording
+        self.directory = self.resource.sandbox_path
+        self.products_inputs_file = os.path.join(self.directory, "product_inputs.json")
+        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
+
+
+    def get_products_directory(self, version_index):
+        """
+        return products filepath of the given resource version
+
+        :param version_index: integer
+        :return: string
+        """
+        version = str(version_index).zfill(cfg.DEFAULT_VERSION_PADDING)
+        path = os.path.join(
+            self.project.cfg.get_product_user_root(),
+            self.project.name,
+            self.uri,
+            cfg.DEFAULT_VERSION_PREFIX + version
+        )
+        return path
 
     def get_inputs(self):
         """
@@ -245,7 +246,7 @@ class WorkNode:
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def add_input(self, uri, input_name=None, consider_work_product=False):
+    def add_input(self, uri, input_name=None, consider_work_product=False, product_path=""):
         """
         add a product to the work inputs list
         download it to local product if needed
@@ -273,9 +274,9 @@ class WorkNode:
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        return self.update_input(input_name, uri, consider_work_product)
+        return self.update_input(input_name, uri, consider_work_product, product_path=product_path)
 
-    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error"):
+    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error", product_path=""):
         """
         update a work input.
         the input name is an alias, used for creating linked directory in {work}/inputs/
@@ -358,41 +359,11 @@ class WorkNode:
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        try:
-            product = self.project.get_work_product(uri)
-        except PulseError:
-            product = self.project.get_commit(uri)
-
-        product.remove_product_user(self.directory)
-
         # remove linked input directory
         input_directory = (os.path.join(self.directory, cfg.work_input_dir, input_name))
         if os.path.exists(input_directory):
             os.remove(input_directory)
 
-
-class WorkProduct(Product, WorkNode):
-    """
-        class for products which has not been registered to database yet
-    """
-    def __init__(self, work, product_type):
-        Product.__init__(self, work, product_type)
-        WorkNode.__init__(self, work.project, self.directory)
-        self.product_users_file = os.path.normpath(os.path.join(
-            self.parent.project.work_product_data_directory,
-            fu.uri_to_json_filename(self.uri)
-        ))
-
-
-class Work(WorkNode):
-    """
-        Resource downloaded locally to be modified
-    """
-    def __init__(self, resource):
-        WorkNode.__init__(self, resource.project, resource.sandbox_path)
-        self.resource = resource
-        self.version = None
-        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
 
     def _check_exists_in_user_workspace(self):
         if not os.path.exists(self.directory):
@@ -676,12 +647,6 @@ class Work(WorkNode):
                 raise PulseError("can't move folder " + path)
 
 
-        # unregister from products
-        for input_product_uri in self.get_inputs():
-            input_product = self.project.get_commit(input_product_uri)
-            if os.path.exists(input_product.directory):
-                input_product.remove_product_user(self.directory)
-
         # create the trash work directory
         trash_directory = self._get_trash_directory()
         if not os.path.exists(trash_directory):
@@ -772,10 +737,11 @@ class Resource(PulseDbObject):
             uri_standards.convert_from_dict({"entity": entity, "resource_type": resource_type})
         )
         self.sandbox_path = os.path.join(
-            project.cfg.get_work_user_root(), project.name, self.uri)
+            project.cfg.get_work_user_root(), project.name, self.uri).replace("\\", "/")
         self._storage_vars = [
             'lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
+    # TODO : this could be moved to "Version" class used by published and work version
     def get_products_directory(self, version_index):
         """
         return products filepath of the given resource version
@@ -854,7 +820,7 @@ class Resource(PulseDbObject):
         try:
             return Work(self).read()
         except PulseError:
-            return PulseMissingNode
+            raise PulseMissingNode ("missing work : " + self.uri)
 
     def checkout(self, index="last", destination_folder=None, recreate_products=True, resolve_conflict="error"):
         """
@@ -1100,6 +1066,7 @@ class Project:
         file_list = [os.path.basename(x) for x in path_list]
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
+    # TODO : rename as purge_unused_cache_products
     def purge_unused_user_products(self, unused_days=0, resource_filter=None, dry_mode=False):
         """
         remove unused products from the user product space, based on a unused time

@@ -136,8 +136,9 @@ class TestResources(unittest.TestCase):
         self.anna_mdl = self.prj.create_resource("anna", "mdl")
         self.anna_mdl_work = self.anna_mdl.checkout()
         utils.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
-        self.anna_abc_work_product = self.anna_mdl_work.create_product("abc")
-        utils.add_file_to_directory(self.anna_abc_work_product.directory, "anna.abc")
+        self.anna_abc_work_product = os.path.join(self.anna_mdl_work.directory, "output/abc")
+        os.makedirs(self.anna_abc_work_product)
+        utils.add_file_to_directory(self.anna_abc_work_product, "anna.abc")
         self.anna_mdl_commit = self.anna_mdl_work.commit()
         self.anna_abc_product_v1 = self.prj.get_commit("anna-mdl.abc@1")
 
@@ -406,24 +407,14 @@ class TestResources(unittest.TestCase):
         anna_srf_work = anna_srf_resource.checkout()
         anna_srf_work.add_input("ch_anna-modeling/ABC")
 
-        # TODO : remove this check
-        # check you can't remove a product if it's used by a work
-        # with self.assertRaises(Exception):
-        #     anna_mdl_v2_abc.remove_from_local_products()
-
         anna_srf_work.commit("with input")
         self.assertEqual(anna_srf_resource.last_version, 1)
         # trash the hat
 
         anna_srf_work.trash()
-        # TODO : move the get_product_users function from product to commit
-        self.assertTrue(anna_srf_work.directory not in anna_mdl_v2.get_product_users())
-        # check the unused time for the product
-        # TODO : move the get_unused_time function from product to commit
-        self.assertTrue(anna_mdl_v2.get_unused_time() > 0)
         # remove the product
         # TODO : remove rename purge_unused_user_products() to purge_unused_resource()
-        self.prj.purge_unused_resource()
+        self.prj.purge_unused_user_products()
         # checkout the work
         anna_srf_work = anna_srf_resource.checkout()
         anna_srf_work.remove_input("ch_anna-modeling/ABC")
@@ -432,7 +423,7 @@ class TestResources(unittest.TestCase):
         os.makedirs(os.path.join(anna_srf_work.directory, "output/ld"))
         # TODO : add_input should be disabled for products
         # register the modeling as input for this output
-        anna_srf_work.add_input("ch_anna-modeling/ABC", output="/ld")
+        anna_srf_work.add_input("ch_anna-modeling/ABC", product_path="/ld")
         # test uri_standard
         self.assertEqual(uri.path_to_uri(anna_srf_work.directory), anna_srf_resource.uri)
         self.assertEqual(uri.path_to_uri(anna_mdl_v2.directory), anna_mdl_v2.uri)
