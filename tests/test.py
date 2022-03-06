@@ -418,6 +418,9 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_user_products()
         # checkout the work
         anna_srf_work = anna_srf_resource.checkout()
+        # test the input is restored
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "input/ch_anna-modeling~ABC/test.abc")))
+
         anna_srf_work.remove_input("ch_anna-modeling/ABC")
         anna_mdl_work.trash()
         # create a new output
