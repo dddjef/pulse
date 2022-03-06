@@ -414,7 +414,7 @@ class TestResources(unittest.TestCase):
 
         anna_srf_work.trash()
         # remove the product
-        # TODO : remove rename purge_unused_user_products() to purge_unused_resource()
+        # TODO : remove rename purge_unused_user_products() to purge_unused_cache_products()
         self.prj.purge_unused_user_products()
         # checkout the work
         anna_srf_work = anna_srf_resource.checkout()
