@@ -405,7 +405,7 @@ class TestResources(unittest.TestCase):
         anna_srf_resource = self.prj.create_resource("ch_anna", "surfacing")
         self.assertEqual(anna_srf_resource.last_version, 0)
         anna_srf_work = anna_srf_resource.checkout()
-        anna_srf_work.add_input("ch_anna-modeling/ABC")
+        anna_srf_work.add_work_input("ch_anna-modeling/ABC")
         self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "input/ch_anna-modeling~ABC/test.abc")))
 
         anna_srf_work.commit("with input")
@@ -424,8 +424,10 @@ class TestResources(unittest.TestCase):
         os.makedirs(os.path.join(anna_srf_work.directory, "output/ld"))
         # TODO : add_input should be disabled for products
         # register the modeling as input for this output
-        anna_srf_work.add_input("ch_anna-modeling/ABC", product_path="/ld")
+        anna_srf_work.add_product_input("ch_anna-modeling@2/ABC", product_path="ld")
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "output/ld/input/ch_anna-modeling~ABC@2/test.abc")))
         # test uri_standard
+        # TODO : test adding missing product path is supported (or updating)
         self.assertEqual(uri.path_to_uri(anna_srf_work.directory), anna_srf_resource.uri)
         self.assertEqual(uri.path_to_uri(anna_mdl_v2.directory), anna_mdl_v2.uri)
 

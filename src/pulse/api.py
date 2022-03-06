@@ -246,7 +246,18 @@ class Work():
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def add_input(self, uri, input_name=None, consider_work_product=False, product_path=""):
+    def add_product_input(self, uri, product_path):
+        # TODO : check uri is absolute
+        # TODO : check product_path exists
+        input_directory = os.path.join(self.get_products_directory(), product_path)
+        if not os.path.exists(input_directory):
+            raise PulseError("product path does not exists : " + input_directory)
+        self._add_input(uri, input_directory=input_directory)
+
+    def add_work_input(self, uri, input_name=None, consider_work_product=False):
+        self._add_input(uri, input_name, consider_work_product)
+
+    def _add_input(self, uri, input_name=None, consider_work_product=False, input_directory=""):
         """
         add a product to the work inputs list
         download it to local product if needed
@@ -258,6 +269,7 @@ class Work():
         :param consider_work_product: if set to True, Pulse will look in local work product to add the input
         :return: return the product used for the input
         """
+
         if not uri_standards.is_valid(uri):
             raise PulseError("malformed uri : " + uri)
 
@@ -274,9 +286,9 @@ class Work():
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        return self.update_input(input_name, uri, consider_work_product, product_path=product_path)
+        return self.update_input(input_name, uri, consider_work_product, input_directory=input_directory)
 
-    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error", product_path=""):
+    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error", input_directory=""):
         """
         update a work input.
         the input name is an alias, used for creating linked directory in {work}/inputs/
@@ -293,6 +305,8 @@ class Work():
         :return: return the new product found for the input
 
         """
+        # TODO : abstract uri are not supported for product inputs
+
         # abort if input doesn't exist
         inputs = self.get_inputs()
         if input_name not in inputs:
@@ -328,9 +342,9 @@ class Work():
             commit.download(resolve_conflict, subpath=uri_standards.convert_to_dict(uri)["subpath"])
 
         # if we are in a work input, add a linked directory
-        subpath = uri_standards.convert_to_dict(uri)["subpath"]
+        subpath = uri_standards.convert_to_dict(uri)["subpath"].replace("/", "~")
         if self.project.cfg.use_linked_input_directories and self.__class__.__name__ == "Work":
-            input_directory = os.path.join(self.directory, cfg.work_input_dir, input_name)
+            input_directory = os.path.join(self.directory, cfg.work_input_dir, input_name.replace("/", "~"))
 
             if os.path.exists(input_directory):
                 os.remove(input_directory)
