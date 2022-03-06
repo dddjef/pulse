@@ -44,17 +44,12 @@ def convert_to_dict(uri_string):
     else:
         version = None
 
-    if len(subpath_split) > 1:
-        subpath = subpath_split[1]
-    else:
-        subpath = ""
-
     return {
         "entity": entity,
         "resource_type": resource_type,
         "version": version,
         "product_type": product_type,
-        "subpath": subpath
+        "subpath": subpath_split[-1]
     }
 
 
@@ -66,9 +61,9 @@ def convert_from_dict(uri_dict):
     :return: uri string
     """
     uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
-    if 'product_type' in uri_dict and uri_dict['product_type']:
+    if 'product_type' in uri_dict:
         uri += "." + uri_dict['product_type']
-    if 'version' in uri_dict and uri_dict['version']:
+    if 'version' in uri_dict:
         uri += "@" + (str(int(uri_dict['version'])))
     return uri
 

@@ -139,7 +139,7 @@ class TestResources(unittest.TestCase):
         self.anna_abc_work_product = self.anna_mdl_work.create_product("abc")
         utils.add_file_to_directory(self.anna_abc_work_product.directory, "anna.abc")
         self.anna_mdl_commit = self.anna_mdl_work.commit()
-        self.anna_abc_product_v1 = self.prj.get_commit_product("anna-mdl.abc@1")
+        self.anna_abc_product_v1 = self.prj.get_commit("anna-mdl.abc@1")
 
     def test_delete_project(self):
         self.cnx.delete_project(test_project_name)
@@ -165,7 +165,7 @@ class TestResources(unittest.TestCase):
 
     def test_purged_product(self):
         # test the dry mode
-        self.anna_abc_product_v1 = self.prj.get_commit_product("anna-mdl.abc@1")
+        self.anna_abc_product_v1 = self.prj.get_commit("anna-mdl.abc@1")
         self.assertTrue(os.path.exists(self.anna_abc_product_v1.directory))
         self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), ['anna-mdl.abc@1'])
         self.assertTrue(os.path.exists(self.anna_abc_product_v1.directory))
@@ -392,7 +392,7 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a sub resource
-        abc_work_product = os.path.join(anna_mdl_work.directory, "abc")
+        abc_work_product = os.path.join(anna_mdl_work.directory, "output/abc")
         os.makedirs(abc_work_product)
         # now products directory should exists)
         utils.add_file_to_directory(abc_work_product, "test.abc")
@@ -412,7 +412,7 @@ class TestResources(unittest.TestCase):
         #     anna_mdl_v2_abc.remove_from_local_products()
 
         anna_srf_work.commit("with input")
-        self.assertEqual(hat_mdl_resource.last_version, 1)
+        self.assertEqual(anna_srf_resource.last_version, 1)
         # trash the hat
 
         anna_srf_work.trash()
@@ -428,9 +428,10 @@ class TestResources(unittest.TestCase):
         anna_srf_work = anna_srf_resource.checkout()
         anna_srf_work.remove_input("ch_anna-modeling/ABC")
         anna_mdl_work.trash()
-
+        # create a new output
         os.makedirs(os.path.join(anna_srf_work.directory, "output/ld"))
         # TODO : add_input should be disabled for products
+        # register the modeling as input for this output
         anna_srf_work.add_input("ch_anna-modeling/ABC", output="/ld")
         # test uri_standard
         self.assertEqual(uri.path_to_uri(anna_srf_work.directory), anna_srf_resource.uri)
@@ -563,7 +564,7 @@ class TestResources(unittest.TestCase):
     def test_product_download(self):
         self.anna_mdl_work.trash()
         self.prj.purge_unused_user_products()
-        product = self.prj.get_commit_product("anna-mdl.abc@1")
+        product = self.prj.get_commit("anna-mdl.abc@1")
         self.assertFalse(os.path.exists(product.directory))
         self.assertFalse(os.path.exists(product.product_users_file))
         product.download()
@@ -600,7 +601,7 @@ class TestResources(unittest.TestCase):
         # then userB try to download the last abc product, this should raise an error by default
         with self.assertRaises(PulseWorkConflict):
             os.environ["USER_VAR"] = "userB"
-            commit_product = proj_b.get_commit_product("joe-model.abc@1")
+            commit_product = proj_b.get_commit("joe-model.abc@1")
             commit_product.download()
 
     def test_project_list_products(self):
