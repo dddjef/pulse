@@ -107,7 +107,7 @@ def json_list_get(json_path):
         return read_data(json_path)
 
 
-def remove_empty_parents_directory(directory, root_dirs=[]):
+def remove_empty_parents_directory(directory, root_dirs):
     if not os.path.exists(directory):
         return
     while not os.listdir(directory):
@@ -170,7 +170,6 @@ def lock_directory_content(directory, lock=True):
             else:
                 os.chmod(os.path.join(root, f), S_IWUSR | S_IREAD)
 
-
 def get_file_list(root_directory, excluded_patterns=[]):
     files_dict = {}
     for root, dirs, files in os.walk(root_directory, topdown=True):
@@ -180,8 +179,3 @@ def get_file_list(root_directory, excluded_patterns=[]):
             relative_path = filepath[len(root_directory):]
             files_dict[relative_path.replace(os.sep, "/")] = {"checksum": md5(filepath)}
     return files_dict
-
-
-def path_join(a, *args):
-    path = os.path.join(a, *args)
-    return path.replace("\\", "/")
