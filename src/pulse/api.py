@@ -102,8 +102,11 @@ class Commit(PulseDbObject):
         """ list of product names"""
         self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
         self.directory = os.path.join(resource.get_products_directory(self.version))
-
-
+        # TODO : rename commit_product_data_directory
+        self.product_users_file = os.path.normpath(os.path.join(
+            self.project.commit_product_data_directory,
+            fu.uri_to_json_filename(self.uri)
+        ))
 
     def remove_from_local_products(self, recursive_clean=False):
         """
@@ -111,57 +114,18 @@ class Commit(PulseDbObject):
         will raise a pulse error if the product is used by a resource
         will raise an error if the product's folder is locked by the filesystem
         """
-        if len(self.get_product_users()) > 0:
-            raise PulseError("Can't remove a product still in use")
-
+        # TODO : recursivity should be tested and restore
         # test the folder can be moved
         if not fu.test_path_write_access(self.directory):
-            raise PulseError("folder is in used by a process : " + self.directory)
-
-        # unregister from its inputs
-        for uri in self.products_inputs:
-            product_input = self.project.get_commit(uri)
-            product_input.remove_product_user(self.directory)
-            if recursive_clean:
-                try:
-                    product_input.remove_from_local_products(recursive_clean=True)
-                except PulseError:
-                    pass
+            raise PulseError("directory is locked : " + self.directory)
 
         # make all files writable
         fu.lock_directory_content(self.directory, lock=False)
 
         shutil.rmtree(self.directory)
-        # remove also the version directory if it's empty now
-        version_dir = os.path.dirname(self.directory)
-        if os.listdir(version_dir) == [cfg.pulse_filename]:
-            shutil.rmtree(version_dir)
-            parent_dir = os.path.dirname(version_dir)
-            if not os.listdir(parent_dir):
-                shutil.rmtree(parent_dir)
-        self.unregister_to_user_products()
 
 
-
-    def get_product(self, product_type):
-        """
-        return the commit's product with the specified product type. If the product doesn't exists return a
-        pulseDataBaseMissingObject exception
-
-        :param product_type: string
-        :return: a CommitProduct
-        """
-        return CommitProduct(self, product_type).db_read()
-
-    def get_products(self):
-        """
-        return the commit's products list
-        """
-        products = []
-        for product_name in self.products:
-            products.append(CommitProduct(self, product_name))
-        return products
-
+    # TODO : what's the purpose of this ?
     def get_products_directory(self):
         """
         return the commit's products directory
@@ -187,20 +151,20 @@ class Commit(PulseDbObject):
         if os.path.exists(self.directory):
             return self.directory
 
-        self.project.cnx.repositories[self.parent.resource.repository].download_product(self)
-        if not os.path.exists(self.parent.pulse_filepath):
-            open(self.parent.pulse_filepath, 'a').close()
-
-        self.init_local_data_file()
+        self.project.cnx.repositories[self.resource.repository].download_product(self)
+        if not os.path.exists(self.pulse_filepath):
+            open(self.pulse_filepath, 'a').close()
 
         # lock files
         fu.lock_directory_content(self.directory)
 
-        fu.write_data(self.product_users_file, [])
-        for uri in self.products_inputs:
-            product = self.project.get_commit(uri)
-            product.download()
-            product.add_product_user(self.directory)
+        # TODO : delete input directories before commit
+        # restore inputs
+        for root, dirs, files in os.walk(self.directory):
+            for name in files:
+                if name == cfg.input_data_filename:
+                    print( root, name)
+
         return self.directory
 
 
@@ -214,7 +178,8 @@ class Work():
         self.version = None
         # TODO : this seems redundant and incoherent in wording
         self.directory = self.resource.sandbox_path
-        self.products_inputs_file = os.path.join(self.directory, "product_inputs.json")
+        self.input_data_filename = "input_data.json"
+        self.work_inputs_file = os.path.join(self.directory, self.input_data_filename)
         self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
 
 
@@ -234,30 +199,35 @@ class Work():
         )
         return path
 
-    def get_inputs(self):
+    def _get_input_directory(self, product_path):
+        # if product path is set, test the product path location exists
+        if product_path:
+            root_directory = os.path.join(self.get_products_directory(), product_path)
+            if not os.path.exists(root_directory):
+                raise PulseError("product path does not exists : " + root_directory)
+            # return the absolute product path
+            return root_directory
+        # else return the work directory
+        else:
+            return self.directory
+
+    def get_inputs(self, product_path=None):
         """
         return a dict of inputs in the form
         {uri_input_name : {uri, resolved_uri}}
 
         :return: inputs dict
         """
-        if not os.path.exists(self.products_inputs_file):
+
+        root_directory = self._get_input_directory(product_path)
+        input_data_filepath = os.path.join(root_directory, self.input_data_filename)
+
+        if not os.path.exists(input_data_filepath):
             return {}
-        with open(self.products_inputs_file, "r") as read_file:
+        with open(input_data_filepath, "r") as read_file:
             return json.load(read_file)
 
-    def add_product_input(self, uri, product_path):
-        # TODO : check uri is absolute
-        # TODO : check product_path exists
-        input_directory = os.path.join(self.get_products_directory(), product_path)
-        if not os.path.exists(input_directory):
-            raise PulseError("product path does not exists : " + input_directory)
-        self._add_input(uri, input_directory=input_directory)
-
-    def add_work_input(self, uri, input_name=None, consider_work_product=False):
-        self._add_input(uri, input_name, consider_work_product)
-
-    def _add_input(self, uri, input_name=None, consider_work_product=False, input_directory=""):
+    def add_input(self, uri, input_name=None, consider_work_product=False, product_path=None):
         """
         add a product to the work inputs list
         download it to local product if needed
@@ -277,18 +247,19 @@ class Work():
             input_name = uri
 
         # abort if input already exists
-        inputs = self.get_inputs()
+        inputs = self.get_inputs(product_path)
         if input_name in inputs:
             raise PulseError("input already exists : " + input_name)
 
-        # save input entry to disk
+        input_directory = self._get_input_directory(product_path)
+        input_data_filepath = os.path.join(input_directory, self.input_data_filename)
         inputs[input_name] = uri
-        with open(self.products_inputs_file, "w") as write_file:
+        with open(input_data_filepath, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        return self.update_input(input_name, uri, consider_work_product, input_directory=input_directory)
+        return self.update_input(input_name, uri, consider_work_product, product_path)
 
-    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error", input_directory=None):
+    def update_input(self, input_name, uri=None, consider_work_product=False, product_path=None, resolve_conflict="error"):
         """
         update a work input.
         the input name is an alias, used for creating linked directory in {work}/inputs/
@@ -305,10 +276,8 @@ class Work():
         :return: return the new product found for the input
 
         """
-        # TODO : abstract uri are not supported for product inputs
-
         # abort if input doesn't exist
-        inputs = self.get_inputs()
+        inputs = self.get_inputs(product_path)
         if input_name not in inputs:
             raise PulseError("unknown input : " + input_name)
 
@@ -344,10 +313,7 @@ class Work():
         # add a linked directory
         subpath = uri_standards.convert_to_dict(uri)["subpath"]
 
-        if not input_directory:
-            input_directory = self.directory
-
-        input_directory = os.path.join(input_directory, cfg.work_input_dir)
+        input_directory = os.path.join(self._get_input_directory(product_path), cfg.work_input_dir)
 
         if not os.path.exists(input_directory):
             os.makedirs(input_directory)
@@ -361,13 +327,15 @@ class Work():
 
         # updated input data entry to disk
         inputs[input_name] = commit.uri + "/" + subpath
-        with open(self.products_inputs_file, "w") as write_file:
+        input_data_filepath = os.path.join(input_directory, self.input_data_filename)
+        with open(input_data_filepath, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
         #commit.add_product_user(self.directory)
         return commit
 
-    def remove_input(self, input_name):
+    # TODO : directory should be product directory
+    def remove_input(self, input_name, directory=None):
         """
         remove a product from inputs list
 
@@ -377,9 +345,13 @@ class Work():
         if input_name not in inputs:
             raise PulseError("input does not exist : " + input_name)
 
-        uri = inputs[input_name]
+        if not directory:
+            directory = self.directory
+
+        input_data_filepath = os.path.join(directory, self.input_data_filename)
+
         inputs.pop(input_name, None)
-        with open(self.products_inputs_file, "w") as write_file:
+        with open(input_data_filepath, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
         # remove linked input directory
@@ -398,6 +370,7 @@ class Work():
         path += self.resource.uri + "-" + date_time
         return path
 
+    # TODO : this should be a file_utils function return a relative filepath list given a directory and exceptions
     def _get_work_files(self):
         files_dict = {}
         excluded_path = [cfg.work_output_dir, cfg.work_input_dir]
@@ -572,6 +545,7 @@ class Work():
             raise PulseError("no file change to commit")
 
         # check all inputs are registered
+        # TODO : should check for products inputs too
         for input_name, input_uri in self.get_inputs().items():
             try:
                 self.project.get_commit(input_uri)
@@ -594,6 +568,7 @@ class Work():
         commit.products_inputs = self.get_inputs()
         commit.products = self.list_products()
 
+        # TODO : should be updated, there's no commit.products anymore
         # convert work products to commit products
         if commit.products:
             for product_type in commit.products:
@@ -918,7 +893,7 @@ class Resource(PulseDbObject):
             for product in out_product_list:
                 work.create_product(product)
 
-        # download requested input products if needed
+        # get work input products if needed
         for input_name, input_uri in work.get_inputs().items():
             work.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
 
