@@ -183,22 +183,6 @@ class Work():
         self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
 
 
-    def get_products_directory(self, version_index):
-        """
-        return products filepath of the given resource version
-
-        :param version_index: integer
-        :return: string
-        """
-        version = str(version_index).zfill(cfg.DEFAULT_VERSION_PADDING)
-        path = os.path.join(
-            self.project.cfg.get_product_user_root(),
-            self.project.name,
-            self.uri,
-            cfg.DEFAULT_VERSION_PREFIX + version
-        )
-        return path
-
     def _get_input_directory(self, product_path):
         # if product path is set, test the product path location exists
         if product_path:
@@ -371,16 +355,6 @@ class Work():
         return path
 
     # TODO : this should be a file_utils function return a relative filepath list given a directory and exceptions
-    def _get_work_files(self):
-        files_dict = {}
-        excluded_path = [cfg.work_output_dir, cfg.work_input_dir]
-        for root, dirs, files in os.walk(self.directory, topdown=True):
-            dirs[:] = [d for d in dirs if d not in excluded_path]
-            for f in files:
-                filepath = os.path.join(root, f)
-                relative_path = filepath[len(self.directory):]
-                files_dict[relative_path.replace(os.sep, "/")] = {"checksum": fu.md5(filepath)}
-        return files_dict
 
     def get_product(self, product_type):
         """
@@ -488,7 +462,7 @@ class Work():
             "entity": self.resource.entity,
             "resource_type": self.resource.resource_type,
             "outputs": [],
-            "work_files": self._get_work_files()
+            "work_files": fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir])
             })
 
         # create work product directory
@@ -557,16 +531,20 @@ class Work():
         lock_user = self.resource.lock_user
         self.resource.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
 
+
+
         # copy work files to a new version in repository
         commit = Commit(self.resource, self.version)
-        commit.files = self._get_work_files()
-        commit.project.cnx.repositories[self.resource.repository].upload_resource_commit(
-            commit, self.directory, commit.files, self.get_products_directory())
-
         # register changes to database
         commit.comment = comment
         commit.products_inputs = self.get_inputs()
-        commit.products = self.list_products()
+        commit.products = fu.get_file_list(commit.directory, [cfg.work_output_dir, cfg.work_input_dir])
+        # TODO : rename this is work.files
+        commit.files = fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir])
+        commit.project.cnx.repositories[self.resource.repository].upload_resource_commit(
+            commit, self.directory, commit.files, commit.products)
+
+
 
         # TODO : should be updated, there's no commit.products anymore
         # convert work products to commit products
@@ -696,7 +674,7 @@ class Work():
         """
 
         diff = fu.compare_directory_content(
-            self._get_work_files(),
+            fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir]),
             fu.read_data(self.data_file)["work_files"]
         )
 

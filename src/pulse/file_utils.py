@@ -169,3 +169,13 @@ def lock_directory_content(directory, lock=True):
                 os.chmod(os.path.join(root, f), S_IREAD | S_IRGRP | S_IROTH)
             else:
                 os.chmod(os.path.join(root, f), S_IWUSR | S_IREAD)
+
+def get_file_list(root_directory, excluded_patterns=[]):
+    files_dict = {}
+    for root, dirs, files in os.walk(root_directory, topdown=True):
+        dirs[:] = [d for d in dirs if d not in excluded_patterns]
+        for f in files:
+            filepath = os.path.join(root, f)
+            relative_path = filepath[len(root_directory):]
+            files_dict[relative_path.replace(os.sep, "/")] = {"checksum": md5(filepath)}
+    return files_dict
