@@ -443,7 +443,7 @@ class TestResources(unittest.TestCase):
         self.assertFalse(os.path.exists(anna_srf_v2.directory))
 
         anna_srf_v2.download()
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "output/ld/input/ch_anna-modeling@2~ABC/test.abc")))
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_v2.directory, "ld/input/ch_anna-modeling@2~ABC/test.abc")))
 
         # TODO : test work check out does recreate links in input, and not hard directories
         # test uri_standard
