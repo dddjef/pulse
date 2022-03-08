@@ -83,6 +83,10 @@ class PulseDbObject:
         data = dict((name, getattr(self, name)) for name in self._storage_vars)
         self.project.cnx.db.create(self.project.name, self.__class__.__name__, self.uri, data)
 
+class PulseLocalObject:
+    """
+        abstract class for all objects which can be downloaded
+    """
 
 class Commit(PulseDbObject):
     """
@@ -343,7 +347,6 @@ class Work():
         if os.path.exists(input_directory):
             os.remove(input_directory)
 
-
     def _check_exists_in_user_workspace(self):
         if not os.path.exists(self.directory):
             raise PulseMissingNode("Missing work space : " + self.directory)
@@ -353,100 +356,6 @@ class Work():
         path = os.path.join(self.project.cfg.get_work_user_root(), self.project.name, "TRASH") + os.sep
         path += self.resource.uri + "-" + date_time
         return path
-
-    # TODO : this should be a file_utils function return a relative filepath list given a directory and exceptions
-
-    def get_product(self, product_type):
-        """
-        return the resource's work product based on the given type
-
-        :param product_type:
-        :return: a work product
-        """
-        if product_type not in self.list_products():
-            raise PulseError("product not found : " + product_type)
-        return WorkProduct(self, product_type)
-
-    def list_products(self):
-        """
-        return the work's product's type list
-
-        :return: a string list
-        """
-        return fu.read_data(self.data_file)["outputs"]
-
-    def create_product(self, product_type):
-        """
-        create a new product for the work
-
-        :param product_type: string
-        :return: the new work product object
-        """
-        self._check_exists_in_user_workspace()
-        outputs = self.list_products()
-        if product_type in outputs:
-            raise PulseError("product already exists : " + product_type)
-        work_product = WorkProduct(self, product_type)
-        # create the pulse data file
-        work_product.init_local_data_file()
-
-        os.makedirs(work_product.directory)
-        pulse_filepath = os.path.join(self.get_products_directory(), cfg.pulse_filename)
-        if not os.path.exists(pulse_filepath):
-            open(pulse_filepath, 'a').close()
-        # update work pipe file with the new output
-        outputs.append(product_type)
-        data_dict = fu.read_data(self.data_file)
-        data_dict["outputs"] = outputs
-        fu.write_data(self.data_file, data_dict)
-
-        return work_product
-
-    def trash_product(self, product_type):
-        """
-        move the specified product to the trash directory
-        raise an error if the product is used by a resource or another product
-
-        :param product_type: string
-        """
-        self._check_exists_in_user_workspace()
-        if product_type not in self.list_products():
-            raise PulseError("product does not exists : " + product_type)
-        product = WorkProduct(self, product_type)
-
-        if not fu.test_path_write_access(product.directory):
-            raise PulseError("can't move folder " + product.directory)
-
-        users = product.get_product_users()
-        if users:
-            raise PulseError("work can't be trashed if its product is used : " + users[0])
-
-        # unregister from products
-        for input_product_uri in product.get_inputs():
-            input_product = self.project.get_commit(input_product_uri)
-            if os.path.exists(input_product.directory):
-                input_product.remove_product_user(product.directory)
-
-        # create the trash work directory
-        trash_directory = self._get_trash_directory()
-        if not os.path.exists(trash_directory):
-            os.makedirs(trash_directory)
-
-        # move folder
-        shutil.move(product.directory, os.path.join(trash_directory, "PRODUCTS", product_type))
-
-        # remove the product from work outputs
-        data_dict = fu.read_data(self.data_file)
-        data_dict["outputs"].remove(product_type)
-        fu.write_data(self.data_file, data_dict)
-
-        # remove the products directory if it's empty
-        products_directory = self.get_products_directory()
-        if not os.listdir(products_directory):
-            shutil.rmtree(products_directory)
-
-        # remove the product from products local data
-        os.remove(product.product_users_file)
 
     def write(self):
         """
@@ -545,24 +454,6 @@ class Work():
             commit, self.directory, commit.files, commit.products)
 
 
-
-        # TODO : should be updated, there's no commit.products anymore
-        # convert work products to commit products
-        if commit.products:
-            for product_type in commit.products:
-                work_product = self.get_product(product_type)
-
-                commit_product = CommitProduct(commit, product_type)
-                commit_product.products_inputs = work_product.get_inputs()
-                commit_product.db_create()
-
-                if not keep_products_in_cache:
-                    commit_product.remove_from_local_products()
-                else:
-                    # change the work product data file to a commit product file, and lock files
-                    os.rename(work_product.product_users_file, commit_product.product_users_file)
-                    fu.lock_directory_content(commit_product.directory)
-
         commit.db_create()
         self.resource.set_last_version(self.version)
 
@@ -570,10 +461,7 @@ class Work():
         self.version += 1
         self.write()
 
-        # recreate same products
-        if recreate_last_products:
-            for product in commit.products:
-                self.create_product(product)
+        # TODO : manage an option to keep product directory structure after commit
 
         # restore the resource lock state
         self.resource.set_lock(lock_state, lock_user, steal=True)
