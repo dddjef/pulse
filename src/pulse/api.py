@@ -88,104 +88,6 @@ class PulseLocalObject:
         abstract class for all objects which can be downloaded
     """
 
-class Commit(PulseDbObject):
-    """
-        Object created when a resource has been published to database
-        The commit is a versioned resource
-    """
-    def __init__(self, resource, version):
-        self.uri = resource.uri + "@" + str(version)
-        PulseDbObject.__init__(self, resource.project, self.uri)
-        self.resource = resource
-        self.comment = ""
-        self.files = {}
-        self.products_inputs = []
-        self.version = int(version)
-        self.products = []
-        self.pulse_filepath = os.path.join(self.get_products_directory(), cfg.pulse_filename)
-        """ list of product names"""
-        self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
-        self.directory = os.path.join(resource.get_products_directory(self.version))
-        # TODO : rename commit_product_data_directory
-        self.product_users_file = os.path.normpath(os.path.join(
-            self.project.commit_product_data_directory,
-            fu.uri_to_json_filename(self.uri)
-        ))
-
-    def remove_from_local_products(self, recursive_clean=False):
-        """
-        remove the product from local pulse cache
-        will raise a pulse error if the product is used by a resource
-        will raise an error if the product's folder is locked by the filesystem
-        """
-        # TODO : recursivity should be tested and restore
-        # test the folder can be moved
-        if not fu.test_path_write_access(self.directory):
-            raise PulseError("directory is locked : " + self.directory)
-
-        # make all files writable
-        fu.lock_directory_content(self.directory, lock=False)
-
-        shutil.rmtree(self.directory)
-
-
-    # TODO : what's the purpose of this ?
-    def get_products_directory(self):
-        """
-        return the commit's products directory
-
-        :return: filepath
-        """
-        return self.resource.get_products_directory(self.version)
-
-    def download(self, resolve_conflict="error", subpath=""):
-        """
-        download the resource_version to local pulse cache if it doesn't already exists.
-        Since the downloaded version could be currently worked by the user, this could
-        raise a conflict. Pulse by default stop the process and raise an error.
-        resolve conflict could be "error", "mine", and "theirs".
-
-        :return: the product's local filepath
-        :param resolve_conflict: behaviour if there's already a local work product with the same uri
-        :param subpath: only download a part of the commit
-        """
-
-        self.project.resolve_local_product_conflict(self.uri, resolve_conflict)
-
-        if os.path.exists(self.directory):
-            return self.directory
-
-        self.project.cnx.repositories[self.resource.repository].download_product(self)
-        if not os.path.exists(self.pulse_filepath):
-            open(self.pulse_filepath, 'a').close()
-
-        # lock files
-        fu.lock_directory_content(self.directory)
-
-        # TODO : delete input directories before commit
-        # restore inputs
-        for root, dirs, files in os.walk(self.directory):
-            for name in files:
-                if name == cfg.input_data_filename:
-                    print( root, name)
-
-        return self.directory
-
-
-class Work():
-    """
-        Resource downloaded locally to be modified
-    """
-    def __init__(self, resource):
-        self.project = resource.project
-        self.resource = resource
-        self.version = None
-        # TODO : this seems redundant and incoherent in wording
-        self.directory = self.resource.sandbox_path
-        self.input_data_filename = "input_data.json"
-        self.work_inputs_file = os.path.join(self.directory, self.input_data_filename)
-        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
-
 
     def _get_input_directory(self, product_path):
         # if product path is set, test the product path location exists
@@ -215,37 +117,14 @@ class Work():
         with open(input_data_filepath, "r") as read_file:
             return json.load(read_file)
 
-    def add_input(self, uri, input_name=None, consider_work_product=False, product_path=None):
-        """
-        add a product to the work inputs list
-        download it to local product if needed
-        uri can be mutable (ie: anna-mdl.abc) or not (ie : anna-mdl.abc@4)
-        if a mutable uri is given, the last version will be used
+    def restore_inputs(self):
+        for root, dirs, files in os.walk(self.directory):
+            for name in files:
+                if name == cfg.input_data_filename:
+                    input_data_file = os.path.join(root, name)
+                    for input_name, input_uri in self.get_inputs(input_data_file).items():
+                        self.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
 
-        :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
-        :param uri: the product uri, can be mutable
-        :param consider_work_product: if set to True, Pulse will look in local work product to add the input
-        :return: return the product used for the input
-        """
-
-        if not uri_standards.is_valid(uri):
-            raise PulseError("malformed uri : " + uri)
-
-        if not input_name:
-            input_name = uri
-
-        # abort if input already exists
-        inputs = self.get_inputs(product_path)
-        if input_name in inputs:
-            raise PulseError("input already exists : " + input_name)
-
-        input_directory = self._get_input_directory(product_path)
-        input_data_filepath = os.path.join(input_directory, self.input_data_filename)
-        inputs[input_name] = uri
-        with open(input_data_filepath, "w") as write_file:
-            json.dump(inputs, write_file, indent=4, sort_keys=True)
-
-        return self.update_input(input_name, uri, consider_work_product, product_path)
 
     def update_input(self, input_name, uri=None, consider_work_product=False, product_path=None, resolve_conflict="error"):
         """
@@ -321,6 +200,135 @@ class Work():
 
         #commit.add_product_user(self.directory)
         return commit
+
+
+class Commit(PulseLocalObject, PulseDbObject):
+    """
+        Object created when a resource has been published to database
+        The commit is a versioned resource
+    """
+    def __init__(self, resource, version):
+        self.uri = resource.uri + "@" + str(version)
+        PulseDbObject.__init__(self, resource.project, self.uri)
+        self.resource = resource
+        self.comment = ""
+        self.files = {}
+        self.products_inputs = []
+        self.version = int(version)
+        self.products = []
+        self.pulse_filepath = os.path.join(self.get_products_directory(), cfg.pulse_filename)
+        """ list of product names"""
+        self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
+        self.directory = os.path.join(resource.get_products_directory(self.version))
+        # TODO : rename commit_product_data_directory
+        self.product_users_file = os.path.normpath(os.path.join(
+            self.project.commit_product_data_directory,
+            fu.uri_to_json_filename(self.uri)
+        ))
+
+    def remove_from_local_products(self, recursive_clean=False):
+        """
+        remove the product from local pulse cache
+        will raise a pulse error if the product is used by a resource
+        will raise an error if the product's folder is locked by the filesystem
+        """
+        # TODO : recursivity should be tested and restore
+        # test the folder can be moved
+        if not fu.test_path_write_access(self.directory):
+            raise PulseError("directory is locked : " + self.directory)
+
+        # make all files writable
+        fu.lock_directory_content(self.directory, lock=False)
+
+        shutil.rmtree(self.directory)
+
+
+    # TODO : what's the purpose of this ?
+    def get_products_directory(self):
+        """
+        return the commit's products directory
+
+        :return: filepath
+        """
+        return self.resource.get_products_directory(self.version)
+
+    def download(self, resolve_conflict="error", subpath=""):
+        """
+        download the resource_version to local pulse cache if it doesn't already exists.
+        Since the downloaded version could be currently worked by the user, this could
+        raise a conflict. Pulse by default stop the process and raise an error.
+        resolve conflict could be "error", "mine", and "theirs".
+
+        :return: the product's local filepath
+        :param resolve_conflict: behaviour if there's already a local work product with the same uri
+        :param subpath: only download a part of the commit
+        """
+
+        self.project.resolve_local_product_conflict(self.uri, resolve_conflict)
+
+        if os.path.exists(self.directory):
+            return self.directory
+
+        self.project.cnx.repositories[self.resource.repository].download_product(self)
+        if not os.path.exists(self.pulse_filepath):
+            open(self.pulse_filepath, 'a').close()
+
+        # lock files
+        fu.lock_directory_content(self.directory)
+
+        # restore inputs
+        self.restore_inputs()
+
+
+        return self.directory
+
+
+class Work(PulseLocalObject):
+    """
+        Resource downloaded locally to be modified
+    """
+    def __init__(self, resource):
+        self.project = resource.project
+        self.resource = resource
+        self.version = None
+        # TODO : this seems redundant and incoherent in wording
+        self.directory = self.resource.sandbox_path
+        self.input_data_filename = "input_data.json"
+        self.work_inputs_file = os.path.join(self.directory, self.input_data_filename)
+        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
+
+
+    def add_input(self, uri, input_name=None, consider_work_product=False, product_path=None):
+        """
+        add a product to the work inputs list
+        download it to local product if needed
+        uri can be mutable (ie: anna-mdl.abc) or not (ie : anna-mdl.abc@4)
+        if a mutable uri is given, the last version will be used
+
+        :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
+        :param uri: the product uri, can be mutable
+        :param consider_work_product: if set to True, Pulse will look in local work product to add the input
+        :return: return the product used for the input
+        """
+
+        if not uri_standards.is_valid(uri):
+            raise PulseError("malformed uri : " + uri)
+
+        if not input_name:
+            input_name = uri
+
+        # abort if input already exists
+        inputs = self.get_inputs(product_path)
+        if input_name in inputs:
+            raise PulseError("input already exists : " + input_name)
+
+        input_directory = self._get_input_directory(product_path)
+        input_data_filepath = os.path.join(input_directory, self.input_data_filename)
+        inputs[input_name] = uri
+        with open(input_data_filepath, "w") as write_file:
+            json.dump(inputs, write_file, indent=4, sort_keys=True)
+
+        return self.update_input(input_name, uri, consider_work_product, product_path)
 
     # TODO : directory should be product directory
     def remove_input(self, input_name, directory=None):
@@ -759,9 +767,8 @@ class Resource(PulseDbObject):
             for product in out_product_list:
                 work.create_product(product)
 
-        # get work input products if needed
-        for input_name, input_uri in work.get_inputs().items():
-            work.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
+        # restore work input products
+        work.restore_inputs()
 
         return work
 
