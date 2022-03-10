@@ -110,21 +110,28 @@ class PulseLocalObject:
         """
 
         root_directory = self._get_input_directory(product_path)
-        input_data_filepath = os.path.join(root_directory, self.input_data_filename)
+        input_data_filepath = os.path.join(root_directory, cfg.input_data_filename)
 
         if not os.path.exists(input_data_filepath):
             return {}
         with open(input_data_filepath, "r") as read_file:
             return json.load(read_file)
 
-    def restore_inputs(self):
+    def _get_input_data_files(self):
+        input_data_files = []
         for root, dirs, files in os.walk(self.directory):
             for name in files:
                 if name == cfg.input_data_filename:
-                    input_data_file = os.path.join(root, name)
-                    for input_name, input_uri in self.get_inputs(input_data_file).items():
-                        self.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
+                    input_data_files.append(os.path.join(root, name))
+        return input_data_files
 
+    # TODO this function could be private, no?
+    def restore_inputs(self, resolve_conflict=False):
+        for input_data_file in self._get_input_data_files():
+            # TODO : adding and removing the filename is not very elegant
+            root = os.path.dirname(input_data_file)
+            for input_name, input_uri in self.get_inputs(root).items():
+                self.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict, product_path=root)
 
     def update_input(self, input_name, uri=None, consider_work_product=False, product_path=None, resolve_conflict="error"):
         """
@@ -148,9 +155,11 @@ class PulseLocalObject:
         if input_name not in inputs:
             raise PulseError("unknown input : " + input_name)
 
+        old_uri = inputs[input_name]
+
         # if uri is not forced to a specific version, get the uri registered for this input as mutable
         if not uri:
-            uri = uri_standards.remove_version_from_uri(inputs[input_name])
+            uri = uri_standards.remove_version_from_uri(old_uri)
 
         # get the work commit version if needed
         work_version = 0
@@ -180,25 +189,27 @@ class PulseLocalObject:
         # add a linked directory
         subpath = uri_standards.convert_to_dict(uri)["subpath"]
 
-        input_directory = os.path.join(self._get_input_directory(product_path), cfg.work_input_dir)
+        input_directory = self._get_input_directory(product_path)
+        input_linked_directory = os.path.join(input_directory, cfg.work_input_dir)
 
-        if not os.path.exists(input_directory):
-            os.makedirs(input_directory)
+        if not os.path.exists(input_linked_directory):
+            os.makedirs(input_linked_directory)
 
-        if self.project.cfg.use_linked_input_directories and self.__class__.__name__ == "Work":
-            input_link_directory = os.path.join(input_directory, input_name.replace("/", "~"))
+        if self.project.cfg.use_linked_input_directories:
+            input_link_directory = os.path.join(input_linked_directory, input_name.replace("/", "~"))
 
             if os.path.exists(input_link_directory):
                 os.remove(input_link_directory)
             fu.make_directory_link(input_link_directory, os.path.join(commit.directory, subpath))
 
-        # updated input data entry to disk
-        inputs[input_name] = commit.uri + "/" + subpath
-        input_data_filepath = os.path.join(input_directory, self.input_data_filename)
-        with open(input_data_filepath, "w") as write_file:
-            json.dump(inputs, write_file, indent=4, sort_keys=True)
+        # updated input data entry to disk if needed
+        new_uri = commit.uri + "/" + subpath
+        if new_uri != old_uri:
+            inputs[input_name] = new_uri
+            input_data_filepath = os.path.join(input_directory, cfg.input_data_filename)
+            with open(input_data_filepath, "w") as write_file:
+                json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        #commit.add_product_user(self.directory)
         return commit
 
 
@@ -239,6 +250,11 @@ class Commit(PulseLocalObject, PulseDbObject):
 
         # make all files writable
         fu.lock_directory_content(self.directory, lock=False)
+        # remove input directories
+        for input_data_file in self._get_input_data_files():
+            input_dir = os.path.join(os.path.dirname(input_data_file), cfg.work_input_dir)
+            for dir in os.listdir(input_dir):
+                os.remove(os.path.join(input_dir, dir))
 
         shutil.rmtree(self.directory)
 
