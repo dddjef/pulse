@@ -125,8 +125,7 @@ class PulseLocalObject:
                     input_data_files.append(os.path.join(root, name))
         return input_data_files
 
-    # TODO this function could be private, no?
-    def restore_inputs(self, resolve_conflict=False):
+    def _restore_inputs(self, resolve_conflict=False):
         for input_data_file in self._get_input_data_files():
             # TODO : adding and removing the filename is not very elegant
             root = os.path.dirname(input_data_file)
@@ -293,7 +292,7 @@ class Commit(PulseLocalObject, PulseDbObject):
         fu.lock_directory_content(self.directory)
 
         # restore inputs
-        self.restore_inputs()
+        self._restore_inputs()
 
 
         return self.directory
@@ -784,7 +783,7 @@ class Resource(PulseDbObject):
                 work.create_product(product)
 
         # restore work input products
-        work.restore_inputs()
+        work._restore_inputs()
 
         return work
 
