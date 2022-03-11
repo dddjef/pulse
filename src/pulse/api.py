@@ -935,7 +935,6 @@ class Project:
         self.cfg = Config(self)
         self.work_directory = None
         self.work_data_directory = None
-        self.commit_product_data_directory = None
         self.work_product_data_directory = None
 
     def get_work_version(self, uri_string):
@@ -992,6 +991,8 @@ class Project:
         return the list of products in user work space
         :return: uri list
         """
+        # TODO : should be renamed get local products
+        # TODO : should list directory in local products
         if not os.path.exists(self.commit_product_data_directory):
             return []
         file_list = os.listdir(self.commit_product_data_directory)
@@ -1040,14 +1041,12 @@ class Project:
         self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
         self.work_data_directory = os.path.join(self.work_directory, cfg.pulse_data_dir, "works")
         product_root = os.path.join(self.cfg.get_product_user_root(), self.name)
-        self.commit_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "commit_products")
         self.work_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "work_products")
         self.initialize_sandbox()
 
     def initialize_sandbox(self):
         # create local data directories
         for directory in [self.work_data_directory,
-                          self.commit_product_data_directory,
                           self.work_product_data_directory]:
             if not os.path.isdir(directory):
                 os.makedirs(directory)
