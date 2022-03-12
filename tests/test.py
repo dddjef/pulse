@@ -58,7 +58,7 @@ class TestProjectSettings(unittest.TestCase):
         abc_product = commit.get_product("abc")
         # trash
         work.trash(no_backup=True)
-        prj.purge_unused_user_products()
+        prj.purge_unused_local_products()
         self.assertFalse(os.path.exists(os.path.join(
             utils.test_data_output_path,
             "works/env_var/ch_anna/model/V001/abc"
@@ -108,7 +108,7 @@ class TestProjectSettings(unittest.TestCase):
         abc_product = commit.get_product("abc")
         # trash
         work.trash(no_backup=True)
-        prj.purge_unused_user_products()
+        prj.purge_unused_local_products()
         # create another resource
         surf_resource = prj.create_resource("ch_anna", "surfacing")
         surf_work = surf_resource.checkout()
@@ -160,32 +160,34 @@ class TestResources(unittest.TestCase):
 
     def test_unused_time_on_purged_product(self):
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         product = self.anna_mdl_commit.get_product("abc")
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_purged_product(self):
         # test the dry mode
-        self.anna_abc_product_v1 = self.prj.get_commit("anna-mdl.abc@1")
-        self.assertTrue(os.path.exists(self.anna_abc_product_v1.directory))
-        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), ['anna-mdl.abc@1'])
-        self.assertTrue(os.path.exists(self.anna_abc_product_v1.directory))
+        self.anna_mdl_v1 = self.prj.get_commit("anna-mdl@1")
+        self.assertTrue(os.path.exists(self.anna_mdl_v1.directory))
+        self.assertEqual(['anna-mdl@1'], self.prj.purge_unused_local_products(dry_mode=True))
+
+        # test dry mode don't remove the directory
+        self.assertTrue(os.path.exists(self.anna_mdl_v1.directory))
 
         # test product currently in use can't be purged
         self.anna_surf = self.prj.create_resource("anna", "surfacing")
         self.anna_surf_work = self.anna_surf.checkout()
-        self.anna_surf_work.add_input(self.anna_abc_product_v1.uri)
-        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=True), [])
+        self.anna_surf_work.add_input(self.anna_mdl_v1.uri)
+        self.assertEqual(self.prj.purge_unused_local_products(dry_mode=True), [])
 
         # test the normal mode
         self.anna_surf_work.trash()
-        self.assertEqual(self.prj.purge_unused_user_products(dry_mode=False), ['anna-mdl.abc@1'])
+        self.assertEqual(self.prj.purge_unused_local_products(dry_mode=False), ['anna-mdl.abc@1'])
         self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
 
     def test_manipulating_trashed_work(self):
         wip_product = self.anna_mdl_work.create_product("wip")
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
         # add a trashed product
         with self.assertRaises(PulseDatabaseMissingObject):
@@ -222,7 +224,7 @@ class TestResources(unittest.TestCase):
     def test_checkout(self):
         # remove a work with a commit product
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         # ensure the product directory is missing
         self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
         # checkout the resource again
@@ -342,7 +344,7 @@ class TestResources(unittest.TestCase):
         anna_rig_work.commit("comment test")
         anna_rig_work.trash()
         anna_surf_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         self.assertFalse(os.path.exists(anna_surf_textures.directory))
         rig_v01 = anna_rig_resource.get_commit(1)
         self.assertTrue('ch_anna-surfacing.textures@1' in rig_v01.products_inputs)
@@ -364,7 +366,7 @@ class TestResources(unittest.TestCase):
         anna_rig_actor = commit.get_product("actor_anim")
         anna_rig_work.trash()
         anna_surf_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         self.assertFalse(os.path.exists(anna_surf_textures.directory))
         anim_resource = self.prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
@@ -415,7 +417,7 @@ class TestResources(unittest.TestCase):
         anna_srf_work.trash()
         # remove the product
         # TODO : remove rename purge_unused_user_products() to purge_unused_cache_products()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         # checkout the work
         anna_srf_work = anna_srf_resource.checkout()
         # test the input is restored
@@ -577,7 +579,7 @@ class TestResources(unittest.TestCase):
 
     def test_product_download(self):
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         product = self.prj.get_commit("anna-mdl.abc@1")
         self.assertFalse(os.path.exists(product.directory))
         self.assertFalse(os.path.exists(product.product_users_file))
@@ -670,13 +672,13 @@ class TestResources(unittest.TestCase):
         utils.add_file_to_directory(low_texture.directory, "tex.jpg")
         self.anna_mdl_work.commit()
         self.anna_mdl_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         self.assertFalse(os.path.exists(low_texture.directory))
         anna_rig_work.add_input(low_texture.uri)
         self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
 
         # test if downloaded product used as input is not purged
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
 
         # test the input is a work product
@@ -759,7 +761,7 @@ class TestResources(unittest.TestCase):
         # test update input can download missing product
         anna_rig_work.commit()
         anna_rig_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         anna_rig_resource.checkout()
         self.assertTrue("V4.txt" in os.listdir(input_dir))
 

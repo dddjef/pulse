@@ -156,7 +156,7 @@ def trash_resource(args):
     dict_uri = uri_standards.convert_to_dict(args.uri)
     resource = project.get_resource(dict_uri['entity'], dict_uri['resource_type'])
     resource.get_work().trash()
-    project.purge_unused_user_products(resource_filter=resource)
+    project.purge_unused_local_products(resource_filter=resource)
     print('resource trashed "' + resource.uri + '"')
 
 

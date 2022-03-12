@@ -88,6 +88,50 @@ class PulseLocalObject:
         abstract class for all objects which can be downloaded
     """
 
+    def init_local_data_file(self):
+        """
+        create the local data file on user space
+        :return:
+        """
+        if not os.path.isfile(self.product_users_file):
+            fu.json_list_init(self.product_users_file)
+
+    def add_product_user(self, user_directory):
+        """
+        add a local resource or product as product's user
+        :param user_directory: the resource path
+        """
+        fu.json_list_append(self.product_users_file, user_directory)
+
+    def remove_product_user(self, user_directory):
+        """
+        remove the specified local resource or product from the product's user
+        :param user_directory: the resource path
+        """
+        fu.json_list_remove(self.product_users_file, user_directory)
+
+    def get_product_users(self):
+        """
+        return the list of local resources or product using this product
+        :return: resources filepath list
+        """
+        return fu.json_list_get(self.product_users_file)
+
+    def get_unused_time(self):
+        """
+        return the time since the local product has not been used by any resource or product.
+        Mainly used to purge local products from pulse's cache
+        :return: time value
+        """
+        if not os.path.exists(self.directory):
+            return -1
+        users = self.get_product_users()
+        if users:
+            return -1
+        if os.path.exists(self.product_users_file):
+            return time.time() - os.path.getmtime(self.product_users_file) + 0.01
+        else:
+            return time.time() - os.path.getctime(self.directory)
 
     def _get_input_directory(self, product_path):
         # if product path is set, test the product path location exists
@@ -209,6 +253,8 @@ class PulseLocalObject:
             with open(input_data_filepath, "w") as write_file:
                 json.dump(inputs, write_file, indent=4, sort_keys=True)
 
+        commit.add_product_user(self.directory)
+
         return commit
 
 
@@ -230,7 +276,6 @@ class Commit(PulseLocalObject, PulseDbObject):
         """ list of product names"""
         self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
         self.directory = os.path.join(resource.get_products_directory(self.version))
-        # TODO : rename commit_product_data_directory
         self.product_users_file = os.path.normpath(os.path.join(
             self.project.commit_product_data_directory,
             fu.uri_to_json_filename(self.uri)
@@ -294,7 +339,6 @@ class Commit(PulseLocalObject, PulseDbObject):
         # restore inputs
         self._restore_inputs()
 
-
         return self.directory
 
 
@@ -311,7 +355,10 @@ class Work(PulseLocalObject):
         self.input_data_filename = "input_data.json"
         self.work_inputs_file = os.path.join(self.directory, self.input_data_filename)
         self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
-
+        self.product_users_file = os.path.normpath(os.path.join(
+            self.project.work_product_data_directory,
+            fu.uri_to_json_filename(self.resource.uri)
+        ))
 
     def add_input(self, uri, input_name=None, consider_work_product=False, product_path=None):
         """
@@ -414,6 +461,10 @@ class Work(PulseLocalObject):
             if not os.path.exists(work_input_path):
                 os.makedirs(work_input_path)
 
+        # init product users file
+        if not os.path.isfile(self.product_users_file):
+            fu.json_list_init(self.product_users_file)
+
     def read(self):
         """
         read the work data from user work space
@@ -476,8 +527,16 @@ class Work(PulseLocalObject):
         commit.project.cnx.repositories[self.resource.repository].upload_resource_commit(
             commit, self.directory, commit.files, commit.products)
 
-
         commit.db_create()
+        # TODO : if not commit keeps product, remove the commit
+        if keep_products_in_cache:
+            os.rename(self.product_users_file, commit.product_users_file)
+            fu.lock_directory_content(commit.directory)
+        else:
+            pass
+        # else convert the work product data file to a commit product data file
+
+
         self.resource.set_last_version(self.version)
 
         # increment the work and the products files
@@ -954,9 +1013,9 @@ class Project:
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
     # TODO : rename as purge_unused_cache_products
-    def purge_unused_user_products(self, unused_days=0, resource_filter=None, dry_mode=False):
+    def purge_unused_local_products(self, unused_days=0, resource_filter=None, dry_mode=False):
         """
-        remove unused products from the user product space, based on a unused time
+        remove unused products from the user local product space, based on a unused time
 
         :param unused_days: for how many days this products have not been used by the user
         :param resource_filter: affect only products with the uri starting by the given string
@@ -965,6 +1024,7 @@ class Project:
         """
         purged_products = []
         for uri in self.get_local_commit_products():
+            print(uri)
             if resource_filter:
                 if not uri.startswith(resource_filter.uri):
                     continue

@@ -116,7 +116,7 @@ class TestFTP(unittest.TestCase):
         template_work.commit()
         # self.assertTrue(os.path.exists(os.path.join(user_works, "test\\rig\\_template")))
         template_work.trash()
-        self.prj.purge_unused_user_products()
+        self.prj.purge_unused_local_products()
         self.assertFalse(os.path.exists(os.path.join(utils.sandbox_work_path, test_project_name, "_template-rig")))
         template_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(utils.sandbox_work_path, test_project_name, "_template-rig")))
