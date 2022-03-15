@@ -592,6 +592,13 @@ class Work(PulseLocalObject):
             if os.path.exists(path) and not fu.test_path_write_access(path):
                 raise PulseError("can't move folder " + path)
 
+        # TODO : unregister work product
+
+        # unregister from products
+        for input_product_uri in self.get_inputs():
+            input_product = self.project.get_commit(input_product_uri)
+            if os.path.exists(input_product.directory):
+                input_product.remove_product_user(self.directory)
 
         # create the trash work directory
         trash_directory = self._get_trash_directory()
