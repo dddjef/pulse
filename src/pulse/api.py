@@ -359,6 +359,8 @@ class Work(PulseLocalObject):
             self.project.work_product_data_directory,
             fu.uri_to_json_filename(self.resource.uri)
         ))
+        self.output_directory = os.path.join(self.directory, cfg.work_output_dir)
+        self.input_directory = os.path.join(self.directory, cfg.work_input_dir)
 
     def add_input(self, uri, input_name=None, consider_work_product=False, product_path=None):
         """
