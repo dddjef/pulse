@@ -100,12 +100,13 @@ class TestProjectSettings(unittest.TestCase):
         work = resource.checkout()
         # test there's no output directory
         self.assertFalse(os.path.exists(os.path.join(work.directory, "output")))
+
         # add an output product
-        work.create_product("abc")
+        os.makedirs(fu.path_join(work.output_directory, "abc"))
+
         # commit
         utils.add_file_to_directory(work.directory)
-        commit = work.commit()
-        abc_product = commit.get_product("abc")
+        anna_mdl_v1 = work.commit()
         # trash
         work.trash(no_backup=True)
         prj.purge_unused_local_products()
@@ -113,7 +114,7 @@ class TestProjectSettings(unittest.TestCase):
         surf_resource = prj.create_resource("ch_anna", "surfacing")
         surf_work = surf_resource.checkout()
         # require this product
-        surf_work.add_input(abc_product.uri)
+        surf_work.add_input(anna_mdl_v1.uri)
         # test the product location
         self.assertFalse(os.path.exists(os.path.join(surf_work.directory, "input")))
         surf_work.commit()
@@ -416,7 +417,6 @@ class TestResources(unittest.TestCase):
 
         anna_srf_work.trash()
         # remove the product
-        # TODO : remove rename purge_unused_user_products() to purge_unused_cache_products()
         self.prj.purge_unused_local_products()
         # checkout the work
         anna_srf_work = anna_srf_resource.checkout()
