@@ -825,17 +825,17 @@ class Resource(PulseDbObject):
             os.makedirs(destination_folder)
         else:
             self.project.cnx.repositories[source_resource.repository].download_work(source_commit, destination_folder)
-            out_product_list = source_commit.products
+            # TODO : commit products should not be registered as before, but as a directory tree
+            # out_product_list = source_commit.products
 
             # test for local work product in conflict with incoming work input product
             for input_name, uri in source_commit.products_inputs.items():
                 self.project.resolve_local_product_conflict(uri, resolve_conflict)
 
         work.write()
-        # recreate empty output products
-        if recreate_products:
-            for product in out_product_list:
-                work.create_product(product)
+        # TODO recreate empty output products
+        # if recreate_products:
+
 
         # restore work input products
         work._restore_inputs()

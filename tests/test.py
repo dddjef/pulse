@@ -309,15 +309,14 @@ class TestResources(unittest.TestCase):
         source_resource = self.prj.create_resource("source", "surface")
         source_work = source_resource.checkout()
         utils.add_file_to_directory(source_work.directory, shader_work_file)
-        os.makedirs(os.path.join(source_work.output_directory, "shader"))
-        utils.add_file_to_directory(source_work.output_directory, "shader", shader_product_file)
+        utils.add_file_to_directory(os.path.join(source_work.output_directory, "shader"), shader_product_file)
         source_work.commit()
 
         anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=source_resource)
         anna_shd_work = anna_shd_resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(anna_shd_work.directory, shader_work_file)))
         self.assertFalse(os.path.exists(os.path.join(
-            anna_shd_work.get_product("shader").directory,
+            anna_shd_work.output_directory, "shader",
             shader_product_file)))
 
     def test_trashing_work_errors(self):
