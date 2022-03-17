@@ -426,10 +426,10 @@ class TestResources(unittest.TestCase):
         anna_srf_work.remove_input("ch_anna-modeling/ABC")
         anna_mdl_work.trash()
         # create a new output
-        os.makedirs(fu.path_join(anna_srf_work.output_directory, "/ld"))
+        os.makedirs(fu.path_join(anna_srf_work.output_directory, "ld"))
         # test add an input to LD product
         anna_srf_work.add_input("ch_anna-modeling@2/ABC", product_path="ld")
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.output_directory, "/ld/input/ch_anna-modeling@2~ABC/test.abc")))
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.output_directory, "ld/input/ch_anna-modeling@2~ABC/test.abc")))
 
         # commit surfacing
         anna_srf_v2 = anna_srf_work.commit()

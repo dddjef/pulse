@@ -5,8 +5,6 @@ Created on 07 September 2020
 
 import os
 import glob
-from pathlib import Path
-from typing import FrozenSet, List
 import pulse.file_utils as fu
 import shutil
 import time
@@ -54,18 +52,12 @@ class PulseDbObject:
         """
             read all object attributes from database.
 
-            Will pass if the database have an attribute missing on the object.
-            Returns ``None`` if nothing found.
+            Will pass if the database have an attribute missing on the object
 
-            :return: PulseDbObject or None
+            :return: PulseDbObject
             :rtype: PulseDbObject
         """
         data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
-        
-        # Check data is valid
-        if not data:
-            return
-
         for k in data:
             if k not in vars(self):
                 continue
@@ -819,11 +811,6 @@ class Resource(PulseDbObject):
                 try:
                     if self.entity != cfg.template_name:
                         source_resource = self.project.get_resource(cfg.template_name, self.resource_type)
-                        
-                        # If resource not found, raise missing
-                        if not source_resource:
-                            raise PulseDatabaseMissingObject(f"Database object not found.")
-                        
                         source_commit = source_resource.get_commit("last")
                 except PulseDatabaseMissingObject:
                     pass
@@ -1253,49 +1240,16 @@ class Connection:
         )
 
 
-def get_adapter_directories(adapter_type: str)-> List[Path]:
-    """Get all adapter directories.
-
-    By default, native Pulse's adapters directory is included.
-
-    The user can declare a list of directories using the PULSE_ADAPTERS env var.
-    The folders structure must be respected for every dir:
-    ```
-    {PULSE_ADAPTERS}/
-    |--database_adapters
-    |--repository_adapters
-    ```
-
-    Args:
-        adapter_type (str): Adapter type (databases or repository)
-
-    Returns:
-        List[Path]: List of all path directories for the adapter type
-    """
-    adapter_directory_name = f"{adapter_type}_adapters"
-    pulse_adapters_path = Path(Path(__file__).parent, adapter_directory_name)
-    user_directories = [Path(path, adapter_directory_name) for path in os.environ.get("PULSE_ADAPTERS", "").split(",")]
-    return [pulse_adapters_path] + [path for path in user_directories if path.exists()]
+def get_adapter_directory_path(adapter_type):
+    pulse_filepath = os.path.dirname(os.path.realpath(__file__))
+    return os.path.join(pulse_filepath, adapter_type + "_adapters")
 
 
-def get_adapter_list(adapter_type: str) -> FrozenSet[str]:
-    """Get list of existing adapters' names.
-
-    Args:
-        adapter_type (str): Adapter type to get names of
-
-    Returns:
-        FrozenSet[str]: FrozenSet of adapters names
-    """
-    files = [dir.glob("*.py") for dir in get_adapter_directories(adapter_type)]
-    files = set()
-    for dir in get_adapter_directories(adapter_type):
-        files.update((filepath.stem for filepath in dir.glob("*.py")))
-
-    # Remove unwanted modules TODO interface class must be in another directory as a main class to inherit from
-    files.remove("interface_class")
-    files.remove("__init__")  # TODO __init__ shouldn't be necessary
-    return frozenset(files)
+def get_adapter_list(adapter_type):
+    files = [os.path.basename(x) for x in glob.glob(os.path.join(get_adapter_directory_path(adapter_type), "*.py"))]
+    files.remove("interface_class.py")
+    files.remove("__init__.py")
+    return [os.path.splitext(x)[0] for x in files]
 
 
 def import_adapter(adapter_type, adapter_name):
@@ -1306,20 +1260,17 @@ def import_adapter(adapter_type, adapter_name):
     :param adapter_name:
     :return: the adapter module
     """
-    adapters_directories = get_adapter_directories(adapter_type)
-    
-    # Try to find adapter name in all directories
-    for adapter_dir_path in adapters_directories:
-        path = adapter_dir_path.joinpath(f"{adapter_name}.py")
-        if path.is_file():  # Load module
-            spec = importlib.util.spec_from_file_location(adapter_type, path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
+    path = os.path.join(get_adapter_directory_path(adapter_type), adapter_name + ".py")
 
-            return mod
-
-    # Failed to find adapter, raise error
-    raise ModuleNotFoundError(f"{adapter_name} not found in none of these locations:\n{chr(10).join([path.as_posix() for path in adapters_directories])}")
+    try:
+        # python 3 import
+        spec = importlib.util.spec_from_file_location(adapter_type, path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    except NameError:
+        # python 2 import
+        mod = imp.load_source(adapter_type, path)
+    return mod
 
 
 def get_project_from_path(path, username="", password=""):
