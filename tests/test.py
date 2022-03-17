@@ -309,8 +309,8 @@ class TestResources(unittest.TestCase):
         source_resource = self.prj.create_resource("source", "surface")
         source_work = source_resource.checkout()
         utils.add_file_to_directory(source_work.directory, shader_work_file)
-        source_product = source_work.create_product("shader")
-        utils.add_file_to_directory(source_product.directory, shader_product_file)
+        os.makedirs(os.path.join(source_work.output_directory, "shader"))
+        utils.add_file_to_directory(source_work.output_directory, "shader", shader_product_file)
         source_work.commit()
 
         anna_shd_resource = self.prj.create_resource("ch_anna", "surface", source_resource=source_resource)
@@ -395,7 +395,7 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a sub resource
-        abc_work_product = os.path.join(anna_mdl_work.directory, "output/abc")
+        abc_work_product = os.path.join(anna_mdl_work.output_directory, "abc")
         os.makedirs(abc_work_product)
         # now products directory should exists)
         utils.add_file_to_directory(abc_work_product, "test.abc")
@@ -408,7 +408,7 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_srf_resource.last_version, 0)
         anna_srf_work = anna_srf_resource.checkout()
         anna_srf_work.add_input("ch_anna-modeling/ABC")
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "input/ch_anna-modeling~ABC/test.abc")))
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
 
         anna_srf_work.commit("with input")
         self.assertEqual(anna_srf_resource.last_version, 1)
@@ -421,15 +421,15 @@ class TestResources(unittest.TestCase):
         # checkout the work
         anna_srf_work = anna_srf_resource.checkout()
         # test the input is restored
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "input/ch_anna-modeling~ABC/test.abc")))
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
 
         anna_srf_work.remove_input("ch_anna-modeling/ABC")
         anna_mdl_work.trash()
         # create a new output
-        os.makedirs(os.path.join(anna_srf_work.directory, "output/ld"))
+        os.makedirs(fu.path_join(anna_srf_work.output_directory, "/ld"))
         # test add an input to LD product
         anna_srf_work.add_input("ch_anna-modeling@2/ABC", product_path="ld")
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.directory, "output/ld/input/ch_anna-modeling@2~ABC/test.abc")))
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.output_directory, "/ld/input/ch_anna-modeling@2~ABC/test.abc")))
 
         # commit surfacing
         anna_srf_v2 = anna_srf_work.commit()
