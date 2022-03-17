@@ -28,6 +28,9 @@ def reset_test_data(root=test_data_output_path):
 
 
 def add_file_to_directory(directory, filename="any_file.txt", source_filepath=None):
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+
     if not source_filepath:
         open(os.path.join(directory, filename), 'a').close()
     else:

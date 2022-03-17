@@ -48,14 +48,13 @@ class TestProjectSettings(unittest.TestCase):
         # test its location
         self.assertTrue(os.path.exists(os.path.join(utils.test_data_output_path, "works/env_var/ch_anna-model")))
         # add an output product
-        work.create_product("abc")
+        utils.add_file_to_directory(os.path.join(work.output_directory, "abc"), "model.abc")
         # test the product folder location
         self.assertTrue(
             os.path.exists(os.path.join(utils.test_data_output_path, "products/env_var/ch_anna-model/V001/abc")))
         # commit
         utils.add_file_to_directory(work.directory)
-        commit = work.commit()
-        abc_product = commit.get_product("abc")
+        anna_model_v1 = work.commit()
         # trash
         work.trash(no_backup=True)
         prj.purge_unused_local_products()
@@ -67,7 +66,7 @@ class TestProjectSettings(unittest.TestCase):
         surf_resource = prj.create_resource("ch_anna", "surfacing")
         surf_work = surf_resource.checkout()
         # require this product
-        surf_work.add_input(abc_product.uri)
+        surf_work.add_input(anna_model_v1.uri)
         # test the product location
         self.assertTrue(os.path.exists(os.path.join(
             utils.test_data_output_path,
