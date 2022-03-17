@@ -99,7 +99,7 @@ class TestProjectSettings(unittest.TestCase):
         # check out the resource
         work = resource.checkout()
         # test there's no output directory
-        self.assertFalse(os.path.exists(os.path.join(work.directory, "output")))
+        self.assertFalse(os.path.exists(work.output_directory))
 
         # add an output product
         os.makedirs(fu.path_join(work.output_directory, "abc"))
@@ -116,7 +116,7 @@ class TestProjectSettings(unittest.TestCase):
         # require this product
         surf_work.add_input(anna_mdl_v1.uri)
         # test the product location
-        self.assertFalse(os.path.exists(os.path.join(surf_work.directory, "input")))
+        self.assertFalse(os.path.exists(work.input_directory))
         surf_work.commit()
 
 
