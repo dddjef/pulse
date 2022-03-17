@@ -769,7 +769,7 @@ class Resource(PulseDbObject):
         except PulseError:
             raise PulseMissingNode ("missing work : " + self.uri)
 
-    def checkout(self, index="last", destination_folder=None, recreate_products=True, resolve_conflict="error"):
+    def checkout(self, index="last", destination_folder=None, resolve_conflict="error"):
         """
         Download the resource work files in the user work space.
         Download related dependencies if they are not available in user products space
