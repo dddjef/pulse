@@ -294,14 +294,12 @@ class TestResources(unittest.TestCase):
         template = self.prj.create_template("shapes")
         template_work = template.checkout()
         utils.add_file_to_directory(template_work.directory)
-        product = template_work.create_product("abc")
-        utils.add_file_to_directory(product.directory, "test.abc")
+        utils.add_file_to_directory(template_work.output_directory, "test.abc")
         template_work.commit()
 
         resource = self.prj.create_resource("joe", "shapes")
         work = resource.checkout()
-        work_abc = work.get_product("abc")
-        self.assertFalse(os.path.exists(work_abc.directory + "/test.abc"))
+        self.assertFalse(os.path.exists(work.output_directory + "/test.abc"))
 
     def test_check_out_from_another_resource(self):
         shader_work_file = "shader_work_file.ma"
@@ -321,7 +319,7 @@ class TestResources(unittest.TestCase):
 
     def test_trashing_work_errors(self):
         froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
-        froga_mdl_work.create_product("abc")
+        utils.add_file_to_directory(os.path.join(froga_mdl_work.output_directory, "abc"), "char.abc")
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
         anna_surf_work.add_input("froga-mdl.abc", consider_work_product=True)
 
