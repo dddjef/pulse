@@ -183,16 +183,13 @@ class TestResources(unittest.TestCase):
         self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
 
     def test_manipulating_trashed_work(self):
-        wip_product = self.anna_mdl_work.create_product("wip")
+        # ensure a file inside output won't be an issue when trashing the work
+        utils.add_file_to_directory(self.anna_mdl_work.output_directory, "wip.abc")
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
         anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
-        # add a trashed product
-        with self.assertRaises(PulseDatabaseMissingObject):
-            anna_surf_work.add_input(wip_product.uri)
-        # create product on a trashed work
-        with self.assertRaises(PulseMissingNode):
-            self.anna_mdl_work.create_product("abc")
+        # ensure trashed worked have no directory anymore
+        self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
         # commit a trashed work
         with self.assertRaises(PulseMissingNode):
             self.anna_mdl_work.commit()
@@ -635,8 +632,8 @@ class TestResources(unittest.TestCase):
         work = resource.checkout()
         self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_output_dir)))
         # ensure the output directory point to the current work product
-        work.create_product("export")
-        self.assertTrue(os.path.exists(os.path.join(work.directory, cfg.work_output_dir, "export")))
+        os.makedirs(os.path.join(work.output_directory, "export"))
+        self.assertTrue(os.path.exists(os.path.join(work.get_products_directory(), "export")))
 
     def test_work_add_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
