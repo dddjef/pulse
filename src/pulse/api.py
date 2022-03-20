@@ -354,16 +354,20 @@ class Work(PulseLocalObject):
         self.output_directory = os.path.join(self.directory, cfg.work_output_dir)
         self.input_directory = os.path.join(self.directory, cfg.work_input_dir)
 
+# TODO : maybe it will be clearer to have another function for product's input. Here it's not really clear that specify
+    # an empty string should affect the products
     def add_input(self, uri, input_name=None, consider_work_product=False, product_path=None):
         """
         add a product to the work inputs list
         download it to local product if needed
-        uri can be mutable (ie: anna-mdl.abc) or not (ie : anna-mdl.abc@4)
+        uri can be mutable (ie: anna-mdl/abc) or not (ie : anna-mdl@4/abc)
         if a mutable uri is given, the last version will be used
+        if a product path is specified, it should exists before or it will raise a pulse error
 
         :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
         :param uri: the product uri, can be mutable
         :param consider_work_product: if set to True, Pulse will look in local work product to add the input
+        :param product_path: if specified, the input will be used for an output subdirectory
         :return: return the product used for the input
         """
 
@@ -377,6 +381,13 @@ class Work(PulseLocalObject):
         inputs = self.get_inputs(product_path)
         if input_name in inputs:
             raise PulseError("input already exists : " + input_name)
+
+        # abort if product path doesn't exists
+        if product_path:
+            subdirectory = os.path.join(self.output_directory, product_path)
+            if not os.path.exists(subdirectory):
+                raise PulseError("missing subdirectory : " + subdirectory)
+
 
         input_directory = self._get_input_directory(product_path)
         input_data_filepath = os.path.join(input_directory, self.input_data_filename)

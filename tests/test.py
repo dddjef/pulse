@@ -138,7 +138,7 @@ class TestResources(unittest.TestCase):
         utils.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
         self.anna_abc_work_product = os.path.join(self.anna_mdl_work.output_directory, "abc")
         utils.add_file_to_directory(self.anna_abc_work_product, "anna.abc")
-        self.anna_mdl_commit_v1 = self.anna_mdl_work.commit()
+        self.anna_mdl_v1 = self.anna_mdl_work.commit()
 
     def test_delete_project(self):
         self.cnx.delete_project(test_project_name)
@@ -159,7 +159,7 @@ class TestResources(unittest.TestCase):
     def test_unused_time_on_purged_product(self):
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
-        product = self.anna_mdl_commit_v1.get_product("abc")
+        product = self.anna_mdl_v1.get_product("abc")
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_purged_product(self):
@@ -787,11 +787,24 @@ class TestResources(unittest.TestCase):
     def test_product_add_input(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_hd = anna_rig_work.create_product("hd")
-        anna_rig_hd.add_input(self.anna_abc_product_v1.uri)
-        # test products don't have a "input" linked directory
-        self.assertFalse(os.path.exists(os.path.join(anna_rig_hd.directory, "input")))
 
+        # add an input to missing output subdirectory should raise an error
+        with self.assertRaises(PulseError):
+            anna_rig_work.add_input(self.anna_mdl_v1.uri + "/abc", product_path="hd")
+
+        # make the missing output subdirectory and test products have an "input" linked directory
+        os.makedirs(os.path.join(anna_rig_work.output_directory, "hd"))
+        anna_rig_work.add_input(self.anna_mdl_v1.uri + "/abc", product_path="hd")
+        self.assertTrue(os.path.exists(os.path.join(
+            anna_rig_work.output_directory,
+            "hd",
+            cfg.work_input_dir,
+            self.anna_mdl_v1.uri + "~abc"
+        )))
+
+        # add an existing input to a subdirectory should raise an error
+        with self.assertRaises(PulseError):
+            anna_rig_work.add_input(self.anna_mdl_v1.uri + "/abc", product_path="hd")
 
 if __name__ == '__main__':
     unittest.main()
