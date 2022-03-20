@@ -136,11 +136,9 @@ class TestResources(unittest.TestCase):
         self.anna_mdl = self.prj.create_resource("anna", "mdl")
         self.anna_mdl_work = self.anna_mdl.checkout()
         utils.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
-        self.anna_abc_work_product = os.path.join(self.anna_mdl_work.directory, "output/abc")
-        os.makedirs(self.anna_abc_work_product)
+        self.anna_abc_work_product = os.path.join(self.anna_mdl_work.output_directory, "abc")
         utils.add_file_to_directory(self.anna_abc_work_product, "anna.abc")
-        self.anna_mdl_commit = self.anna_mdl_work.commit()
-        self.anna_abc_product_v1 = self.prj.get_commit("anna-mdl.abc@1")
+        self.anna_mdl_commit_v1 = self.anna_mdl_work.commit()
 
     def test_delete_project(self):
         self.cnx.delete_project(test_project_name)
@@ -161,7 +159,7 @@ class TestResources(unittest.TestCase):
     def test_unused_time_on_purged_product(self):
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
-        product = self.anna_mdl_commit.get_product("abc")
+        product = self.anna_mdl_commit_v1.get_product("abc")
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_purged_product(self):
@@ -225,16 +223,13 @@ class TestResources(unittest.TestCase):
         # remove a work with a commit product
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
-        # ensure the product directory is missing
-        self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
+        # ensure the absolute product directory is missing
+        self.assertFalse(os.path.exists(self.anna_mdl_work.get_products_directory()))
         # checkout the resource again
         work = self.anna_mdl.checkout()
         # test the empty product has been restored
-        product = work.get_product("abc")
-        self.assertTrue(os.path.exists(product.directory))
-        # test get a missing product raise an error
-        with self.assertRaises(PulseError):
-            work.get_product("abcd")
+        self.assertTrue(os.path.exists(self.anna_mdl_work.get_products_directory()))
+
 
     def test_work_checkout_product_conflict(self):
         os.environ["USER_VAR"] = "userA"
