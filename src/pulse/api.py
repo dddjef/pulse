@@ -355,19 +355,19 @@ class Work(PulseLocalObject):
         self.input_directory = os.path.join(self.directory, cfg.work_input_dir)
 
 # TODO : maybe it will be clearer to have another function for product's input. Here it's not really clear that specify
-    # an empty string should affect the products
+# TODO : an empty string should affect the products. But in this case there should also be a "update product inputs"
     def add_input(self, uri, input_name=None, consider_work_product=False, product_path=None):
         """
         add a product to the work inputs list
         download it to local product if needed
-        uri can be mutable (ie: anna-mdl/abc) or not (ie : anna-mdl@4/abc)
+        uri can be mutable (ie: anna-mdl) or not (ie : anna-mdl@4)
         if a mutable uri is given, the last version will be used
-        if a product path is specified, it should exists before or it will raise a pulse error
+        uri can have a subpath to download only a commit part, ie : anna-mdl@4/ld or anna-mdl/ld
 
         :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
         :param uri: the product uri, can be mutable
         :param consider_work_product: if set to True, Pulse will look in local work product to add the input
-        :param product_path: if specified, the input will be used for an output subdirectory
+        :param product_path: if specified, the input will be used for an output subdirectory. Product path should exists
         :return: return the product used for the input
         """
 
