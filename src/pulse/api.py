@@ -358,8 +358,9 @@ class Work(PulseLocalObject):
 # TODO : an empty string should affect the products. But in this case there should also be a "update product inputs"
     def add_input(self, uri, input_name=None, consider_work_product=False, product_path=None):
         """
-        add a product to the work inputs list
-        download it to local product if needed
+        add an existing product to the work inputs list. When an input is registered, it will be downloaded each time
+        the resource work will be checkout.
+        the product is downloaded to local product if needed, and its own inputs could be recursively downloaded if present
         uri can be mutable (ie: anna-mdl) or not (ie : anna-mdl@4)
         if a mutable uri is given, the last version will be used
         uri can have a subpath to download only a commit part, ie : anna-mdl@4/ld or anna-mdl/ld
@@ -387,7 +388,6 @@ class Work(PulseLocalObject):
             subdirectory = os.path.join(self.output_directory, product_path)
             if not os.path.exists(subdirectory):
                 raise PulseError("missing subdirectory : " + subdirectory)
-
 
         input_directory = self._get_input_directory(product_path)
         input_data_filepath = os.path.join(input_directory, self.input_data_filename)
