@@ -1042,7 +1042,6 @@ class Project:
         """
         purged_products = []
         for uri in self.get_local_commit_products():
-            print(uri)
             if resource_filter:
                 if not uri.startswith(resource_filter.uri):
                     continue
