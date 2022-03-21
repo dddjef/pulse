@@ -404,12 +404,13 @@ class Work(PulseLocalObject):
 
         return self.update_input(input_name, uri, consider_work_product, product_path)
 
-    # TODO : directory should be product directory
+    # TODO : if no input is specified, all inputs could removed
     def remove_input(self, input_name, product_path=None):
         """
         remove a product from inputs list
 
         :param input_name: input_name
+        :param product_path: remove a work product subdirectory input
         """
         inputs = self.get_inputs()
         if input_name not in inputs:
