@@ -568,15 +568,15 @@ class TestResources(unittest.TestCase):
     def test_product_download(self):
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
-        product = self.prj.get_commit("anna-mdl.abc@1")
-        self.assertFalse(os.path.exists(product.directory))
-        self.assertFalse(os.path.exists(product.product_users_file))
-        product.download()
-        self.assertTrue(os.path.exists(product.directory))
-        self.assertTrue(os.path.exists(product.product_users_file))
-        product.remove_from_local_products()
-        self.assertFalse(os.path.exists(product.directory))
-        self.assertFalse(os.path.exists(product.product_users_file))
+        anna_mdl_V1 = self.prj.get_commit("anna-mdl@1")
+        self.assertFalse(os.path.exists(anna_mdl_V1.directory))
+        self.assertFalse(os.path.exists(anna_mdl_V1.product_users_file))
+        anna_mdl_V1.download()
+        self.assertTrue(os.path.exists(anna_mdl_V1.directory))
+        self.assertTrue(os.path.exists(anna_mdl_V1.product_users_file))
+        anna_mdl_V1.remove_from_local_products()
+        self.assertFalse(os.path.exists(anna_mdl_V1.directory))
+        self.assertFalse(os.path.exists(anna_mdl_V1.product_users_file))
 
     def test_product_download_conflict(self):
         os.environ["USER_VAR"] = "userA"
