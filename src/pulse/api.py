@@ -367,7 +367,8 @@ class Work(PulseLocalObject):
 
         :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
         :param uri: the product uri, can be mutable
-        :param consider_work_product: if set to True, Pulse will look in local work product to add the input
+        :param consider_work_product: if set to True, Pulse will look in local "WIP" product to add the input. The wip
+        product has to be commit before this work is commit.
         :param product_path: if specified, the input will be used for an output subdirectory. Product path should exists
         :return: return the product used for the input
         """
