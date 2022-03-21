@@ -369,7 +369,13 @@ class Work(PulseLocalObject):
         :param uri: the product uri, can be mutable
         :param consider_work_product: if set to True, Pulse will look in local "WIP" product to add the input. The wip
         product has to be commit before this work is commit.
-        :param product_path: if specified, the input will be used for an output subdirectory. Product path should exists
+        :param product_path: if specified, the input will be used for a work product subdirectory.
+        registering an input for a work product subdirectory will only download the product if needed
+        ie : let's say "anna-rig" has a "/high" and "/low" product subdirectory. If a "anna-surfacing" is registered only
+        for the "/high" subdirectory, when "anna-rig/low" will be downloaded, "anna-surfacing" won't be dowloaded
+        Product path should start with "/" which represent work product root directory.
+        ie : for work resource "anna-mdl", product path "/ld" will be build "anna-mdl/output/ld"
+        product path should exist before adding an input to it
         :return: return the product used for the input
         """
 
@@ -399,7 +405,7 @@ class Work(PulseLocalObject):
         return self.update_input(input_name, uri, consider_work_product, product_path)
 
     # TODO : directory should be product directory
-    def remove_input(self, input_name, directory=None):
+    def remove_input(self, input_name, product_path=None):
         """
         remove a product from inputs list
 
@@ -409,8 +415,10 @@ class Work(PulseLocalObject):
         if input_name not in inputs:
             raise PulseError("input does not exist : " + input_name)
 
-        if not directory:
+        if not product_path:
             directory = self.directory
+        else :
+            directory = product_path
 
         input_data_filepath = os.path.join(directory, self.input_data_filename)
 
