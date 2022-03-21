@@ -292,7 +292,12 @@ class Commit(PulseLocalObject, PulseDbObject):
             for dir in os.listdir(input_dir):
                 os.remove(os.path.join(input_dir, dir))
 
+        # remove the product user file
+        os.remove(self.product_users_file)
+
+        # remove the product directory itself, and the remaining resource directory if needed
         shutil.rmtree(self.directory)
+        fu.remove_empty_parents_directory(os.path.dirname(self.directory))
 
 
     # TODO : what's the purpose of this ?
@@ -330,6 +335,10 @@ class Commit(PulseLocalObject, PulseDbObject):
 
         # restore inputs
         self._restore_inputs()
+
+        # init product users file
+        if not os.path.isfile(self.product_users_file):
+            fu.json_list_init(self.product_users_file)
 
         return self.directory
 
