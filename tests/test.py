@@ -558,13 +558,6 @@ class TestResources(unittest.TestCase):
         # TODO : test work create product failed from a trash work
         pass
 
-    def test_product_trash(self):
-        anna_rig_resource = self.prj.create_resource("anna", "rigging")
-        anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
-        anna_rig_work.trash_product("actor_anim")
-
     # TODO : test download a product partially, then completly
     def test_product_download(self):
         self.anna_mdl_work.trash()
