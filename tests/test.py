@@ -565,6 +565,7 @@ class TestResources(unittest.TestCase):
         anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
         anna_rig_work.trash_product("actor_anim")
 
+    # TODO : test download a product partially, then completly
     def test_product_download(self):
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
@@ -589,23 +590,25 @@ class TestResources(unittest.TestCase):
 
         # userA checkout a modeling, he creates a abc product in V001
         work_model_a = prj_a.create_resource("joe", "model").checkout()
-        abc_product_a = work_model_a.create_product("abc")
-        utils.add_file_to_directory(abc_product_a.directory, "userA_was_here.txt")
+        a_abc_product_directory = os.path.join(work_model_a.output_directory, "abc")
+        os.makedirs(a_abc_product_directory)
+        utils.add_file_to_directory(a_abc_product_directory, "userA_was_here.txt")
 
-        # userB does the exact same thing, but he do not commit
+        # userB does the exact same thing, but he does not commit
         os.environ["USER_VAR"] = "userB"
         proj_b = self.cnx.get_project("project_conflict")
         work_model_b = proj_b.get_resource("joe", "model").checkout()
-        work_model_b.create_product("abc")
+        b_abc_product_directory = os.path.join(work_model_b.output_directory, "abc")
+        os.makedirs(b_abc_product_directory)
 
         # userA commit
         os.environ["USER_VAR"] = "userA"
         work_model_a.commit()
 
-        # then userB try to download the last abc product, this should raise an error by default
+        # then userB tries to download the last abc product, this should raise an error by default
         with self.assertRaises(PulseWorkConflict):
             os.environ["USER_VAR"] = "userB"
-            commit_product = proj_b.get_commit("joe-model.abc@1")
+            commit_product = proj_b.get_commit("joe-model@1/abc")
             commit_product.download()
 
     def test_project_list_products(self):
