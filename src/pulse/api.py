@@ -560,7 +560,6 @@ class Work(PulseLocalObject):
             pass
         # else convert the work product data file to a commit product data file
 
-
         self.resource.set_last_version(self.version)
 
         # increment the work and the products files
@@ -971,10 +970,9 @@ class Project:
         uri_dict = uri_standards.convert_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         work = resource.get_work()
-        if not work.version == uri_dict["version"]:
-            raise PulseMissingNode ("No Work for " + uri_string)
+        if not str(work.version) == uri_dict["version"]:
+            raise PulseMissingNode("No Work for " + uri_string)
         return work
-
 
     def get_commit(self, uri_string):
         """
