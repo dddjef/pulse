@@ -137,6 +137,7 @@ class PulseLocalObject:
         else:
             return self.directory
 
+    # TODO : merely understandable argument : to get all product's inputs, you have to give an empty string to product path
     def get_inputs(self, product_path=None):
         """
         return a dict of inputs in the form
@@ -623,6 +624,12 @@ class Work(PulseLocalObject):
             if os.path.exists(input_product.directory):
                 input_product.remove_product_user(self.directory)
 
+        # unregister own products from other products
+        for input_product_uri in self.get_inputs(""):
+            input_product = self.project.get_commit(input_product_uri)
+            if os.path.exists(input_product.directory):
+                input_product.remove_product_user(self.directory)
+
         # create the trash work directory
         trash_directory = self._get_trash_directory()
         if not os.path.exists(trash_directory):
@@ -651,6 +658,9 @@ class Work(PulseLocalObject):
 
         # remove work data file
         os.remove(self.data_file)
+
+        # remove work product file
+        os.remove(self.product_users_file)
 
         return True
 
