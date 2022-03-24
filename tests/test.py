@@ -607,8 +607,7 @@ class TestResources(unittest.TestCase):
     def test_project_list_products(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
+        utils.add_file_to_directory(anna_rig_work.output_directory + "/actor_anim", "actor.blend")
         anna_rig_work.commit()
         self.assertTrue(len(self.prj.list_products("anna*")) == 2)
         self.assertTrue(len(self.prj.list_products("an?a*")) == 2)

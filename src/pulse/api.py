@@ -1012,7 +1012,7 @@ class Project:
         :param uri_pattern: string
         :return: a Products list
         """
-        return [self.get_commit(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
+        return [self.get_commit(uri) for uri in self.cnx.db.find_uris(self.name, "Commit", uri_pattern)]
 
     def get_local_commit_products(self):
         """
