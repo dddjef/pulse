@@ -180,7 +180,7 @@ class TestResources(unittest.TestCase):
         # test the normal mode
         self.anna_surf_work.trash()
         self.assertEqual(['anna-mdl@1'], self.prj.purge_unused_local_products(dry_mode=False))
-        self.assertFalse(os.path.exists(self.anna_abc_product_v1.directory))
+        self.assertFalse(os.path.exists(self.anna_mdl_v1.directory))
 
     def test_manipulating_trashed_work(self):
         # ensure a file inside output won't be an issue when trashing the work
