@@ -194,10 +194,6 @@ class TestResources(unittest.TestCase):
         with self.assertRaises(PulseMissingNode):
             self.anna_mdl_work.commit()
 
-    def test_trash_product(self):
-        wip_product = self.anna_mdl_work.create_product("wip")
-        self.anna_mdl_work.trash_product("wip")
-        self.assertFalse(os.path.exists(wip_product.directory))
 
     def test_metadata(self):
         pass
