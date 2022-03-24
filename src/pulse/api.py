@@ -1048,6 +1048,7 @@ class Project:
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
     # TODO : rename as purge_unused_cache_products
+    # TODO : this should be recursive : if a product is used only by another, which is not used, the first product should be removed too.
     def purge_unused_local_products(self, unused_days=0, resource_filter=None, dry_mode=False):
         """
         remove unused products from the user local product space, based on a unused time
