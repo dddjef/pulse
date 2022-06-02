@@ -66,9 +66,9 @@ def convert_from_dict(uri_dict):
     :return: uri string
     """
     uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
-    if 'product_type' in uri_dict:
+    if 'product_type' in uri_dict and uri_dict['product_type']:
         uri += "." + uri_dict['product_type']
-    if 'version' in uri_dict:
+    if 'version' in uri_dict and uri_dict['version']:
         uri += "@" + (str(int(uri_dict['version'])))
     return uri
 

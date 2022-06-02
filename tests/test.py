@@ -158,7 +158,7 @@ class TestResources(unittest.TestCase):
     def test_unused_time_on_purged_product(self):
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
-        product = self.anna_mdl_v1.get_product("abc")
+        product = self.anna_mdl_v1
         self.assertTrue(product.get_unused_time(), -1)
 
     def test_purged_product(self):
@@ -304,36 +304,24 @@ class TestResources(unittest.TestCase):
             anna_shd_work.output_directory, "shader",
             shader_product_file)))
 
-    def test_trashing_work_errors(self):
-        froga_mdl_work = self.prj.create_resource("froga", "mdl").checkout()
-        utils.add_file_to_directory(os.path.join(froga_mdl_work.output_directory, "abc"), "char.abc")
-        anna_surf_work = self.prj.create_resource("anna", "surfacing").checkout()
-        anna_surf_work.add_input("froga-mdl.abc", consider_work_product=True)
-
-        # trashing a product used by another resource is forbidden
-        anna_surf_work.add_input(self.anna_abc_product_v1.uri)
-        with self.assertRaises(PulseError):
-            self.anna_abc_product_v1.remove_from_local_products()
-
     def test_work_dependencies_download(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
         anna_surf_work = anna_surf_resource.checkout()
-        anna_surf_textures = anna_surf_work.create_product("textures")
-        utils.add_file_to_directory(anna_surf_textures.directory, "product_file.txt")
-        commit = anna_surf_work.commit(comment="test generated product")
+        anna_surf_textures_path = os.path.join(anna_surf_work.output_directory, "textures")
+        utils.add_file_to_directory(anna_surf_textures_path, "product_file.txt")
+        anna_surf_work.commit(comment="test generated product")
         anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_surf_textures = commit.get_product("textures")
-        anna_rig_work.add_input(anna_surf_textures.uri)
+        anna_rig_work.add_input(anna_surf_work.uri + "/textures")
         anna_rig_work.commit("comment test")
         anna_rig_work.trash()
         anna_surf_work.trash()
         self.prj.purge_unused_local_products()
-        self.assertFalse(os.path.exists(anna_surf_textures.directory))
+        self.assertFalse(os.path.exists(anna_surf_textures_path))
         rig_v01 = anna_rig_resource.get_commit(1)
         self.assertTrue('ch_anna-surfacing.textures@1' in rig_v01.products_inputs)
         anna_rig_resource.checkout()
-        self.assertTrue(os.path.exists(anna_surf_textures.directory))
+        self.assertTrue(os.path.exists(anna_surf_textures_path))
 
     def test_recursive_dependencies_download(self):
         anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
@@ -630,30 +618,30 @@ class TestResources(unittest.TestCase):
         anna_rig_work = anna_rig_resource.checkout()
 
         # test linked directory content is the same as the product content after add input
-        anna_rig_work.add_input("anna-mdl.abc")
+        anna_rig_work.add_input("anna-mdl/abc")
         self.assertEqual(os.listdir(os.path.join(
             anna_rig_work.directory,
             cfg.work_input_dir,
-            "anna-mdl.abc"
-        )), os.listdir(self.anna_abc_product_v1.directory))
+            "anna-mdl~abc"
+        )), os.listdir(os.path.join(self.anna_mdl_v1.directory, "abc")))
 
-        # test if the input already exists in work inputs
+        # test if the input already exists in current work inputs
         with self.assertRaises(PulseError):
-            anna_rig_work.add_input("anna-mdl.abc")
+            anna_rig_work.add_input("anna-mdl/abc")
 
         # test the input is a non existing product
         with self.assertRaises(PulseDatabaseMissingObject):
             anna_rig_work.add_input("unknown-product.uri")
 
         # test where the input has to be downloaded
-        low_texture = self.anna_mdl_work.create_product("low_texture")
-        utils.add_file_to_directory(low_texture.directory, "tex.jpg")
+        low_texture_directory = os.path.join(self.anna_mdl_work.output_directory, "low_texture")
+        utils.add_file_to_directory(low_texture_directory, "tex.jpg")
         self.anna_mdl_work.commit()
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
-        self.assertFalse(os.path.exists(low_texture.directory))
-        anna_rig_work.add_input(low_texture.uri)
-        self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
+        self.assertFalse(os.path.exists(low_texture_directory))
+        anna_rig_work.add_input("anna-mdl@2/low_texture")
+        self.assertTrue(os.path.exists(os.path.join(low_texture_directory, "tex.jpg")))
 
         # test if downloaded product used as input is not purged
         self.prj.purge_unused_local_products()
