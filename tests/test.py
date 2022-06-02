@@ -148,13 +148,12 @@ class TestResources(unittest.TestCase):
     def test_template_resource(self):
         template_mdl = self.prj.create_template("mdl")
         template_mdl_work = template_mdl.checkout()
-        template_mdl_work.create_product("abc")
-        utils.add_file_to_directory(template_mdl_work.directory)
+        utils.add_file_to_directory(template_mdl_work.directory, "work.blend")
         template_mdl_work.commit()
         template_mdl_work.trash()
         froga_mdl = self.prj.create_resource("froga", "mdl")
         froga_mdl_work = froga_mdl.checkout()
-        self.assertTrue(os.path.exists(os.path.join(froga_mdl_work.get_products_directory(), "abc")))
+        self.assertTrue(os.path.exists(os.path.join(froga_mdl_work.directory, "work.blend")))
 
     def test_unused_time_on_purged_product(self):
         self.anna_mdl_work.trash()
