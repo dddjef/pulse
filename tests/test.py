@@ -350,6 +350,8 @@ class TestResources(unittest.TestCase):
         anna_rig_work.trash()
         anna_surf_work.trash()
         self.prj.purge_unused_local_products()
+        self.prj.purge_unused_local_products()
+        # rigV1 uses surf V1, but since rigV1 was purged, surf V1 should be deleted with the purge unused product
         self.assertFalse(os.path.exists(anna_surf_v1.directory))
         anim_resource = self.prj.create_resource("sh003", "anim")
         anim_work = anim_resource.checkout()
