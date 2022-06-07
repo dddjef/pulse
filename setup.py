@@ -4,7 +4,7 @@ with open("README.rst", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="pulse",
+    name="pulse-rcs",
     version="0.0.1",
     author="Jean-François Sarazin",
     author_email="dddjef@gmail.com",
