@@ -645,26 +645,27 @@ class TestResources(unittest.TestCase):
         with self.assertRaises(PulseDatabaseMissingObject):
             anna_rig_work.add_input("unknown-product.uri")
 
-        # test where the input has to be downloaded
-        low_texture_directory = os.path.join(self.anna_mdl_work.output_directory, "low_texture")
-        utils.add_file_to_directory(low_texture_directory, "tex.jpg")
-        self.anna_mdl_work.commit()
+        # test when the input has to be downloaded
+        mdl_low_directory = os.path.join(self.anna_mdl_work.output_directory, "low")
+        utils.add_file_to_directory(mdl_low_directory, "tex.jpg")
+        anna_mdl_commit = self.anna_mdl_work.commit()
         self.anna_mdl_work.trash()
         self.prj.purge_unused_local_products()
-        self.assertFalse(os.path.exists(low_texture_directory))
-        anna_rig_work.add_input("anna-mdl@2/low_texture")
-        self.assertTrue(os.path.exists(os.path.join(low_texture_directory, "tex.jpg")))
+        self.assertFalse(os.path.exists(mdl_low_directory))
+        anna_rig_work.add_input("anna-mdl@2/low")
+        tex_path = os.path.join(anna_mdl_commit.directory, "low", "tex.jpg")
+        self.assertTrue(os.path.exists(tex_path))
 
         # test if downloaded product used as input is not purged
         self.prj.purge_unused_local_products()
-        self.assertTrue(os.path.exists(os.path.join(low_texture.directory, "tex.jpg")))
+        self.assertTrue(os.path.exists(tex_path))
 
-        # test the input is a work product
+        # test when the input is a work product
         self.anna_mdl_work = self.anna_mdl.checkout()
-        high_geo = self.anna_mdl_work.create_product("high_geo")
-        utils.add_file_to_directory(high_geo.directory, "hi.abc")
-        anna_rig_work.add_input("anna-mdl.high_geo", consider_work_product=True)
-        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.high_geo", "hi.abc")))
+        high_geo_directory = os.path.join(self.anna_mdl_work.output_directory, "high_geo")
+        utils.add_file_to_directory(high_geo_directory, "hi.abc")
+        anna_rig_work.add_input("anna-mdl/high_geo", consider_work_product=True)
+        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl~high_geo", "hi.abc")))
 
     def test_work_add_input_with_custom_name(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
