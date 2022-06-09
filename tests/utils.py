@@ -24,7 +24,7 @@ def reset_test_data(root=test_data_output_path):
             subprocess.call('rmdir /s /q "' + root + '"', shell=True)
         else:
             shutil.rmtree(root)
-    os.mkdir(root)
+    os.makedirs(root)
 
 
 def add_file_to_directory(directory, filename="any_file.txt", source_filepath=None):
