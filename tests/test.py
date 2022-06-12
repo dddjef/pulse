@@ -136,7 +136,7 @@ class TestResources(unittest.TestCase):
         self.anna_mdl = self.prj.create_resource("anna", "mdl")
         self.anna_mdl_work = self.anna_mdl.checkout()
         utils.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
-        self.anna_abc_work_product = os.path.join(self.anna_mdl_work.output_directory, "abc")
+        self.anna_abc_work_product = os.path.join(self.anna_mdl_work.directory, "abc")
         utils.add_file_to_directory(self.anna_abc_work_product, "anna.abc")
         self.anna_mdl_v1 = self.anna_mdl_work.commit()
 
@@ -372,7 +372,7 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a sub resource
-        abc_work_product = os.path.join(anna_mdl_work.output_directory, "abc")
+        abc_work_product = os.path.join(anna_mdl_work.directory, "abc")
         os.makedirs(abc_work_product)
         # now products directory should exists)
         utils.add_file_to_directory(abc_work_product, "test.abc")
