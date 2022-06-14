@@ -54,12 +54,18 @@ class PulseDbObject:
         """
             read all object attributes from database.
 
-            Will pass if the database have an attribute missing on the object
+            Will pass if the database have an attribute missing on the object.
+            Returns ``None`` if nothing found.
 
-            :return: PulseDbObject
+            :return: PulseDbObject or None
             :rtype: PulseDbObject
         """
         data = self.project.cnx.db.read(self.project.name, self.__class__.__name__, self.uri)
+        
+        # Check data is valid
+        if not data:
+            return
+
         for k in data:
             if k not in vars(self):
                 continue
