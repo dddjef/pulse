@@ -978,6 +978,11 @@ class Resource(PulseDbObject):
                 try:
                     if self.entity != cfg.template_name:
                         source_resource = self.project.get_resource(cfg.template_name, self.resource_type)
+                        
+                        # If resource not found, raise missing
+                        if not source_resource:
+                            raise PulseDatabaseMissingObject
+                        
                         source_commit = source_resource.get_commit("last")
                 except PulseDatabaseMissingObject:
                     pass
