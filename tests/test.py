@@ -356,42 +356,43 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_mdl_resource.last_version, 0)
 
         # checkout, and check directories are created
-        anna_mdl_work = anna_mdl_resource.checkout()
-        self.assertTrue(os.path.exists(anna_mdl_work.directory))
+        anna_mdl_sandbox = anna_mdl_resource.checkout()
+        self.assertTrue(os.path.exists(anna_mdl_sandbox.directory))
 
         # commit should fail if nothing is change in work
         with self.assertRaises(PulseError):
-            anna_mdl_work.commit("very first time")
+            anna_mdl_sandbox.commit("very first time")
 
         # create a new file in work directory and try to commit again
         new_file = "test_complete.txt"
-        utils.add_file_to_directory(anna_mdl_work.directory, new_file)
-        self.assertEqual(anna_mdl_work.status(), {"/" + new_file: 'added'})
+        mdl_work_dir = os.path.join(anna_mdl_sandbox.directory, "work")
+        utils.add_file_to_directory(mdl_work_dir, new_file)
+        self.assertEqual(anna_mdl_sandbox.status(), {"/work/" + new_file: 'added'})
 
-        anna_mdl_work.commit("add a file")
+        anna_mdl_sandbox.commit("add a file")
         self.assertEqual(anna_mdl_resource.last_version, 1)
 
         # create a sub resource
-        abc_work_product = os.path.join(anna_mdl_work.directory, "abc")
+        abc_work_product = os.path.join(anna_mdl_sandbox.directory, "abc")
         os.makedirs(abc_work_product)
         # now products directory should exists)
         utils.add_file_to_directory(abc_work_product, "test.abc")
         # create a new commit
-        anna_mdl_v2 = anna_mdl_work.commit("some abc produced")
+        anna_mdl_v2 = anna_mdl_sandbox.commit("some abc produced")
 
         self.assertEqual(anna_mdl_resource.last_version, 2)
         # create a new resource
         anna_srf_resource = self.prj.create_resource("ch_anna", "surfacing")
         self.assertEqual(anna_srf_resource.last_version, 0)
-        anna_srf_work = anna_srf_resource.checkout()
-        anna_srf_work.add_input("ch_anna-modeling/ABC")
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
+        anna_srf_sandbox = anna_srf_resource.checkout()
+        anna_srf_sandbox.add_input("ch_anna-modeling/ABC")
+        self.assertTrue(os.path.exists(os.path.join(anna_srf_sandbox.input_directory, "ch_anna-modeling~ABC/test.abc")))
 
-        anna_srf_work.commit("with input")
+        anna_srf_sandbox.commit("with input")
         self.assertEqual(anna_srf_resource.last_version, 1)
         # trash the hat
 
-        anna_srf_work.trash()
+        anna_srf_sandbox.trash()
         # remove the product
         self.prj.purge_unused_local_products()
         # checkout the work
@@ -400,7 +401,7 @@ class TestResources(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
 
         anna_srf_work.remove_input("ch_anna-modeling/ABC")
-        anna_mdl_work.trash()
+        anna_mdl_sandbox.trash()
         # create a new output
         os.makedirs(fu.path_join(anna_srf_work.output_directory, "ld"))
         # test add an input to LD product
