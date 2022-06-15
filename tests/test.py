@@ -229,8 +229,9 @@ class TestResources(unittest.TestCase):
         # test the empty product has been restored
         product = work.get_product("abc")
         self.assertTrue(os.path.exists(product.directory))
-        # test get a missing product returns None
-        self.assertIsNone(work.get_product("abcd"))
+        # test get a missing product raise an error
+        with self.assertRaises(PulseError):
+            work.get_product("abcd")
 
     def test_work_checkout_product_conflict(self):
         os.environ["USER_VAR"] = "userA"

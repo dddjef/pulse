@@ -27,7 +27,8 @@ def convert_to_dict(uri_string):
     if not is_valid(uri_string):
         raise PulseUriError("Uri not valid : " + uri_string)
 
-    uri_split = uri_string.split("@")
+    subpath_split = uri_string.split("/", 1)
+    uri_split = subpath_split[0].split("@")
     product_split = uri_split[0].split(".")
     resource_split = product_split[0].split("-")
     entity = resource_split[0]
@@ -43,7 +44,18 @@ def convert_to_dict(uri_string):
     else:
         version = None
 
-    return {"entity": entity, "resource_type": resource_type, "version": version, "product_type": product_type}
+    if len(subpath_split) > 1:
+        subpath = subpath_split[1]
+    else:
+        subpath = ""
+
+    return {
+        "entity": entity,
+        "resource_type": resource_type,
+        "version": version,
+        "product_type": product_type,
+        "subpath": subpath
+    }
 
 
 def convert_from_dict(uri_dict):
@@ -54,9 +66,9 @@ def convert_from_dict(uri_dict):
     :return: uri string
     """
     uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
-    if 'product_type' in uri_dict:
+    if 'product_type' in uri_dict and uri_dict['product_type']:
         uri += "." + uri_dict['product_type']
-    if 'version' in uri_dict:
+    if 'version' in uri_dict and uri_dict['version']:
         uri += "@" + (str(int(uri_dict['version'])))
     return uri
 
@@ -99,3 +111,10 @@ def remove_version_from_uri(uri):
         raise PulseUriError("Uri not valid : " + uri)
     split = uri.split("@")
     return split[0]
+
+
+def edit(uri_string, edit_dict):
+    uri_dict = convert_to_dict(uri_string)
+    for k, v in edit_dict.items():
+        uri_dict[k] = v
+    return convert_from_dict(uri_dict)

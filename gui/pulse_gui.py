@@ -70,7 +70,7 @@ class LocalProductsWindow(QDialog):
     def update_inputs_list(self):
         self.products_listWidget.clear()
         for uri in self.project.get_local_commit_products():
-            product = self.project.get_commit_product(uri)
+            product = self.project.get_published_version(uri)
             if self.showUnused_checkBox.isChecked():
                 if product.get_unused_time() < (self.unusedDays_spinBox.value()*86400):
                     continue
