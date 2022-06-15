@@ -160,7 +160,7 @@ class InputsWindow(QDialog):
         current_item = self.mainWindow.treeWidget.currentItem()
         if not current_item:
             self.mainWindow.message_user("You have to select an item in the treeview", "ERROR")
-        elif not isinstance(current_item.pulse_node, pulse.Product):
+        elif not isinstance(current_item.pulse_node, pulse.LocalProduct):
             self.mainWindow.message_user("the selected item should be a product only", "ERROR")
         else:
             try:
@@ -550,7 +550,7 @@ class MainWindow(QMainWindow):
                                 resource_uri + ".*@" + version
                         ):
                             product_type = pulse_uri.convert_to_dict(product_uri)["product_type"]
-                            product = pulse.CommitProduct(commit, product_type)
+                            product = pulse.LocalPublishedVersion(commit, product_type)
                             product_item = PulseItem([product_type], product)
                             if product.uri in self.project.get_local_commit_products():
                                 set_tree_item_style(product_item, "downloaded")
@@ -595,7 +595,7 @@ class MainWindow(QMainWindow):
                     "resource_template": item.pulse_node.resource_template,
                     "lock_user": item.pulse_node.lock_user
                 })
-            if isinstance(item.pulse_node, pulse.Commit):
+            if isinstance(item.pulse_node, pulse.PublishedVersion):
                 properties = {
                     "comment": item.pulse_node.comment,
                     "files": list(item.pulse_node.files.keys())
@@ -670,12 +670,12 @@ class MainWindow(QMainWindow):
                 action3 = rc_menu.addAction(self.tr("Lock"))
             action3.triggered.connect(partial(self.toggle_lock, item))
 
-        elif isinstance(item.pulse_node, pulse.Commit):
+        elif isinstance(item.pulse_node, pulse.PublishedVersion):
             pass
             # action = rc_menu.addAction(self.tr("Commit Action"))
             # action.triggered.connect(partial(self.add_tree_item, item))
 
-        elif isinstance(item.pulse_node, pulse.CommitProduct):
+        elif isinstance(item.pulse_node, pulse.LocalPublishedVersion):
             action = rc_menu.addAction(self.tr("Download To Cache"))
             action.triggered.connect(partial(self.download_product, item))
             action2 = rc_menu.addAction(self.tr("Remove From Cache"))

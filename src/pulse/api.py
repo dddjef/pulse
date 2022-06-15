@@ -84,7 +84,7 @@ class PulseDbObject:
         self.project.cnx.db.create(self.project.name, self.__class__.__name__, self.uri, data)
 
 
-class Product:
+class LocalProduct:
     """
         abstract class for all products
     """
@@ -151,12 +151,12 @@ class Product:
             return time.time() - os.path.getctime(self.directory)
 
 
-class CommitProduct(PulseDbObject, Product):
+class LocalPublishedVersion(PulseDbObject, LocalProduct):
     """
-        Product which has been published to database
+        Resource version registered to database and available in user space
     """
     def __init__(self, parent, product_type):
-        Product.__init__(self, parent, product_type)
+        LocalProduct.__init__(self, parent, product_type)
         PulseDbObject.__init__(self, parent.project, self.uri)
         self.products_inputs = []
         self._storage_vars = ['product_type', 'products_inputs', 'uri']
@@ -238,10 +238,9 @@ class CommitProduct(PulseDbObject, Product):
         self.unregister_to_user_products()
 
 
-class Commit(PulseDbObject):
+class PublishedVersion(PulseDbObject):
     """
         Object created when a resource has been published to database
-        The commit is a versioned resource
     """
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
@@ -262,9 +261,9 @@ class Commit(PulseDbObject):
         pulseDataBaseMissingObject exception
 
         :param product_type: string
-        :return: a CommitProduct
+        :return: a LocalPublishedVersion
         """
-        return CommitProduct(self, product_type).db_read()
+        return LocalPublishedVersion(self, product_type).db_read()
 
     def get_products(self):
         """
@@ -272,7 +271,7 @@ class Commit(PulseDbObject):
         """
         products = []
         for product_name in self.products:
-            products.append(CommitProduct(self, product_name))
+            products.append(LocalPublishedVersion(self, product_name))
         return products
 
     def get_products_directory(self):
@@ -284,12 +283,12 @@ class Commit(PulseDbObject):
         return self.resource.get_products_directory(self.version)
 
 
-class WorkProduct(Product):
+class WorkProduct(LocalProduct):
     """
         class for products which has not been registered to database yet
     """
     def __init__(self, work, product_type):
-        Product.__init__(self, work, product_type)
+        LocalProduct.__init__(self, work, product_type)
         self.product_users_file = os.path.normpath(os.path.join(
             self.parent.project.work_product_data_directory,
             fu.uri_to_json_filename(self.uri)
@@ -439,7 +438,7 @@ class Work:
             raise PulseMissingNode("No product found for :" + uri)
 
         # if it's a commit product, try to download it
-        if isinstance(product, CommitProduct):
+        if isinstance(product, LocalPublishedVersion):
             product.download(resolve_conflict)
 
         # if we are in a work input, add a linked directory
@@ -657,7 +656,7 @@ class Work:
         self.resource.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
 
         # copy work files to a new version in repository
-        commit = Commit(self.resource, self.version)
+        commit = PublishedVersion(self.resource, self.version)
         commit.files = self._get_work_files()
         commit.project.cnx.repositories[self.resource.repository].upload_resource_commit(
             commit, self.directory, commit.files, self.get_products_directory())
@@ -672,7 +671,7 @@ class Work:
             for product_type in commit.products:
                 work_product = self.get_product(product_type)
 
-                commit_product = CommitProduct(commit, product_type)
+                commit_product = LocalPublishedVersion(commit, product_type)
                 commit_product.db_create()
 
                 if not keep_products_in_cache:
@@ -911,7 +910,7 @@ class Resource(PulseDbObject):
         :param version: integer
         :return: Commit
         """
-        return Commit(self, self.get_index(version)).db_read()
+        return PublishedVersion(self, self.get_index(version)).db_read()
 
     def get_work(self):
         """
@@ -1128,7 +1127,7 @@ class Project:
         if not uri_dict['version'] or uri_dict['version'] == "last":
             products = self.cnx.db.find_uris(
                 self.name,
-                "CommitProduct",
+                "LocalPublishedVersion",
                 uri_standards.remove_version_from_uri(uri_string) + "@*"
             )
             if not products:
@@ -1153,7 +1152,8 @@ class Project:
         :param uri_pattern: string
         :return: a Products list
         """
-        return [self.get_commit_product(uri) for uri in self.cnx.db.find_uris(self.name, "CommitProduct", uri_pattern)]
+        return [self.get_commit_product(uri) for uri in self.cnx.db.find_uris(
+            self.name, "LocalPublishedVersion", uri_pattern)]
 
     def get_local_commit_products(self):
         """
