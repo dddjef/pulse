@@ -6,7 +6,7 @@ Created on 07 September 2020
 import os
 import glob
 from pathlib import Path
-from typing import FrozenSet, List
+from typing import FrozenSet, List, Union
 import pulse.file_utils as fu
 import shutil
 import time
@@ -493,15 +493,18 @@ class Work(WorkNode):
                 files_dict[relative_path.replace(os.sep, "/")] = {"checksum": fu.md5(filepath)}
         return files_dict
 
-    def get_product(self, product_type):
-        """
-        return the resource's work product based on the given type
+    def get_product(self, product_type: str) -> Union[None, WorkProduct]:
+        """Return the resource's work product based on the given type.
 
-        :param product_type:
-        :return: a work product
+        Args:
+            product_type (str): Name of the product type
+
+        Returns:
+            WorkProduct: Object if found, else None 
         """
         if product_type not in self.list_products():
-            raise PulseError("product not found : " + product_type)
+            return
+
         return WorkProduct(self, product_type)
 
     def list_products(self):
