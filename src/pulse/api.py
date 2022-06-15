@@ -296,7 +296,7 @@ class WorkProduct(Product):
         ))
 
 
-class Work():
+class Work:
     """
         Resource downloaded locally to be modified
     """
@@ -484,7 +484,6 @@ class Work():
         input_directory = (os.path.join(self.directory, cfg.work_input_dir, input_name))
         if os.path.exists(input_directory):
             os.remove(input_directory)
-
 
     def get_product(self, product_type):
         """
