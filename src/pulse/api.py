@@ -981,7 +981,7 @@ class Resource(PulseDbObject):
                         
                         # If resource not found, raise missing
                         if not source_resource:
-                            raise PulseDatabaseMissingObject(f"Source ressource not found.")
+                            raise PulseDatabaseMissingObject(f"Database object not found.")
                         
                         source_commit = source_resource.get_commit("last")
                 except PulseDatabaseMissingObject:
