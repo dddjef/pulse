@@ -6,7 +6,7 @@ Created on 07 September 2020
 import os
 import glob
 from pathlib import Path
-from typing import FrozenSet, List
+from typing import FrozenSet, List, Union
 import pulse.file_utils as fu
 import shutil
 import time
@@ -485,15 +485,18 @@ class Work:
         if os.path.exists(input_directory):
             os.remove(input_directory)
 
-    def get_product(self, product_type):
-        """
-        return the resource's work product based on the given type
+    def get_product(self, product_type: str) -> Union[None, WorkProduct]:
+        """Return the resource's work product based on the given type.
 
-        :param product_type:
-        :return: a work product
+        Args:
+            product_type (str): Name of the product type
+
+        Returns:
+            WorkProduct: Object if found, else None 
         """
         if product_type not in self.list_products():
-            raise PulseError("product not found : " + product_type)
+            return
+
         return WorkProduct(self, product_type)
 
     def list_products(self):
@@ -1102,7 +1105,7 @@ class Project:
         work = resource.get_work()
         if work:
             product = work.get_product(uri_dict['product_type'])
-            if uri_dict['version']:
+            if product and uri_dict['version']:
                 if product.parent.version == int(uri_dict['version']):
                     return product
             else:
