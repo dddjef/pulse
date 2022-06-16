@@ -82,6 +82,7 @@ class Repository(PulseRepository):
         return True
         
     def download_work(self, commit, work_folder):
+        print("loooo")
         repo_work_path = self._build_commit_path("work", commit)
         # copy repo work to sandbox
         copy_folder_content(repo_work_path, work_folder)

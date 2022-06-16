@@ -348,28 +348,6 @@ class TestResources(unittest.TestCase):
         anna_rig_resource.checkout()
         self.assertTrue(os.path.exists(anna_surf_textures.directory))
 
-    def test_recursive_dependencies_download(self):
-        anna_surf_resource = self.prj.create_resource("ch_anna", "surfacing")
-        anna_surf_work = anna_surf_resource.checkout()
-        textures_work_product = anna_surf_work.create_product("textures")
-        utils.add_file_to_directory(textures_work_product.directory, "product_file.txt")
-        commit = anna_surf_work.commit(comment="test generated product")
-        anna_surf_textures = commit.get_product("textures")
-        anna_rig_resource = self.prj.create_resource("ch_anna", "rigging")
-        anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(anna_surf_textures.uri)
-        commit = anna_rig_work.commit()
-        anna_rig_actor = commit.get_product("actor_anim")
-        anna_rig_work.trash()
-        anna_surf_work.trash()
-        self.prj.purge_unused_user_products()
-        self.assertFalse(os.path.exists(anna_surf_textures.directory))
-        anim_resource = self.prj.create_resource("sh003", "anim")
-        anim_work = anim_resource.checkout()
-        anim_work.add_input(anna_rig_actor.uri)
-        self.assertTrue(os.path.exists(anna_surf_textures.directory))
-
     def test_complete_scenario(self):
         # create a resource based on this template
         anna_mdl_resource = self.prj.create_resource("ch_anna", "modeling")
@@ -554,8 +532,7 @@ class TestResources(unittest.TestCase):
     def test_product_trash(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
+        anna_rig_work.create_product("actor_anim")
         anna_rig_work.trash_product("actor_anim")
 
     def test_product_download(self):
@@ -605,7 +582,7 @@ class TestResources(unittest.TestCase):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
         anna_rig_actor = anna_rig_work.create_product("actor_anim")
-        anna_rig_actor.add_input(self.anna_abc_product_v1.uri)
+        utils.add_file_to_directory(anna_rig_actor.directory)
         anna_rig_work.commit()
         self.assertTrue(len(self.prj.list_products("anna*")) == 2)
         self.assertTrue(len(self.prj.list_products("an?a*")) == 2)
@@ -776,14 +753,6 @@ class TestResources(unittest.TestCase):
         # test remove a missing input
         with self.assertRaises(PulseError):
             anna_rig_work.remove_input(self.anna_abc_product_v1.uri)
-
-    def test_product_add_input(self):
-        anna_rig_resource = self.prj.create_resource("anna", "rigging")
-        anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_hd = anna_rig_work.create_product("hd")
-        anna_rig_hd.add_input(self.anna_abc_product_v1.uri)
-        # test products don't have a "input" linked directory
-        self.assertFalse(os.path.exists(os.path.join(anna_rig_hd.directory, "input")))
 
 
 if __name__ == '__main__':

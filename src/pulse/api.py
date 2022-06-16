@@ -284,14 +284,51 @@ class Commit(PulseDbObject):
         return self.resource.get_products_directory(self.version)
 
 
-class WorkNode:
+class WorkProduct(Product):
     """
-        abstract class for unpublished data (work or product)
+        class for products which has not been registered to database yet
     """
-    def __init__(self, project, directory):
-        self.directory = directory
-        self.products_inputs_file = os.path.join(directory, "product_inputs.json")
-        self.project = project
+    def __init__(self, work, product_type):
+        Product.__init__(self, work, product_type)
+        self.product_users_file = os.path.normpath(os.path.join(
+            self.parent.project.work_product_data_directory,
+            fu.uri_to_json_filename(self.uri)
+        ))
+
+
+class Work:
+    """
+        Resource downloaded locally to be modified
+    """
+    def __init__(self, resource):
+        self.directory = resource.sandbox_path
+        self.products_inputs_file = os.path.join(self.directory, "product_inputs.json")
+        self.project = resource.project
+
+        self.resource = resource
+        self.version = None
+        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
+
+    def _check_exists_in_user_workspace(self):
+        if not os.path.exists(self.directory):
+            raise PulseMissingNode("Missing work space : " + self.directory)
+
+    def _get_trash_directory(self):
+        date_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+        path = os.path.join(self.project.cfg.get_work_user_root(), self.project.name, "TRASH") + os.sep
+        path += self.resource.uri + "-" + date_time
+        return path
+
+    def _get_work_files(self):
+        files_dict = {}
+        excluded_path = [cfg.work_output_dir, cfg.work_input_dir]
+        for root, dirs, files in os.walk(self.directory, topdown=True):
+            dirs[:] = [d for d in dirs if d not in excluded_path]
+            for f in files:
+                filepath = os.path.join(root, f)
+                relative_path = filepath[len(self.directory):]
+                files_dict[relative_path.replace(os.sep, "/")] = {"checksum": fu.md5(filepath)}
+        return files_dict
 
     def get_inputs(self):
         """
@@ -448,51 +485,6 @@ class WorkNode:
         if os.path.exists(input_directory):
             os.remove(input_directory)
 
-
-class WorkProduct(Product, WorkNode):
-    """
-        class for products which has not been registered to database yet
-    """
-    def __init__(self, work, product_type):
-        Product.__init__(self, work, product_type)
-        WorkNode.__init__(self, work.project, self.directory)
-        self.product_users_file = os.path.normpath(os.path.join(
-            self.parent.project.work_product_data_directory,
-            fu.uri_to_json_filename(self.uri)
-        ))
-
-
-class Work(WorkNode):
-    """
-        Resource downloaded locally to be modified
-    """
-    def __init__(self, resource):
-        WorkNode.__init__(self, resource.project, resource.sandbox_path)
-        self.resource = resource
-        self.version = None
-        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
-
-    def _check_exists_in_user_workspace(self):
-        if not os.path.exists(self.directory):
-            raise PulseMissingNode("Missing work space : " + self.directory)
-
-    def _get_trash_directory(self):
-        date_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        path = os.path.join(self.project.cfg.get_work_user_root(), self.project.name, "TRASH") + os.sep
-        path += self.resource.uri + "-" + date_time
-        return path
-
-    def _get_work_files(self):
-        files_dict = {}
-        excluded_path = [cfg.work_output_dir, cfg.work_input_dir]
-        for root, dirs, files in os.walk(self.directory, topdown=True):
-            dirs[:] = [d for d in dirs if d not in excluded_path]
-            for f in files:
-                filepath = os.path.join(root, f)
-                relative_path = filepath[len(self.directory):]
-                files_dict[relative_path.replace(os.sep, "/")] = {"checksum": fu.md5(filepath)}
-        return files_dict
-
     def get_product(self, product_type: str) -> Union[None, WorkProduct]:
         """Return the resource's work product based on the given type.
 
@@ -560,12 +552,6 @@ class Work(WorkNode):
         users = product.get_product_users()
         if users:
             raise PulseError("work can't be trashed if its product is used : " + users[0])
-
-        # unregister from products
-        for input_product_uri in product.get_inputs():
-            input_product = self.project.get_commit_product(input_product_uri)
-            if os.path.exists(input_product.directory):
-                input_product.remove_product_user(product.directory)
 
         # create the trash work directory
         trash_directory = self._get_trash_directory()
@@ -687,7 +673,6 @@ class Work(WorkNode):
                 work_product = self.get_product(product_type)
 
                 commit_product = CommitProduct(commit, product_type)
-                commit_product.products_inputs = work_product.get_inputs()
                 commit_product.db_create()
 
                 if not keep_products_in_cache:
