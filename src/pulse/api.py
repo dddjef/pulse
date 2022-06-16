@@ -1105,7 +1105,7 @@ class Project:
         work = resource.get_work()
         if work:
             product = work.get_product(uri_dict['product_type'])
-            if uri_dict['version']:
+            if product and uri_dict['version']:
                 if product.parent.version == int(uri_dict['version']):
                     return product
             else:
