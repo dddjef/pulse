@@ -741,14 +741,14 @@ class TestResources(unittest.TestCase):
         # test remove product
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_work = anna_rig_resource.checkout()
-        anna_rig_work.add_input("anna-mdl.abc")
-        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.abc")))
-        anna_rig_work.remove_input("anna-mdl.abc")
-        self.assertFalse(os.path.exists(os.path.join(anna_rig_work.directory, "input", "anna-mdl.abc")))
+        anna_rig_work.add_input("anna-mdl/abc")
+        self.assertTrue(os.path.exists(os.path.join(anna_rig_work.input_directory, "anna-mdl~abc")))
+        anna_rig_work.remove_input("anna-mdl/abc")
+        self.assertFalse(os.path.exists(os.path.join(anna_rig_work.input_directory, "anna-mdl~abc")))
 
         # test remove a missing input
         with self.assertRaises(PulseError):
-            anna_rig_work.remove_input(self.anna_abc_product_v1.uri)
+            anna_rig_work.remove_input("unknown-uri")
 
 
 if __name__ == '__main__':

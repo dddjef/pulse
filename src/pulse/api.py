@@ -480,7 +480,7 @@ class Work:
         product.remove_product_user(self.directory)
 
         # remove linked input directory
-        input_directory = (os.path.join(self.directory, cfg.work_input_dir, input_name))
+        input_directory = os.path.join(self.directory, cfg.work_input_dir, uri_standards.uri_to_filename(input_name))
         if os.path.exists(input_directory):
             os.remove(input_directory)
 
