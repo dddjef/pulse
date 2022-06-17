@@ -354,7 +354,7 @@ class Work:
         uri = inputs[input_name]
 
         try:
-            product = self.project.get_work_product(uri)
+            product = self.project.get_work_version(uri)
         except PulseError:
             product = self.project.get_commit_product(uri)
 

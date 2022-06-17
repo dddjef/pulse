@@ -196,10 +196,6 @@ class TestResources(unittest.TestCase):
         with self.assertRaises(PulseMissingNode):
             self.anna_mdl_work.commit()
 
-    def test_trash_product(self):
-        wip_product = self.anna_mdl_work.create_product("wip")
-        self.anna_mdl_work.trash_product("wip")
-        self.assertFalse(os.path.exists(wip_product.directory))
 
     def test_metadata(self):
         pass
@@ -244,19 +240,19 @@ class TestResources(unittest.TestCase):
 
         # userA checkout a modeling, he creates a abc product in V001
         work_model_a = prj_a.create_resource("joe", "model").checkout()
-        work_model_a.create_product("abc")
+        utils.add_file_to_directory(work_model_a.product_directory + "/abc")
 
         # userB does the exact same thing, but he commits first
         os.environ["USER_VAR"] = "userB"
         proj_b = self.cnx.get_project("project_conflict")
         work_model_b = proj_b.get_resource("joe", "model").checkout()
-        abc_product_b = work_model_b.create_product("abc")
-        utils.add_file_to_directory(abc_product_b.directory, "userB_was_here.txt")
+        #abc_product_b = work_model_b.product_directory + "/abc")
+        utils.add_file_to_directory(work_model_b.product_directory + "/abc", "userB_was_here.txt")
         work_model_b.commit()
 
         # userB use this product for a surfacing. he commits the surfacing
         surf_work_b = proj_b.create_resource("joe", "surfacing").checkout()
-        surf_work_b.add_input("joe-model.abc")
+        surf_work_b.add_input("joe-model/abc")
         surf_work_b.commit()
 
         # User A checkout the surfacing
@@ -269,13 +265,13 @@ class TestResources(unittest.TestCase):
 
         # if the resolve argument is turn to "mine", user A version is kept
         surf_work_a = surf_a.checkout(resolve_conflict="mine")
-        abc_product_a = surf_work_a.get_input_product("joe-model.abc")
-        self.assertFalse(os.path.exists(os.path.join(abc_product_a.directory, "userB_was_here.txt")))
+        abc_product_a = surf_work_a.get_input_product("joe-model/abc")
+        self.assertFalse(os.path.exists(os.path.join(abc_product_a.product_directory, "abc", "userB_was_here.txt")))
 
         # if the resolve argument is turn to "theirs", user B version is kept
         surf_work_a.trash()
         surf_a.checkout(resolve_conflict="theirs")
-        self.assertTrue(os.path.exists(os.path.join(abc_product_a.directory, "userB_was_here.txt")))
+        self.assertTrue(os.path.exists(os.path.join(abc_product_a.product_directory, "abc", "userB_was_here.txt")))
 
     def test_check_out_from_template(self):
         # if no template exists
