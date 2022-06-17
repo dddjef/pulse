@@ -67,7 +67,7 @@ class Repository(PulseRepository):
 
     def upload_resource_commit(self, commit, work_folder, work_files, products_files):
         self._copyfiles(work_files, work_folder, self._build_commit_path("work", commit))
-        self._copyfiles(products_files, commit.directory, self._build_commit_path("products", commit))
+        self._copyfiles(products_files, commit.product_directory, self._build_commit_path("products", commit))
         return True
 
     def download_work(self, commit, work_folder):
@@ -76,10 +76,12 @@ class Repository(PulseRepository):
         copy_folder_content(repo_work_path, work_folder)
 
     def download_product(self, local_published_version, subpath=""):
+        # TODO : recreate empty parent directories when using subpath (needs a test with multiple dir depth)
         # build_products_repository_path
         product_repo_path = os.path.join(self._build_commit_path("products", local_published_version), subpath)
+        dest_path = os.path.join(local_published_version.product_directory, subpath)
         # copy repo products type to products_user_filepath
-        copy_folder_content(product_repo_path, local_published_version.directory)
+        copy_folder_content(product_repo_path, dest_path)
 
     def download_resource(self, resource, destination):
         resource_product_repo_path = self._build_resource_path("products", resource)
