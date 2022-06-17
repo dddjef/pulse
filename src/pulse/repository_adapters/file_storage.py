@@ -75,13 +75,14 @@ class Repository(PulseRepository):
         # copy repo work to sandbox
         copy_folder_content(repo_work_path, work_folder)
 
-    def download_product(self, local_published_version, subpath=""):
+    def download_product(self, local_published_version, subpath="", destination_folder=None):
         # TODO : recreate empty parent directories when using subpath (needs a test with multiple dir depth)
         # build_products_repository_path
         product_repo_path = os.path.join(self._build_commit_path("products", local_published_version), subpath)
-        dest_path = os.path.join(local_published_version.product_directory, subpath)
         # copy repo products type to products_user_filepath
-        copy_folder_content(product_repo_path, dest_path)
+        if not destination_folder:
+            destination_folder = os.path.join(local_published_version.product_directory, subpath)
+        copy_folder_content(product_repo_path, destination_folder)
 
     def download_resource(self, resource, destination):
         resource_product_repo_path = self._build_resource_path("products", resource)
