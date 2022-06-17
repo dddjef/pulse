@@ -117,4 +117,13 @@ def edit(uri_string, edit_dict):
     uri_dict = convert_to_dict(uri_string)
     for k, v in edit_dict.items():
         uri_dict[k] = v
-    return convert_from_dict(uri_dict)
+    return convert_from_dict\
+        (uri_dict)
+
+
+def uri_to_filename(uri):
+    return uri.replace("/", "~")
+
+
+def filename_to_uri(filename):
+    return filename.replace("~", "/")

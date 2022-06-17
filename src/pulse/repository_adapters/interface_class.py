@@ -36,7 +36,7 @@ class PulseRepository:
         """
         pass
 
-    def download_product(self, product):
+    def download_product(self, product, subpath=""):
         """download a product content to a local folder. Creates the folder if needed
         """
         pass
