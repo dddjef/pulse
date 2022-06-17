@@ -1115,6 +1115,7 @@ class Project:
         raise a PulseError if the uri is not found in the project
 
         :param uri_string: a pulse product uri
+        :param local_only: return only local published version
         :return: Product
         """
         uri_dict = uri_standards.convert_to_dict(uri_string)
