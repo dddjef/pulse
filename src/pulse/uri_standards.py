@@ -34,11 +34,6 @@ def convert_to_dict(uri_string):
     entity = resource_split[0]
     resource_type = resource_split[1]
 
-    if len(product_split) > 1:
-        product_type = product_split[1]
-    else:
-        product_type = None
-
     if len(uri_split) > 1:
         version = uri_split[1]
     else:
@@ -53,7 +48,6 @@ def convert_to_dict(uri_string):
         "entity": entity,
         "resource_type": resource_type,
         "version": version,
-        "product_type": product_type,
         "subpath": subpath
     }
 
@@ -66,10 +60,12 @@ def convert_from_dict(uri_dict):
     :return: uri string
     """
     uri = uri_dict["entity"] + "-" + uri_dict['resource_type']
-    if 'product_type' in uri_dict and uri_dict['product_type']:
-        uri += "." + uri_dict['product_type']
     if 'version' in uri_dict and uri_dict['version']:
         uri += "@" + str(uri_dict['version'])
+    if 'subpath' in uri_dict and uri_dict['subpath']:
+        subpath = uri_dict['subpath']
+        if subpath != "":
+            uri += "/" + subpath
     return uri
 
 
@@ -110,8 +106,7 @@ def edit(uri_string, edit_dict):
     uri_dict = convert_to_dict(uri_string)
     for k, v in edit_dict.items():
         uri_dict[k] = v
-    return convert_from_dict\
-        (uri_dict)
+    return convert_from_dict(uri_dict)
 
 
 def uri_to_filename(uri):
