@@ -16,7 +16,7 @@ def is_mutable(uri):
         return True
     return uri_dict["version"].isalpha()
 
-
+# TODO : remove product type from lib
 def convert_to_dict(uri_string):
     """
     transform a string uri in a dict uri
@@ -69,7 +69,7 @@ def convert_from_dict(uri_dict):
     if 'product_type' in uri_dict and uri_dict['product_type']:
         uri += "." + uri_dict['product_type']
     if 'version' in uri_dict and uri_dict['version']:
-        uri += "@" + (str(int(uri_dict['version'])))
+        uri += "@" + str(uri_dict['version'])
     return uri
 
 
@@ -104,13 +104,6 @@ def path_to_uri(path):
         raise PulseError("can't convert path to uri, malformed path")
 
     return convert_from_dict(uri_dict)
-
-
-def remove_version_from_uri(uri):
-    if not is_valid(uri):
-        raise PulseUriError("Uri not valid : " + uri)
-    split = uri.split("@")
-    return split[0]
 
 
 def edit(uri_string, edit_dict):
