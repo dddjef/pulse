@@ -925,7 +925,7 @@ class Resource(PulseDbObject):
         except PulseError:
             return None
 
-    def checkout(self, index="last", destination_folder=None, recreate_products=True, resolve_conflict="error"):
+    def checkout(self, index="last", destination_folder:Union[str, Path]=None, recreate_products=True, resolve_conflict="error"):
         """
         Download the resource work files in the user work space.
         Download related dependencies if they are not available in user products space
@@ -947,6 +947,7 @@ class Resource(PulseDbObject):
 
         if not destination_folder:
             destination_folder = self.sandbox_path
+        destination_folder = Path(destination_folder)
 
         # create the work object
         work.version = self.last_version + 1
@@ -982,7 +983,8 @@ class Resource(PulseDbObject):
 
         # if no source has been found, just create empty work folder
         if not source_commit:
-            os.makedirs(destination_folder)
+            if not destination_folder.is_dir():
+                destination_folder.mkdir(parents=True)
         else:
             self.project.cnx.repositories[source_resource.repository].download_work(source_commit, destination_folder)
             out_product_list = source_commit.products
