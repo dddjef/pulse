@@ -17,11 +17,12 @@ def copy_folder_content(source_folder, destination_folder):
         source_filepath = os.path.join(source_folder, node)
         destination_filepath = os.path.join(destination_folder, node)
         if os.path.isdir(source_filepath):
-            if os.path.exists(destination_filepath):
-                shutil.rmtree(destination_filepath)
+            # if os.path.exists(destination_filepath):
+            #     shutil.rmtree(destination_filepath)
             fu.copytree(source_filepath, destination_filepath)
         else:
-            shutil.copyfile(source_filepath, destination_filepath)
+            if not os.path.exists(destination_filepath):
+                shutil.copyfile(source_filepath, destination_filepath)
 
 
 class Repository(PulseRepository):
@@ -80,7 +81,7 @@ class Repository(PulseRepository):
         # build_products_repository_path
         product_repo_path = os.path.join(self._build_commit_path("products", local_published_version), subpath)
         if not os.path.exists(product_repo_path):
-            raise PulseRepositoryError ("path does not exists : " + product_repo_path)
+            raise PulseRepositoryError("path does not exists : " + product_repo_path)
         # copy repo products type to products_user_filepath
         if not destination_folder:
             destination_folder = os.path.join(local_published_version.product_directory, subpath)

@@ -128,7 +128,9 @@ def copytree(src, dst, ignore=None):
     else:
         ignored_names = set()
 
-    os.makedirs(dst)
+    if not os.path.exists(dst):
+        os.makedirs(dst)
+
     for name in names:
         if name in ignored_names:
             continue
@@ -138,7 +140,8 @@ def copytree(src, dst, ignore=None):
         if os.path.isdir(srcname):
             copytree(srcname, dstname, ignore)
         else:
-            shutil.copyfile(srcname, dstname)
+            if not os.path.exists(dstname):
+                shutil.copyfile(srcname, dstname)
 
 
 def move_file(src_path, dst_path):
