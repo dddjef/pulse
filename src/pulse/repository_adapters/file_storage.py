@@ -79,6 +79,8 @@ class Repository(PulseRepository):
         # TODO : recreate empty parent directories when using subpath (needs a test with multiple dir depth)
         # build_products_repository_path
         product_repo_path = os.path.join(self._build_commit_path("products", local_published_version), subpath)
+        if not os.path.exists(product_repo_path):
+            raise PulseRepositoryError ("path does not exists : " + product_repo_path)
         # copy repo products type to products_user_filepath
         if not destination_folder:
             destination_folder = os.path.join(local_published_version.product_directory, subpath)
