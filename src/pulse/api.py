@@ -296,7 +296,7 @@ class Work(LocalProduct):
         uri = inputs[input_name]
 
         try:
-            product = self.project.get_work_version(uri)
+            product = self.project.get_work(uri)
         except PulseError:
             product = self.project.get_published_version(uri)
 
@@ -366,7 +366,7 @@ class Work(LocalProduct):
         work = None
         if consider_work_product:
             # check there is a work wih a valid subpath
-            workNode = self.project.get_work_version(uri)
+            workNode = self.project.get_work(uri)
             if workNode and os.path.exists(os.path.join(workNode.product_directory, subpath)):
                 work = workNode
 
@@ -423,7 +423,7 @@ class Work(LocalProduct):
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        product = self.project.get_work_version(uri)
+        product = self.project.get_work(uri)
         if not product:
             product = self.project.get_published_version(uri)
 
@@ -555,11 +555,11 @@ class Work(LocalProduct):
     def restore_template_products(self):
         if self.resource.entity != cfg.template_name:
 
-            source_resource = self.project.get_resource(cfg.template_name, self.resource.resource_type)
+            source_resource = self.project.get_template(self.resource.resource_type)
 
             # If resource not found, raise missing
             if not source_resource:
-                raise PulseDatabaseMissingObject(f"Database object not found." + source_resource.uri)
+                raise PulseDatabaseMissingObject(f"No template found for " + self.resource.resource_type)
 
             self.trash_products_content()
 
@@ -834,14 +834,14 @@ class Resource(PulseDbObject):
         if self.last_version == 0:
             # if a source resource is given, get its template
             if self.resource_template != '':
-                template_dict = uri_standards.convert_to_dict(self.resource_template)
-                source_resource = self.project.get_resource(template_dict['entity'], template_dict['resource_type'])
+                source_resource = self.project.get_resource(self.resource_template)
                 source_commit = source_resource.get_commit("last")
             else:
                 # try to find a template
                 try:
                     if self.entity != cfg.template_name:
-                        source_resource = self.project.get_resource(cfg.template_name, self.resource_type)
+
+                        source_resource = self.project.get_template(self.resource_type)
                         
                         # If resource not found, raise missing
                         if not source_resource:
@@ -978,7 +978,15 @@ class Project:
         self.commit_product_data_directory = None
         self.work_product_data_directory = None
 
-    def get_work_version(self, uri_string):
+    def get_template(self, resource_type):
+        """
+        get the template resource assiocated with theresource type
+        :return: a pulse resource
+        """
+        uri = uri_standards.convert_from_dict({"entity": cfg.template_name, "resource_type": resource_type})
+        return self.get_resource(uri)
+
+    def get_work(self, uri_string):
         uri_dict = uri_standards.convert_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
         work = resource.get_work()
@@ -997,7 +1005,7 @@ class Project:
         raise a PulseError if the uri is not found in the project
         :param uri_string: a pulse product uri
         :param local_only: return only local published version
-        :return: Product
+        :return: PublishedVersion
         """
 
         uri_string = uri_string.split("/", 1)[0]
@@ -1028,7 +1036,7 @@ class Project:
 
         :param uri_pattern: string
         :param local_only: look only for version in user space
-        :return: a Products list
+        :return: uri list
         """
         if local_only:
             if not os.path.exists(self.commit_product_data_directory):
@@ -1101,16 +1109,20 @@ class Project:
         with open(json_path, "w") as write_file:
             json.dump(data, write_file, indent=4, sort_keys=True)
 
-    def get_resource(self, entity, resource_type):
+    def get_resource(self, uri):
         """
         return a project resource based on its entity name and its type
-        will raise a PulseError on missing resource
+        will return None on a missing resource
 
-        :param entity:
-        :param resource_type:
-        :return:
+        :param uri: the resource uri
+        :return: a pulse Resource
         """
-        return Resource(self, entity, resource_type).db_read()
+        uri_dict = uri_standards.convert_to_dict(uri)
+        try:
+            resource = Resource(self, uri_dict["entity"], uri_dict["resource_type"]).db_read()
+        except PulseDatabaseMissingObject:
+            return
+        return resource
 
     def create_template(self, resource_type, repository=None, source_resource=None):
         return self.create_resource(cfg.template_name, resource_type, repository,  source_resource)
@@ -1149,7 +1161,7 @@ class Project:
         """
             return True if product has to be downloaded, False if not, and raise an Error if needed by strategy
         """
-        work_version = self.get_work_version(uri)
+        work_version = self.get_work(uri)
 
         if not work_version:
             return True

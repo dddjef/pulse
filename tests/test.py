@@ -254,7 +254,7 @@ class TestResources(unittest.TestCase):
         # userB checkout the same resource, but he commits first
         os.environ["USER_VAR"] = "userB"
         proj_b = self.cnx.get_project("project_conflict")
-        work_model_b = proj_b.get_resource("joe", "model").checkout()
+        work_model_b = proj_b.get_resource("joe-model").checkout()
         #abc_product_b = work_model_b.product_directory + "/abc")
         utils.add_file_to_directory(work_model_b.product_directory + "/abc", "userB_was_here.txt")
         work_model_b.commit()
@@ -266,7 +266,7 @@ class TestResources(unittest.TestCase):
 
         # User A checkout the surfacing
         os.environ["USER_VAR"] = "userA"
-        surf_a = prj_a.get_resource("joe", "surfacing")
+        surf_a = prj_a.get_resource("joe-surfacing")
 
         # an error is raised by default
         with self.assertRaises(PulseWorkConflict):
@@ -576,7 +576,7 @@ class TestResources(unittest.TestCase):
         # userB does the exact same thing, but he does not commit
         os.environ["USER_VAR"] = "userB"
         proj_b = self.cnx.get_project("project_conflict")
-        work_model_b = proj_b.get_resource("joe", "model").checkout()
+        work_model_b = proj_b.get_resource("joe-model").checkout()
         b_abc_product_directory = os.path.join(work_model_b.output_directory, "abc")
         os.makedirs(b_abc_product_directory)
 
