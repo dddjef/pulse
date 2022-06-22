@@ -74,7 +74,7 @@ class TestResourcesSQL(standard_test.TestResources):
             username=utils_ca.mysql_settings['username'],
             password=utils_ca.mysql_settings['password']
         )
-        self.assertEqual(project.get_local_works(), ['anna-mdl'])
+        self.assertEqual(project.list_works(), ['anna-mdl'])
         project.cnx.db.connection.close()
 
     def tearDown(self):

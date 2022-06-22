@@ -1031,7 +1031,7 @@ class Project:
             index = resource.get_index(uri_dict['version'])
             return resource.get_commit(index)
 
-    def list_products(self, uri_pattern):
+    def list_products(self, uri_pattern="*"):
         """
         return a product objects list matching the uri pattern.
         The pattern should be in the glob search type
@@ -1053,7 +1053,7 @@ class Project:
         file_list = [os.path.basename(x) for x in path_list]
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
-    def get_local_works(self, uri_pattern="*"):
+    def list_works(self, uri_pattern="*"):
         """
         return the list of work resource in user sandbox
         :return: uri list

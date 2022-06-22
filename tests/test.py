@@ -601,11 +601,11 @@ class TestResources(unittest.TestCase):
     def test_project_list_works(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")
         anna_rig_resource.checkout()
-        self.assertEqual(self.prj.get_local_works(), ['anna-mdl', 'anna-rigging'])
+        self.assertEqual(self.prj.list_works(), ['anna-mdl', 'anna-rigging'])
 
     def test_get_project_from_path(self):
         project = get_project_from_path(self.anna_mdl_work.directory)
-        self.assertEqual(project.get_local_works(), ['anna-mdl'])
+        self.assertEqual(project.list_works(), ['anna-mdl'])
 
     def test_junction_point_work_output(self):
         # ensure a resource got its output directory by default
