@@ -1031,7 +1031,7 @@ class Project:
             index = resource.get_index(uri_dict['version'])
             return resource.get_commit(index)
 
-    def list_products(self, uri_pattern="*"):
+    def list_published_versions(self, uri_pattern="*"):
         """
         return a product objects list matching the uri pattern.
         The pattern should be in the glob search type

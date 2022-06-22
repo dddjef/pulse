@@ -595,8 +595,8 @@ class TestResources(unittest.TestCase):
         anna_rig_work = anna_rig_resource.checkout()
         utils.add_file_to_directory(anna_rig_work.output_directory + "/actor_anim", "actor.blend")
         anna_rig_work.commit()
-        self.assertTrue(len(self.prj.list_products("anna*")) == 2)
-        self.assertTrue(len(self.prj.list_products("an?a*")) == 2)
+        self.assertTrue(len(self.prj.list_published_versions("anna*")) == 2)
+        self.assertTrue(len(self.prj.list_published_versions("an?a*")) == 2)
 
     def test_project_list_works(self):
         anna_rig_resource = self.prj.create_resource("anna", "rigging")

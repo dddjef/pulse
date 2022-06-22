@@ -511,7 +511,7 @@ class MainWindow(QMainWindow):
                     work = pulse.Work(resource).read()
                     resource_item = PulseItem([resource_uri], work)
                     self.treeWidget.addTopLevelItem(resource_item)
-                    for product_type in work.list_products():
+                    for product_type in work.list_published_versions():
                         product = work.get_product(product_type)
                         product_item = PulseItem([product_type], product)
                         resource_item.addChild(product_item)
