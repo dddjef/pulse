@@ -1042,14 +1042,15 @@ class Project:
         return [self.get_published_version(uri) for uri in self.cnx.db.find_uris(
             self.name, "PublishedVersion", uri_pattern)]
 
-    def get_local_commit_products(self):
+    def get_local_commit_products(self, uri_pattern="*"):
         """
         return the list of products in user work space
         :return: uri list
         """
         if not os.path.exists(self.commit_product_data_directory):
             return []
-        file_list = os.listdir(self.commit_product_data_directory)
+        path_list = glob.glob(os.path.join(self.commit_product_data_directory, uri_pattern) + ".json")
+        file_list = [os.path.basename(x) for x in path_list]
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
     def get_local_works(self, uri_pattern="*"):
