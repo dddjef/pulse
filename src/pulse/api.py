@@ -507,26 +507,32 @@ class Work:
         """
         return fu.read_data(self.data_file)["outputs"]
 
-    def create_product(self, product_type):
-        """
-        create a new product for the work
+    def create_product(self, product_type:str)->Product:
+        """Create a new product for the work.
 
-        :param product_type: string
-        :return: the new work product object
+        Create directory if doesn't exist.
+
+        Args:
+            product_type (str): Product type name
+
+        Returns:
+            Product: Pulse product
         """
         self._check_exists_in_user_workspace()
-        outputs = self.list_products()
-        if product_type in outputs:
-            raise PulseError("product already exists : " + product_type)
+        
         work_product = WorkProduct(self, product_type)
         # create the pulse data file
         work_product.init_local_data_file()
 
-        os.makedirs(work_product.directory)
+        # Create product dir
+        if not Path(work_product.directory).is_dir():
+            os.makedirs(work_product.directory)  # TODO refactor Path
+
         pulse_filepath = os.path.join(self.get_products_directory(), cfg.pulse_filename)
         if not os.path.exists(pulse_filepath):
             open(pulse_filepath, 'a').close()
         # update work pipe file with the new output
+        outputs = self.list_products()
         outputs.append(product_type)
         data_dict = fu.read_data(self.data_file)
         data_dict["outputs"] = outputs
