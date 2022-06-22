@@ -423,10 +423,9 @@ class Work(LocalProduct):
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-
         product = self.project.get_work_version(uri)
         if not product:
-            product = self.project.get_published_version(uri, local_only=True)
+            product = self.project.get_published_version(uri)
 
         product.remove_product_user(self.directory)
 
@@ -646,7 +645,7 @@ class Work(LocalProduct):
 
         # unregister from products
         for input_name, uri in self.get_inputs().items():
-            input_product = self.project.get_published_version(uri, local_only=True)
+            input_product = self.project.get_published_version(uri)
             if os.path.exists(input_product.product_directory):
                 input_product.remove_product_user(self.directory)
 
@@ -991,7 +990,7 @@ class Project:
             return work
         return
 
-    def get_published_version(self, uri_string, local_only=False):
+    def get_published_version(self, uri_string):
         """
         return the resource version corresponding of the given uri
         @last or no version return the last version
@@ -1000,15 +999,6 @@ class Project:
         :param local_only: return only local published version
         :return: Product
         """
-        if local_only:
-            if not os.path.exists(self.commit_product_data_directory):
-                return None
-            uri = uri_standards.edit(uri_string, {"subpath": ""})
-            filename_uri = uri_standards.uri_to_filename(uri) + ".json"
-            if filename_uri in os.listdir(self.commit_product_data_directory):
-                published_version = self.get_published_version(uri)
-                return published_version
-            return None
 
         uri_string = uri_string.split("/", 1)[0]
         uri_dict = uri_standards.convert_to_dict(uri_string)
@@ -1031,27 +1021,23 @@ class Project:
             index = resource.get_index(uri_dict['version'])
             return resource.get_commit(index)
 
-    def list_published_versions(self, uri_pattern="*"):
+    def list_published_versions(self, uri_pattern="*", local_only=False):
         """
         return a product objects list matching the uri pattern.
         The pattern should be in the glob search type
 
         :param uri_pattern: string
+        :param local_only: look only for version in user space
         :return: a Products list
         """
-        return [self.get_published_version(uri) for uri in self.cnx.db.find_uris(
-            self.name, "PublishedVersion", uri_pattern)]
+        if local_only:
+            if not os.path.exists(self.commit_product_data_directory):
+                return []
+            path_list = glob.glob(os.path.join(self.commit_product_data_directory, uri_pattern) + ".json")
+            file_list = [os.path.basename(x) for x in path_list]
+            return [fu.json_filename_to_uri(filename) for filename in file_list]
 
-    def get_local_commit_products(self, uri_pattern="*"):
-        """
-        return the list of products in user work space
-        :return: uri list
-        """
-        if not os.path.exists(self.commit_product_data_directory):
-            return []
-        path_list = glob.glob(os.path.join(self.commit_product_data_directory, uri_pattern) + ".json")
-        file_list = [os.path.basename(x) for x in path_list]
-        return [fu.json_filename_to_uri(filename) for filename in file_list]
+        return self.cnx.db.find_uris(self.name, "PublishedVersion", uri_pattern)
 
     def list_works(self, uri_pattern="*"):
         """
@@ -1074,12 +1060,12 @@ class Project:
         :return: purge products list
         """
         purged_products = []
-        for uri in self.get_local_commit_products():
+        for uri in self.list_published_versions(local_only=True):
             if resource_filter:
                 if not uri.startswith(resource_filter.uri):
                     continue
 
-            product = self.get_published_version(uri, local_only=True)
+            product = self.get_published_version(uri)
             if product.get_unused_time() > (unused_days*86400):
                 purged_products.append(product.uri)
                 if not dry_mode:
