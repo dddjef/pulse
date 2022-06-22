@@ -677,18 +677,6 @@ class Work(LocalProduct):
 
         return True
 
-    def version_pipe_filepath(self, index):
-        """
-        get the pipe file path
-
-        :param index:
-        :return: filepath
-        """
-        return os.path.join(
-            self.directory,
-            cfg.DEFAULT_VERSION_PREFIX + str(index).zfill(cfg.DEFAULT_VERSION_PADDING) + ".pipe"
-        )
-
     def status(self):
         # TODO : should determine if we want to declare change when template products are restored
         """
