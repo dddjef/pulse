@@ -17,8 +17,6 @@ def copy_folder_content(source_folder, destination_folder):
         source_filepath = os.path.join(source_folder, node)
         destination_filepath = os.path.join(destination_folder, node)
         if os.path.isdir(source_filepath):
-            # if os.path.exists(destination_filepath):
-            #     shutil.rmtree(destination_filepath)
             fu.copytree(source_filepath, destination_filepath)
         else:
             if not os.path.exists(destination_filepath):
