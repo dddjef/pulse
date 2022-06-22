@@ -274,8 +274,7 @@ class TestResources(unittest.TestCase):
 
         # if the resolve argument is turn to "mine", user A version is kept
         surf_work_a = surf_a.checkout(resolve_conflict="mine")
-        # TODO : change get_input_product to get_input_publishedVersion
-        abc_product_a = surf_work_a.get_input_product("joe-model/abc")
+        abc_product_a = surf_work_a.get_input("joe-model/abc")
         self.assertFalse(os.path.exists(os.path.join(abc_product_a.product_directory, "abc", "userB_was_here.txt")))
 
         # if the resolve argument is turn to "theirs", user B version is kept

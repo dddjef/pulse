@@ -283,7 +283,7 @@ class Work(LocalProduct):
         with open(self.products_inputs_file, "r") as read_file:
             return json.load(read_file)
 
-    def get_input_product(self, input_name):
+    def get_input(self, input_name):
         """
         return the product used by the given input
 
