@@ -803,7 +803,6 @@ class Resource(PulseDbObject):
         If the incoming work have input product, those product can be in conflict with local product, by default the
         checkout process will fail with no consequence.
         :param restore_products: could be : none, template, or last.
-        # TODO : destination folder should be destination resource
         :param destination_folder: where the resource will be checkout, if not set, project config is used
         :param index: the commit index to checkout. If not set, the last one will be used
         :param resolve_conflict: can be "error", "mine", or "theirs" depending how Pulse should resolve the conflict.
@@ -1329,9 +1328,9 @@ def get_adapter_list(adapter_type: str) -> FrozenSet[str]:
     for dir in get_adapter_directories(adapter_type):
         files.update((filepath.stem for filepath in dir.glob("*.py")))
 
-    # Remove unwanted modules TODO interface class must be in another directory as a main class to inherit from
+    # Remove unwanted modules
     files.remove("interface_class")
-    files.remove("__init__")  # TODO __init__ shouldn't be necessary
+    files.remove("__init__")
     return frozenset(files)
 
 
