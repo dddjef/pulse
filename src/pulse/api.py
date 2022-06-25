@@ -103,8 +103,6 @@ class LocalProduct:
             pulse_data_dir = self.project.commit_product_data_directory
         return os.path.normpath(os.path.join(pulse_data_dir, fu.uri_to_json_filename(self.uri)))
 
-    # TODO : add and remove product user logic should be in the add input and remove input func, to avoid use them
-    # directly here
     def add_product_user(self, user_directory):
         """
         add a local resource or product as product's user
@@ -157,7 +155,6 @@ class PublishedVersion(PulseDbObject, LocalProduct):
     """
         Object created when a resource has been published to database
     """
-    # TODO : add a "is local" def test
     def __init__(self, resource, version):
         self.uri = resource.uri + "@" + str(version)
         PulseDbObject.__init__(self, resource.project, self.uri)
