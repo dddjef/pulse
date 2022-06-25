@@ -25,9 +25,6 @@ shot_anim_work = shot_anim.checkout()
 >>> # add the last Joe's proxy rig to this shot (download it to user space if needed)
 shot_anim_work.add_input("joe-rig.proxy")
 
->>> # Create a product folder to receive an alembic export
-shot_anim_work.create_product("alembic")
-
 >>> # publish the new resource version and its related products
 shot_anim_work.publish()
 

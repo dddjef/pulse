@@ -17,7 +17,7 @@
 # sys.path.insert(0, os.path.abspath('.'))
 import sys
 import os
-sys.path.insert(0, os.path.abspath('../python'))
+sys.path.insert(0, os.path.abspath('../src'))
 
 # -- Project information -----------------------------------------------------
 
