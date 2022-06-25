@@ -17,11 +17,10 @@ def copy_folder_content(source_folder, destination_folder):
         source_filepath = os.path.join(source_folder, node)
         destination_filepath = os.path.join(destination_folder, node)
         if os.path.isdir(source_filepath):
-            if os.path.exists(destination_filepath):
-                shutil.rmtree(destination_filepath)
             fu.copytree(source_filepath, destination_filepath)
         else:
-            shutil.copyfile(source_filepath, destination_filepath)
+            if not os.path.exists(destination_filepath):
+                shutil.copyfile(source_filepath, destination_filepath)
 
 
 class Repository(PulseRepository):
@@ -55,44 +54,36 @@ class Repository(PulseRepository):
             resource.resource_type,
             resource.entity.replace(":", os.sep)
         )
-        
-    def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
-        version_directory = self._build_commit_path("work", commit)
-        os.makedirs(version_directory)
-        # Copy work files to repo
-        for filepath_rel in work_files:
-            dest = version_directory + filepath_rel
-            dest_dir = os.path.split(dest)[0]
-            if not os.path.isdir(dest_dir):
-                os.makedirs(dest_dir)
-            shutil.copyfile(work_folder + filepath_rel, dest)
 
-        # Copy products folder to repo
-        if not products_folder or not os.path.exists(products_folder):
-            return True
-        products_destination = self._build_commit_path("products", commit)
-    
-        ######################
-        # This part manage the case where a user writes directly to the product repository
-        if os.path.exists(products_destination):
-            return True
-        ######################
-    
-        copy_folder_content(products_folder, products_destination)
+    @staticmethod
+    def _copy_files(relative_filepath_list, source_root, destination_root):
+        os.makedirs(destination_root)
+        for filepath_rel in relative_filepath_list:
+            destination = destination_root + filepath_rel
+            destination_dir = os.path.split(destination)[0]
+            if not os.path.isdir(destination_dir):
+                os.makedirs(destination_dir)
+            shutil.copyfile(source_root + filepath_rel, destination)
+
+    def upload_resource_commit(self, commit, work_folder, work_files, products_files):
+        self._copy_files(work_files, work_folder, self._build_commit_path("work", commit))
+        self._copy_files(products_files, commit.product_directory, self._build_commit_path("products", commit))
         return True
-        
+
     def download_work(self, commit, work_folder):
         repo_work_path = self._build_commit_path("work", commit)
         # copy repo work to sandbox
         copy_folder_content(repo_work_path, work_folder)
 
-    def download_product(self, product, product_folder=None):
+    def download_product(self, local_published_version, subpath="", destination_folder=None):
         # build_products_repository_path
-        product_repo_path = os.path.join(self._build_commit_path("products", product.parent), product.product_type)
+        product_repo_path = os.path.join(self._build_commit_path("products", local_published_version), subpath)
+        if not os.path.exists(product_repo_path):
+            raise PulseRepositoryError("path does not exists : " + product_repo_path)
         # copy repo products type to products_user_filepath
-        if not product_folder:
-            product_folder = product.directory
-        copy_folder_content(product_repo_path, product_folder)
+        if not destination_folder:
+            destination_folder = os.path.join(local_published_version.product_directory, subpath)
+        copy_folder_content(product_repo_path, destination_folder)
 
     def download_resource(self, resource, destination):
         resource_product_repo_path = self._build_resource_path("products", resource)

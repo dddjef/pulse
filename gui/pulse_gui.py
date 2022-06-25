@@ -69,8 +69,8 @@ class LocalProductsWindow(QDialog):
 
     def update_inputs_list(self):
         self.products_listWidget.clear()
-        for uri in self.project.get_local_commit_products():
-            product = self.project.get_commit_product(uri)
+        for uri in self.project.list_published_versions():
+            product = self.project.get_published_version(uri)
             if self.showUnused_checkBox.isChecked():
                 if product.get_unused_time() < (self.unusedDays_spinBox.value()*86400):
                     continue
@@ -160,7 +160,7 @@ class InputsWindow(QDialog):
         current_item = self.mainWindow.treeWidget.currentItem()
         if not current_item:
             self.mainWindow.message_user("You have to select an item in the treeview", "ERROR")
-        elif not isinstance(current_item.pulse_node, pulse.Product):
+        elif not isinstance(current_item.pulse_node, pulse.LocalProduct):
             self.mainWindow.message_user("the selected item should be a product only", "ERROR")
         else:
             try:
@@ -501,7 +501,7 @@ class MainWindow(QMainWindow):
         if self.sandbox_pushButton.isChecked():
             self.sandbox_pushButton.setStyleSheet('QPushButton {font-weight: bold;}')
             self.project_pushButton.setStyleSheet('QPushButton {font-weight: normal;}')
-            resources_uri = self.project.get_local_works(self.get_filter_string())
+            resources_uri = self.project.list_works(self.get_filter_string())
             try:
                 for resource_uri in resources_uri:
                     uri_dict = pulse_uri.convert_to_dict(resource_uri)
@@ -511,7 +511,7 @@ class MainWindow(QMainWindow):
                     work = pulse.Work(resource).read()
                     resource_item = PulseItem([resource_uri], work)
                     self.treeWidget.addTopLevelItem(resource_item)
-                    for product_type in work.list_products():
+                    for product_type in work.list_published_versions():
                         product = work.get_product(product_type)
                         product_item = PulseItem([product_type], product)
                         resource_item.addChild(product_item)
@@ -550,9 +550,9 @@ class MainWindow(QMainWindow):
                                 resource_uri + ".*@" + version
                         ):
                             product_type = pulse_uri.convert_to_dict(product_uri)["product_type"]
-                            product = pulse.CommitProduct(commit, product_type)
+                            product = pulse.LocalPublishedVersion(commit, product_type)
                             product_item = PulseItem([product_type], product)
-                            if product.uri in self.project.get_local_commit_products():
+                            if product.uri in self.project.list_published_versions():
                                 set_tree_item_style(product_item, "downloaded")
                             commit_item.addChild(product_item)
             except Exception as ex:
@@ -595,7 +595,7 @@ class MainWindow(QMainWindow):
                     "resource_template": item.pulse_node.resource_template,
                     "lock_user": item.pulse_node.lock_user
                 })
-            if isinstance(item.pulse_node, pulse.Commit):
+            if isinstance(item.pulse_node, pulse.PublishedVersion):
                 properties = {
                     "comment": item.pulse_node.comment,
                     "files": list(item.pulse_node.files.keys())
@@ -670,12 +670,12 @@ class MainWindow(QMainWindow):
                 action3 = rc_menu.addAction(self.tr("Lock"))
             action3.triggered.connect(partial(self.toggle_lock, item))
 
-        elif isinstance(item.pulse_node, pulse.Commit):
+        elif isinstance(item.pulse_node, pulse.PublishedVersion):
             pass
             # action = rc_menu.addAction(self.tr("Commit Action"))
             # action.triggered.connect(partial(self.add_tree_item, item))
 
-        elif isinstance(item.pulse_node, pulse.CommitProduct):
+        elif isinstance(item.pulse_node, pulse.LocalPublishedVersion):
             action = rc_menu.addAction(self.tr("Download To Cache"))
             action.triggered.connect(partial(self.download_product, item))
             action2 = rc_menu.addAction(self.tr("Remove From Cache"))
@@ -755,7 +755,7 @@ class MainWindow(QMainWindow):
             comment, ok = QInputDialog.getText(self, "Commit", "Optional Comment")
             if not ok:
                 return
-            commit = item.pulse_node.commit(comment=comment)
+            commit = item.pulse_node.publish(comment=comment)
             self.message_user("commit to version " + str(commit.version))
         except Exception as ex:
             print_exception(ex, self)

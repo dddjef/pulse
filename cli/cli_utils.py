@@ -120,7 +120,7 @@ def create_output(args):
 
 def add_input(args):
     project = pulse.get_project_from_path(os.getcwd())
-    product = project.get_commit_product(args.uri)
+    product = project.get_published_version(args.uri)
     if not product:
         print('no product found for ' + args.uri)
         return
@@ -163,7 +163,7 @@ def trash_resource(args):
 def commit(args, path=os.getcwd()):
     work = get_work(path)
     try:
-        commit_obj = work.commit(comment=args.comment)
+        commit_obj = work.publish(comment=args.comment)
         # cli creates creates empty products directory for the new version after the commit
         for product in commit_obj.get_products():
             work.create_product(product.product_type)

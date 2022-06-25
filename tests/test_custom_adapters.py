@@ -74,7 +74,7 @@ class TestResourcesSQL(standard_test.TestResources):
             username=utils_ca.mysql_settings['username'],
             password=utils_ca.mysql_settings['password']
         )
-        self.assertEqual(project.get_local_works(), ['anna-mdl'])
+        self.assertEqual(project.list_works(), ['anna-mdl'])
         project.cnx.db.connection.close()
 
     def tearDown(self):
@@ -113,7 +113,7 @@ class TestFTP(unittest.TestCase):
         template_resource = self.prj.create_resource("_template", "rig", repository="local_test_storage")
         template_work = template_resource.checkout()
         utils.add_file_to_directory(template_work.directory, "template_work.txt")
-        template_work.commit()
+        template_work.publish()
         # self.assertTrue(os.path.exists(os.path.join(user_works, "test\\rig\\_template")))
         template_work.trash()
         self.prj.purge_unused_user_products()
@@ -132,7 +132,7 @@ class TestFTP(unittest.TestCase):
 
         # test commit the resource
         utils.add_file_to_directory(template_work.directory)
-        template_work.commit()
+        template_work.publish()
 
         # test moving resource between repo when the resource is locked
         template_resource.set_lock(True, "another_user")

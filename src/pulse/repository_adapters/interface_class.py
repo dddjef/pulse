@@ -26,7 +26,7 @@ class PulseRepository:
         """
         pass
 
-    def upload_resource_commit(self, commit, work_folder, work_files, products_folder=None):
+    def upload_resource_commit(self, commit, work_folder, work_files, products_files):
         """upload a commit content to repository
         """
         pass
@@ -36,8 +36,9 @@ class PulseRepository:
         """
         pass
 
-    def download_product(self, product, product_folder=None):
+    def download_product(self, product, subpath="", destination_folder=None):
         """download a product content to a local folder. Creates the folder if needed
+            raise a PulseRepositoryError if the subpath is unreachable
         """
         pass
 
