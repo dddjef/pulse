@@ -410,8 +410,14 @@ class TestResources(unittest.TestCase):
         anna_srf_v2.download()
         self.assertTrue(os.path.exists(os.path.join(anna_srf_v2.directory, "ld")))
 
-        self.assertEqual(uri.path_to_uri(anna_srf_work.directory), anna_srf_resource.uri)
-        self.assertEqual(uri.path_to_uri(anna_mdl_v2.directory), anna_mdl_v2.uri)
+
+    def test_path_to_uri(self):
+        self.assertEqual(uri.path_to_uri(self.anna_mdl_work.directory), "anna-mdl")
+        self.assertEqual(uri.path_to_uri(self.anna_mdl_v1.directory), "anna-mdl@1")
+        self.assertEqual(uri.path_to_uri
+            ("C:/Users/dddje/PycharmProjects/pulse/tests/data/out/products/test/anna-mdl/V001/abc"),"anna-mdl@1/abc")
+        self.assertEqual(uri.path_to_uri
+            ("C:/Users/dddje/PycharmProjects/pulse/tests/data/out/products/test/anna-mdl/V001/abc/ld"),"anna-mdl@1/abc/ld")
 
     def test_work_commit(self):
         # test subdirectories are commit

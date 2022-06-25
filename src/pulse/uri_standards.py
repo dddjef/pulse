@@ -16,7 +16,7 @@ def is_mutable(uri):
         return True
     return uri_dict["version"].isalpha()
 
-# TODO : remove product type from lib
+
 def convert_to_dict(uri_string):
     """
     transform a string uri in a dict uri
@@ -29,8 +29,7 @@ def convert_to_dict(uri_string):
 
     subpath_split = uri_string.split("/", 1)
     uri_split = subpath_split[0].split("@")
-    product_split = uri_split[0].split(".")
-    resource_split = product_split[0].split("-")
+    resource_split = uri_split[0].split("-")
     entity = resource_split[0]
     resource_type = resource_split[1]
 
@@ -63,6 +62,8 @@ def convert_from_dict(uri_dict):
     if 'version' in uri_dict and uri_dict['version']:
         uri += "@" + str(uri_dict['version'])
     if 'subpath' in uri_dict and uri_dict['subpath']:
+        if uri_dict['subpath'].startswith("/"):
+            uri_dict['subpath'] = uri_dict['subpath'][1:]
         subpath = uri_dict['subpath']
         if subpath != "":
             uri += "/" + subpath
@@ -75,27 +76,34 @@ def path_to_uri(path):
     mode = None
     uri_dict = {}
 
-    # find the pulse_data_dir to determine if it's a product or work URI
-    for i in range(1, len(path_list)):
-        if os.path.exists(os.path.join(path, cfg.pulse_data_dir, "works")):
+    # find the pulse_data_dir to determine pulse root and if it's a product or work context
+    pulse_root = ""
+    for item in path_list:
+        if item.endswith(":"):
+            item += "\\"
+        pulse_root = os.path.join(pulse_root, item)
+        if os.path.exists(os.path.join(pulse_root, cfg.pulse_data_dir, "works")):
             mode = "work"
             break
-        if os.path.exists(os.path.join(path, cfg.pulse_data_dir, "work_products")):
+        if os.path.exists(os.path.join(pulse_root, cfg.pulse_data_dir, "work_products")):
             mode = "product"
             break
-        path = os.path.dirname(path)
     if not mode:
-        raise PulseError("can't convert path to uri, no project found")
+        raise PulseError("can't convert path to uri, no pulse root found : " + path)
 
-    # convert path element to URI dict
+    # convert pulse path to URI dict
+    pulse_path_split = path[len(pulse_root)+1:].split(os.sep)
     try:
-        split_dir = path_list[-(i - 1)].split("-")
+        split_dir = pulse_path_split[0].split("-")
         uri_dict['entity'] = split_dir[0]
         uri_dict['resource_type'] = split_dir[1]
         if mode == "product":
-            uri_dict['version'] = int(path_list[-(i - 2)].replace(cfg.DEFAULT_VERSION_PREFIX, ""))
-            if i > 3:
-                uri_dict['product_type'] = path_list[-(i - 3)]
+            uri_dict['version'] = int(pulse_path_split[1].replace(cfg.DEFAULT_VERSION_PREFIX, ""))
+            if len(pulse_path_split) > 2:
+                subpath = ""
+                for item in pulse_path_split[2:]:
+                    subpath += "/" + item
+                uri_dict['subpath'] = subpath
     except ValueError:
         raise PulseError("can't convert path to uri, malformed path")
 
