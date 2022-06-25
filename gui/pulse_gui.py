@@ -755,7 +755,7 @@ class MainWindow(QMainWindow):
             comment, ok = QInputDialog.getText(self, "Commit", "Optional Comment")
             if not ok:
                 return
-            commit = item.pulse_node.commit(comment=comment)
+            commit = item.pulse_node.publish(comment=comment)
             self.message_user("commit to version " + str(commit.version))
         except Exception as ex:
             print_exception(ex, self)

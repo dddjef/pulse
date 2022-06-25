@@ -174,7 +174,7 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         """
         return os.path.exists(os.path.join(self.product_directory, subpath))
 
-    def remove_from_local_products(self, recursive_clean=False):
+    def remove_from_local_products(self):
         """
         remove the product from local pulse cache
         will raise a pulse error if the product is used by a resource
@@ -211,13 +211,15 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         :return: the local published version
         :param resolve_conflict: behaviour if there's already a local work product with the same uri
         :param subpath: only download a part of the commit
+        :param destination_folder: download to a custom directory
         """
         # remove leading slash in subpath
         if subpath.startswith("/"):
             subpath = subpath[1:]
 
         if self.project.resolve_local_product_conflict(self.uri, resolve_conflict):
-            self.project.cnx.repositories[self.resource.repository].download_product(self, subpath=subpath, destination_folder=destination_folder)
+            self.project.cnx.repositories[self.resource.repository].download_product(
+                self, subpath=subpath, destination_folder=destination_folder)
             self.init_local_product_data()
 
         return self.product_directory
@@ -240,7 +242,7 @@ class Work(LocalProduct):
 
     @property
     def uri(self):
-        return uri_standards.edit(self.resource.uri, {'version':self.version})
+        return uri_standards.edit(self.resource.uri, {'version': self.version})
 
     def _check_exists_in_user_workspace(self):
         if not os.path.exists(self.directory):
@@ -363,9 +365,9 @@ class Work(LocalProduct):
         work = None
         if consider_work_product:
             # check there is a work wih a valid subpath
-            workNode = self.project.get_work(uri)
-            if workNode and os.path.exists(os.path.join(workNode.product_directory, subpath)):
-                work = workNode
+            work_node = self.project.get_work(uri)
+            if work_node and os.path.exists(os.path.join(work_node.product_directory, subpath)):
+                work = work_node
 
         # get the published product, and compare to work product version to get the last one
         product = self.project.get_published_version(uri)
@@ -479,7 +481,7 @@ class Work(LocalProduct):
         self.version = work_data["version"]
         return self
 
-    def commit(self, comment="", restore_template_products=True):
+    def publish(self, comment="", restore_template_products=True):
         """
         commit the work to the repository, and publish it to the database
 
@@ -1071,7 +1073,7 @@ class Project:
             if product.get_unused_time() > (unused_days*86400):
                 purged_products.append(product.uri)
                 if not dry_mode:
-                    product.remove_from_local_products(recursive_clean=True)
+                    product.remove_from_local_products()
         return purged_products
 
     def load_config(self):

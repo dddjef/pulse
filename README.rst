@@ -28,8 +28,8 @@ shot_anim_work.add_input("joe-rig.proxy")
 >>> # Create a product folder to receive an alembic export
 shot_anim_work.create_product("alembic")
 
->>> # commit the new resource version and its related products
-shot_anim_work.commit()
+>>> # publish the new resource version and its related products
+shot_anim_work.publish()
 
 Pulse is just a library, it's up to you to automatize and configure it to your needs.
 You will find a example CLI and a GUI provided with this project
@@ -38,7 +38,7 @@ Pulse library is written in pure python, compatible with 2.7 to 3.7, for Windows
 Version Control System
 ======================
 You can think of Pulse as a version control system. Like SVN, the user checkout the resource to get a working copy,
-and commit to publish a new version. Pulse shares a few concepts with other VCS:
+and publish to publish a new version. Pulse shares a few concepts with other VCS:
 
 - Pulse manages the versionning, the user doesn't think about it, he just commits
 - a committed resource is stored in a repository, it won't be modified anymore, never. You can rely on your data.
@@ -46,7 +46,7 @@ and commit to publish a new version. Pulse shares a few concepts with other VCS:
 - there's a lock system, preventing concurrent work
 
 Anyway, there's a big difference with other VCS : Pulse doesn't deal with files, it deals with resources. You can see resource as
-a files container, those files will be checkout together, worked together, commit and versioned together.
+a files container, those files will be checkout together, worked together, publish and versioned together.
 A character surfacing is a resource, a shot layout is a resource, etc...
 The resource is the project's unit : a resource can't be split between repositories, and a resource is versioned as a whole.
 

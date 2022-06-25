@@ -32,7 +32,7 @@ class Database(PulseDatabase):
                     cmd += ", " + field
                 cmd += ")"
                 self.cursor.execute(cmd)
-            self.connection.commit()
+            self.connection.publish()
 
     def create_repository(self, name, adapter, login, password, settings):
         data = {
@@ -50,7 +50,7 @@ class Database(PulseDatabase):
             self.cursor.execute(cmd, list(data.values()))
         except mariadb.IntegrityError:
             raise PulseDatabaseError("node already exists:" + name)
-        self.connection.commit()
+        self.connection.publish()
 
     def get_repositories(self):
         self.cursor.execute("USE " + self.config_name)
@@ -89,7 +89,7 @@ class Database(PulseDatabase):
         cmd = "CREATE TABLE version (number VARCHAR(255) NOT NULL)"
         self.cursor.execute(cmd)
         self.cursor.execute("INSERT into version (number) VALUE ('" + self.adapter_version + "')")
-        self.connection.commit()
+        self.connection.publish()
         for table in self.project_tables:
             # id int(11) NOT NULL AUTO_INCREMENT,
             cmd = "CREATE TABLE " + table + " (uri VARCHAR(255) PRIMARY KEY"
@@ -109,7 +109,7 @@ class Database(PulseDatabase):
         columns = ', '.join(data.keys())
         cmd = "INSERT INTO %s ( %s ) VALUES ( %s )" % ("Project", columns, placeholders)
         self.cursor.execute(cmd, list(data.values()))
-        self.connection.commit()
+        self.connection.publish()
 
     def delete_project(self, project_name):
         self.cursor.execute("DROP DATABASE IF EXISTS " + project_name)
@@ -139,7 +139,7 @@ class Database(PulseDatabase):
             self.cursor.execute(cmd, list(data.values()))
         except mariadb.IntegrityError:
             raise PulseDatabaseError("node already exists:" + uri)
-        self.connection.commit()
+        self.connection.publish()
 
     def update(self, project_name, entity_type, uri, data):
         self.cursor.execute("USE " + project_name)
@@ -150,10 +150,10 @@ class Database(PulseDatabase):
         cmd = 'UPDATE ' + entity_type + ' SET {}'.format(', '.join('{}=%s'.format(k) for k in data))
         cmd += " WHERE uri = '" + uri + "'"
         self.cursor.execute(cmd, list(data.values()))
-        self.connection.commit()
+        self.connection.publish()
 
     def read(self, project_name, entity_type, uri):
-        self.connection.commit()
+        self.connection.publish()
         cursor = self.connection.cursor(dictionary=True)
         try:
             cursor.execute("USE " + project_name)
