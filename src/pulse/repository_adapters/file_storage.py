@@ -55,18 +55,19 @@ class Repository(PulseRepository):
             resource.entity.replace(":", os.sep)
         )
 
-    def _copyfiles(self, relative_filepath_list, source_root, destination_root):
+    @staticmethod
+    def _copy_files(relative_filepath_list, source_root, destination_root):
         os.makedirs(destination_root)
         for filepath_rel in relative_filepath_list:
-            dest = destination_root + filepath_rel
-            dest_dir = os.path.split(dest)[0]
-            if not os.path.isdir(dest_dir):
-                os.makedirs(dest_dir)
-            shutil.copyfile(source_root + filepath_rel, dest)
+            destination = destination_root + filepath_rel
+            destination_dir = os.path.split(destination)[0]
+            if not os.path.isdir(destination_dir):
+                os.makedirs(destination_dir)
+            shutil.copyfile(source_root + filepath_rel, destination)
 
     def upload_resource_commit(self, commit, work_folder, work_files, products_files):
-        self._copyfiles(work_files, work_folder, self._build_commit_path("work", commit))
-        self._copyfiles(products_files, commit.product_directory, self._build_commit_path("products", commit))
+        self._copy_files(work_files, work_folder, self._build_commit_path("work", commit))
+        self._copy_files(products_files, commit.product_directory, self._build_commit_path("products", commit))
         return True
 
     def download_work(self, commit, work_folder):
@@ -75,7 +76,6 @@ class Repository(PulseRepository):
         copy_folder_content(repo_work_path, work_folder)
 
     def download_product(self, local_published_version, subpath="", destination_folder=None):
-        # TODO : recreate empty parent directories when using subpath (needs a test with multiple dir depth)
         # build_products_repository_path
         product_repo_path = os.path.join(self._build_commit_path("products", local_published_version), subpath)
         if not os.path.exists(product_repo_path):
