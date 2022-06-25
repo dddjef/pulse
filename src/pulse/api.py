@@ -486,7 +486,7 @@ class Work(LocalProduct):
         commit the work to the repository, and publish it to the database
 
         :param comment: a user comment string
-        :param recreate_last_products: keep same output products after the commit
+        :param restore_template_products: keep same output products after the commit
         :return: the created commit object
         """
         self._check_exists_in_user_workspace()
@@ -598,7 +598,6 @@ class Work(LocalProduct):
         """
         remove the work product content from user workspace
 
-        :param no_backup: if False, the product folder content is moved to trash directory. If True, it is removed from disk
         :return: True on success
         """
         # abort if products directory is empty
@@ -639,7 +638,6 @@ class Work(LocalProduct):
         for path in [self.directory, self.product_directory]:
             if os.path.exists(path) and not fu.test_path_write_access(path):
                 raise PulseError("Aborted. Can't move folder " + path)
-
 
         # unregister from products
         for input_name, uri in self.get_inputs().items():
@@ -824,7 +822,6 @@ class Resource(PulseDbObject):
         work.version = self.last_version + 1
         source_resource = None
         source_commit = None
-        out_product_list = []
 
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
         if self.last_version == 0:
@@ -976,7 +973,7 @@ class Project:
 
     def get_template(self, resource_type):
         """
-        get the template resource assiocated with theresource type
+        get the template resource associated with the resource type
         :return: a pulse resource
         """
         uri = uri_standards.convert_from_dict({"entity": cfg.template_name, "resource_type": resource_type})
@@ -1000,7 +997,6 @@ class Project:
         @last or no version return the last version
         raise a PulseError if the uri is not found in the project
         :param uri_string: a pulse product uri
-        :param local_only: return only local published version
         :return: PublishedVersion
         """
 
