@@ -374,7 +374,6 @@ class Work(LocalProduct):
                 product = work
             else:
                 # if it's a commit version, download it
-                # TODO : should check the subpath exists in DB before trying to download it
                 # check there's no conflict with a local product
                 product.download(resolve_conflict, subpath=uri_standards.convert_to_dict(uri)["subpath"])
                 if not os.path.exists(os.path.join(product.directory, subpath)):
