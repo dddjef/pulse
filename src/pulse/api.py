@@ -673,7 +673,6 @@ class Work(LocalProduct):
         return True
 
     def status(self):
-        # TODO : should determine if we want to declare change when template products are restored
         """
         return the work files changes since last commit. Based on the files modification date time
 
