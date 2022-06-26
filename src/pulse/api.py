@@ -1117,20 +1117,21 @@ class Project:
         return resource
 
     def create_template(self, resource_type, repository=None, source_resource=None):
-        return self.create_resource(cfg.template_name, resource_type, repository,  source_resource)
+        uri = uri_standards.convert_from_dict({"entity": cfg.template_name, "resource_type": resource_type})
+        return self.create_resource(uri, repository,  source_resource)
 
-    def create_resource(self, entity, resource_type, repository=None, source_resource=None):
+    def create_resource(self, uri, repository=None, source_resource=None):
         """
         create a new project's resource
 
-        :param entity: entity of this new resource. Entity is like a namespace
-        :param resource_type:
+        :param uri: uri of this new resource
         :param repository: a pulse Repository, if None, the project default repository is used
         :param source_resource: if given the resource content will be initialized with the given resource
         :return: the created resource object
         """
 
-        resource = Resource(self, entity, resource_type)
+        dict_uri = uri_standards.convert_to_dict(uri)
+        resource = Resource(self, dict_uri["entity"], dict_uri["resource_type"])
 
         if not repository:
             repository = self.cfg.default_repository

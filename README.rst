@@ -17,7 +17,7 @@ How does this python library look like?
 prj = pulse.Connection("mysql", "127.0.0.1", login="John", password="Snow").get_project("GOT")
 
 >>> # create a new resource in this project, animation of shot 99
-shot_anim = prj.create_resource("shot_99", "animation")
+shot_anim = prj.create_resource("shot99-animation")
 
 >>> # check out this resource in the user work space
 shot_anim_work = shot_anim.checkout()
