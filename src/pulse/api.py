@@ -938,7 +938,7 @@ class Project(PulseDbObject):
         self.use_linked_output_directory = True
         self.use_linked_input_directories = True
         self._storage_vars = vars(self).keys()
-        PulseDbObject.__init__(self, project, "config")
+        PulseDbObject.__init__(self, self, "config")
         self._storage_vars = [
             "work_user_root",
             "product_user_root",
