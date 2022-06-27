@@ -250,7 +250,7 @@ class Work(LocalProduct):
 
     def _get_trash_directory(self):
         date_time = datetime.now().strftime("%d%m%Y_%H%M%S")
-        path = os.path.join(self.project.cfg.get_work_user_root(), self.project.name, "TRASH") + os.sep
+        path = os.path.join(self.project.get_work_user_root(), self.project.name, "TRASH") + os.sep
         path += uri_standards.uri_to_filename(self.uri) + "-" + date_time
         index = 0
         path_base = path
@@ -385,7 +385,7 @@ class Work(LocalProduct):
             raise PulseMissingNode("No product found for :" + uri)
 
         # add a linked directory
-        if self.project.cfg.use_linked_input_directories:
+        if self.project.use_linked_input_directories:
             if not os.path.exists(self.input_directory):
                 os.makedirs(self.input_directory)
 
@@ -454,14 +454,14 @@ class Work(LocalProduct):
         os.makedirs(work_product_directory)
 
         # create junction point to the output directory if needed
-        if self.project.cfg.use_linked_output_directory:
+        if self.project.use_linked_output_directory:
             work_output_path = os.path.join(self.directory, cfg.work_output_dir)
 
             # link work output directory to its current output product directory
             fu.make_directory_link(work_output_path, work_product_directory)
 
         # create input directory if needed
-        if self.project.cfg.use_linked_input_directories:
+        if self.project.use_linked_input_directories:
             work_input_path = os.path.join(self.directory, cfg.work_input_dir)
             if not os.path.exists(work_input_path):
                 os.makedirs(work_input_path)
@@ -620,7 +620,7 @@ class Work(LocalProduct):
         os.makedirs(self.product_directory)
 
         # create junction point to the output directory if needed
-        if self.project.cfg.use_linked_output_directory:
+        if self.project.use_linked_output_directory:
             work_output_path = os.path.join(self.directory, cfg.work_output_dir)
 
             # link work output directory to its current output product directory
@@ -711,7 +711,7 @@ class Resource(PulseDbObject):
             uri_standards.convert_from_dict({"entity": entity, "resource_type": resource_type})
         )
         self.sandbox_path = os.path.join(
-            project.cfg.get_work_user_root(), project.name, self.uri)
+            project.get_work_user_root(), project.name, self.uri)
         self._storage_vars = [
             'lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
 
@@ -724,7 +724,7 @@ class Resource(PulseDbObject):
         """
         version = str(version_index).zfill(cfg.DEFAULT_VERSION_PADDING)
         path = os.path.join(
-            self.project.cfg.get_product_user_root(),
+            self.project.get_product_user_root(),
             self.project.name,
             self.uri,
             cfg.DEFAULT_VERSION_PREFIX + version
@@ -806,7 +806,7 @@ class Resource(PulseDbObject):
         :param index: the commit index to checkout. If not set, the last one will be used
         :param resolve_conflict: can be "error", "mine", or "theirs" depending how Pulse should resolve the conflict.
         """
-        if not os.path.exists(self.project.cfg.get_work_user_root()):
+        if not os.path.exists(self.project.get_work_user_root()):
             self.project.initialize_sandbox()
 
         work = Work(self)
@@ -925,11 +925,13 @@ class Resource(PulseDbObject):
         self._db_update(['repository'])
 
 
-class Config(PulseDbObject):
+class Project(PulseDbObject):
     """
-        project's configuration stored in database
+        a Pulse project, containing resources and a configuration
     """
-    def __init__(self, project):
+    def __init__(self, connection, project_name):
+        self.cnx = connection
+        self.name = project_name
         self.work_user_root = None
         self.product_user_root = None
         self.default_repository = None
@@ -944,6 +946,10 @@ class Config(PulseDbObject):
             "use_linked_output_directory",
             "use_linked_input_directories"
         ]
+        self.work_directory = None
+        self.work_data_directory = None
+        self.commit_product_data_directory = None
+        self.work_product_data_directory = None
 
     def get_work_user_root(self):
         return os.path.expandvars(self.work_user_root)
@@ -956,20 +962,6 @@ class Config(PulseDbObject):
         save the project configuration to database
         """
         self._db_update(self._storage_vars)
-
-
-class Project:
-    """
-        a Pulse project, containing resources and a configuration
-    """
-    def __init__(self, connection, project_name):
-        self.cnx = connection
-        self.name = project_name
-        self.cfg = Config(self)
-        self.work_directory = None
-        self.work_data_directory = None
-        self.commit_product_data_directory = None
-        self.work_product_data_directory = None
 
     def get_template(self, resource_type):
         """
@@ -1076,10 +1068,10 @@ class Project:
         """
         load the project configuration from database
         """
-        self.cfg.db_read()
-        self.work_directory = os.path.join(self.cfg.get_work_user_root(), self.name)
+        self.db_read()
+        self.work_directory = os.path.join(self.get_work_user_root(), self.name)
         self.work_data_directory = os.path.join(self.work_directory, cfg.pulse_data_dir, "works")
-        product_root = os.path.join(self.cfg.get_product_user_root(), self.name)
+        product_root = os.path.join(self.get_product_user_root(), self.name)
         self.commit_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "commit_products")
         self.work_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "work_products")
         self.initialize_sandbox()
@@ -1134,7 +1126,7 @@ class Project:
         resource = Resource(self, dict_uri["entity"], dict_uri["resource_type"])
 
         if not repository:
-            repository = self.cfg.default_repository
+            repository = self.default_repository
         resource.repository = repository
 
         # if a source resource is given keep its uri to db
@@ -1227,12 +1219,12 @@ class Connection:
 
         project = Project(self, project_name)
         self.db.create_project(project_name)
-        project.cfg.default_repository = default_repository
-        project.cfg.work_user_root = work_user_root
-        project.cfg.product_user_root = product_user_root
-        project.cfg.use_linked_output_directory = use_linked_output_directory
-        project.cfg.use_linked_input_directories = use_linked_input_directories
-        project.cfg.db_create()
+        project.default_repository = default_repository
+        project.work_user_root = work_user_root
+        project.product_user_root = product_user_root
+        project.use_linked_output_directory = use_linked_output_directory
+        project.use_linked_input_directories = use_linked_input_directories
+        project.db_create()
         project.load_config()
         return project
 
