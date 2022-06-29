@@ -160,10 +160,11 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         self.resource = resource
         self.comment = ""
         self.files = {}
-        self.products_inputs = []
+        self.work_inputs = []
+        self.work_directories = []
+        self.product_directories = []
         self.version = int(version)
-        self.products = []
-        self._storage_vars = ['version', 'products', 'files', 'comment', 'products_inputs']
+        self._storage_vars = ['version', 'files', 'comment', 'work_inputs', 'work_directories', 'product_directories']
         LocalProduct.__init__(self)
         self.directory = self.product_directory
 
@@ -216,7 +217,21 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         if subpath.startswith("/"):
             subpath = subpath[1:]
 
+        if not destination_folder:
+            destination_folder = os.path.join(self.product_directory, subpath)
+
         if self.project.resolve_local_product_conflict(self.uri, resolve_conflict):
+            # recreate the directory structure
+            for rel_dir in self.product_directories:
+                if subpath != "":
+                    if subpath not in rel_dir:
+                        continue
+                abs_path = os.path.normpath(os.path.join(destination_folder, rel_dir[1:]))
+
+                if not os.path.exists(abs_path):
+                    os.makedirs(abs_path)
+
+            # download files
             self.project.cnx.repositories[self.resource.repository].download_product(
                 self, subpath=subpath, destination_folder=destination_folder)
             self.init_local_product_data()
@@ -517,14 +532,17 @@ class Work(LocalProduct):
         # copy work files to a new version in repository
         published_version = PublishedVersion(self.resource, self.version)
         published_version.files = self._get_work_files()
+        published_version.work_directories = fu.get_directory_list(
+            self.directory, [cfg.work_output_dir, cfg.work_input_dir])
         work_files = fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir])
-        product_files = fu.get_file_list(self.product_directory, [cfg.work_output_dir, cfg.work_input_dir])
+        product_files = fu.get_file_list(self.product_directory)
+        published_version.product_directories = fu.get_directory_list(self.product_directory)
         published_version.project.cnx.repositories[self.resource.repository].upload_resource_commit(
             self, self.directory, work_files, product_files)
 
         # register changes to database
         published_version.comment = comment
-        published_version.products_inputs = self.get_inputs()
+        published_version.work_inputs = self.get_inputs()
 
         published_version.db_create()
         self.resource.set_last_version(self.version)
@@ -704,6 +722,7 @@ class Resource(PulseDbObject):
         self._last_version = 0
         self.repository = None
         self.resource_template = ''
+        self.resource_template = ''
         PulseDbObject.__init__(
             self,
             project,
@@ -857,8 +876,14 @@ class Resource(PulseDbObject):
             os.makedirs(destination_folder)
         else:
             # test for local work product in conflict with incoming work input product
-            for input_name, uri in source_commit.products_inputs.items():
+            for input_name, uri in source_commit.work_inputs.items():
                 self.project.resolve_local_product_conflict(uri, resolve_conflict)
+
+            # create the directory structure
+            for rel_dir in source_commit.work_directories:
+                absolute_dir = os.path.join(work.directory, rel_dir[1:])
+                if not os.path.exists(absolute_dir):
+                    os.makedirs(absolute_dir)
 
             self.project.cnx.repositories[source_resource.repository].download_work(source_commit, destination_folder)
 

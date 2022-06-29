@@ -601,7 +601,7 @@ class MainWindow(QMainWindow):
                     "files": list(item.pulse_node.files.keys())
                 }
                 input_index = 1
-                for product_uri in item.pulse_node.products_inputs:
+                for product_uri in item.pulse_node.work_inputs:
                     properties["product input " + str(input_index)] = product_uri
                     input_index += 1
                 self.show_details(properties)

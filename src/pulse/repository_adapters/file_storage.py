@@ -75,14 +75,12 @@ class Repository(PulseRepository):
         # copy repo work to sandbox
         copy_folder_content(repo_work_path, work_folder)
 
-    def download_product(self, local_published_version, subpath="", destination_folder=None):
+    def download_product(self, local_published_version, destination_folder, subpath=""):
         # build_products_repository_path
         product_repo_path = os.path.join(self._build_commit_path("products", local_published_version), subpath)
         if not os.path.exists(product_repo_path):
             raise PulseRepositoryError("path does not exists : " + product_repo_path)
         # copy repo products type to products_user_filepath
-        if not destination_folder:
-            destination_folder = os.path.join(local_published_version.product_directory, subpath)
         copy_folder_content(product_repo_path, destination_folder)
 
     def download_resource(self, resource, destination):

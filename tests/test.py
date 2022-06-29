@@ -296,12 +296,14 @@ class TestResources(unittest.TestCase):
         template_work = template.checkout()
         utils.add_file_to_directory(template_work.directory)
         utils.add_file_to_directory(template_work.output_directory, "test.abc")
+        os.makedirs(template_work.output_directory + "/empty_directory")
         template_work.publish()
 
         # by default checkout restore product data
         resource = self.prj.create_resource("joe-shapes")
         work = resource.checkout()
         self.assertTrue(os.path.exists(work.output_directory + "/test.abc"))
+        self.assertTrue(os.path.exists(work.output_directory + "/empty_directory"))
 
     def test_check_out_from_another_resource(self):
         shader_work_file = "shader_work_file.ma"
@@ -335,7 +337,7 @@ class TestResources(unittest.TestCase):
         self.prj.purge_unused_local_products()
         self.assertFalse(os.path.exists(anna_surf_textures_path))
         rig_v01 = anna_rig_resource.get_commit(1)
-        self.assertTrue('ch_anna-surfacing@1/textures' in rig_v01.products_inputs)
+        self.assertTrue('ch_anna-surfacing@1/textures' in rig_v01.work_inputs)
         anna_rig_resource.checkout()
         self.assertTrue(os.path.exists(anna_surf_textures_path))
 
@@ -419,16 +421,20 @@ class TestResources(unittest.TestCase):
             ("C:/Users/dddje/PycharmProjects/pulse/tests/data/out/products/test/anna-mdl/V001/abc/ld"),"anna-mdl@1/abc/ld")
 
     def test_work_commit(self):
-        # test subdirectories are commit
+        # test subdirectories are commit, empty or not
         subdirectory_name = "subdirectory_test"
         work_subdir_path = os.path.join(self.anna_mdl_work.directory, subdirectory_name)
         os.makedirs(work_subdir_path)
         open(work_subdir_path + "\\subdir_file.txt", 'a').close()
+        subdirectory_name = "empty_subdirectory"
+        work_subdir_empty_path = os.path.join(self.anna_mdl_work.directory, subdirectory_name)
+        os.makedirs(work_subdir_empty_path)
         self.anna_mdl_work.publish()
         self.anna_mdl_work.trash()
         self.assertFalse(os.path.exists(self.anna_mdl_work.directory))
         mdl_work = self.anna_mdl.checkout()
         self.assertTrue(os.path.exists(work_subdir_path + "\\subdir_file.txt"))
+        self.assertTrue(os.path.exists(work_subdir_empty_path))
 
         # test a commit using a uncommit input product will fail
         anna_surf_resource = self.prj.create_resource("ch_anna-surfacing")

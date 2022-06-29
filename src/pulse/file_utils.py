@@ -188,3 +188,15 @@ def get_file_list(root_directory, excluded_patterns=[]):
 def path_join(a, *args):
     path = os.path.join(a, *args)
     return path.replace("\\", "/")
+
+
+def get_directory_list(root_directory, excluded_patterns=[]):
+    directory_list = []
+    for root, dirs, files in os.walk(root_directory, topdown=True):
+        dirs[:] = [d for d in dirs if d not in excluded_patterns]
+        for d in dirs:
+            dir_path = os.path.join(root, d)
+            relative_path = dir_path[len(root_directory):]
+            directory_list.append(relative_path.replace(os.sep, "/"))
+
+    return directory_list
