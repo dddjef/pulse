@@ -770,6 +770,29 @@ class TestResources(unittest.TestCase):
         with self.assertRaises(PulseError):
             anna_rig_work.remove_input("unknown-uri")
 
+    def test_concurrent_work(self):
+        os.environ["USER_VAR"] = "userA"
+        prj_a = self.cnx.create_project(
+            "project_conflict",
+            utils.sandbox_work_path + "_${USER_VAR}",
+            default_repository="main_storage",
+            product_user_root=utils.sandbox_products_path + "_${USER_VAR}"
+        )
+
+        # userA checkout a modeling, he creates a abc product in V001
+        work_model_a = prj_a.create_resource("joe-model").checkout()
+        utils.add_file_to_directory(work_model_a.directory)
+
+        # userB checkout the same resource, but he commits first
+        os.environ["USER_VAR"] = "userB"
+        proj_b = self.cnx.get_project("project_conflict")
+        resource_model_b = proj_b.get_resource("joe-model")
+
+        # Ensure publish from another user increment the last version for every one
+        self.assertEqual(resource_model_b.last_version, 0)
+        work_model_a.publish()
+        resource_model_b.db_read()
+        self.assertEqual(resource_model_b.last_version, 1)
 
 if __name__ == '__main__':
     unittest.main()
