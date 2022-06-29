@@ -1312,14 +1312,11 @@ def get_adapter_list(adapter_type: str) -> FrozenSet[str]:
     Returns:
         FrozenSet[str]: FrozenSet of adapters names
     """
-    files = [dir.glob("*.py") for dir in get_adapter_directories(adapter_type)]
+    files = [directory.glob("*.py") for directory in get_adapter_directories(adapter_type)]
     files = set()
-    for dir in get_adapter_directories(adapter_type):
-        files.update((filepath.stem for filepath in dir.glob("*.py")))
+    for directory in get_adapter_directories(adapter_type):
+        files.update((filepath.stem for filepath in directory.glob("*.py")))
 
-    # Remove unwanted modules
-    files.remove("interface_class")
-    files.remove("__init__")
     return frozenset(files)
 
 
