@@ -699,9 +699,9 @@ class Resource(PulseDbObject):
     def __init__(self, project, entity, resource_type):
         self.lock_state = False
         self.lock_user = ''
-        self.last_version = 0
         self.resource_type = resource_type
         self.entity = entity
+        self._last_version = 0
         self.repository = None
         self.resource_template = ''
         PulseDbObject.__init__(
@@ -712,7 +712,11 @@ class Resource(PulseDbObject):
         self.sandbox_path = os.path.join(
             project.get_work_user_root(), project.name, self.uri)
         self._storage_vars = [
-            'lock_state', 'lock_user', 'last_version', 'resource_type', 'entity', 'repository', 'metas']
+            'lock_state', 'lock_user', '_last_version', 'resource_type', 'entity', 'repository', 'metas']
+
+    @property
+    def last_version(self):
+        return self._last_version
 
     def get_products_directory(self, version_index):
         """
@@ -736,8 +740,8 @@ class Resource(PulseDbObject):
 
         :param version: integer
         """
-        self.last_version = version
-        self._db_update(["last_version"])
+        self._last_version = version
+        self._db_update(["_last_version"])
 
     def user_needs_lock(self, user=None):
         """
