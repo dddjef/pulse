@@ -2,7 +2,7 @@ import json
 import os
 import glob
 import shutil
-from pulse.database_adapters.interface_class import *
+from pulse.database_adapter_interface import *
 
 
 class Database(PulseDatabase):

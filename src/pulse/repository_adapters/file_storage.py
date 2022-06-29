@@ -1,6 +1,6 @@
 import os
 import shutil
-from pulse.repository_adapters.interface_class import *
+from pulse.repository_adapter_interface import *
 import pulse.file_utils as fu
 
 

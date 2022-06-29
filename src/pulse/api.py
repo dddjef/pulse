@@ -14,7 +14,6 @@ try:
     import importlib.util
 except ImportError:
     import imp
-from pulse.database_adapters.interface_class import *
 from pulse.exception import *
 import pulse.config as cfg
 import pulse.uri_standards as uri_standards

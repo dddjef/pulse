@@ -1,5 +1,4 @@
 from pulse.api import *
-from pulse.repository_adapters.interface_class import *
 import pulse.uri_standards as uri
 import unittest
 import os
