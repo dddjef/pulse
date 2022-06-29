@@ -296,12 +296,14 @@ class TestResources(unittest.TestCase):
         template_work = template.checkout()
         utils.add_file_to_directory(template_work.directory)
         utils.add_file_to_directory(template_work.output_directory, "test.abc")
+        os.makedirs(template_work.output_directory + "/empty_directory")
         template_work.publish()
 
         # by default checkout restore product data
         resource = self.prj.create_resource("joe-shapes")
         work = resource.checkout()
         self.assertTrue(os.path.exists(work.output_directory + "/test.abc"))
+        self.assertTrue(os.path.exists(work.output_directory + "/empty_directory"))
 
     def test_check_out_from_another_resource(self):
         shader_work_file = "shader_work_file.ma"

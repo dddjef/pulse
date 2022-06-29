@@ -162,8 +162,9 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         self.files = {}
         self.work_inputs = []
         self.work_directories = []
+        self.product_directories = []
         self.version = int(version)
-        self._storage_vars = ['version', 'files', 'comment', 'work_inputs', 'work_directories']
+        self._storage_vars = ['version', 'files', 'comment', 'work_inputs', 'work_directories', 'product_directories']
         LocalProduct.__init__(self)
         self.directory = self.product_directory
 
@@ -216,7 +217,21 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         if subpath.startswith("/"):
             subpath = subpath[1:]
 
+        if not destination_folder:
+            destination_folder = os.path.join(self.product_directory, subpath)
+
         if self.project.resolve_local_product_conflict(self.uri, resolve_conflict):
+            # recreate the directory structure
+            for rel_dir in self.product_directories:
+                if subpath != "":
+                    if subpath not in rel_dir:
+                        continue
+                abs_path = os.path.normpath(os.path.join(destination_folder, rel_dir[1:]))
+
+                if not os.path.exists(abs_path):
+                    os.makedirs(abs_path)
+
+            # download files
             self.project.cnx.repositories[self.resource.repository].download_product(
                 self, subpath=subpath, destination_folder=destination_folder)
             self.init_local_product_data()
@@ -521,6 +536,7 @@ class Work(LocalProduct):
             self.directory, [cfg.work_output_dir, cfg.work_input_dir])
         work_files = fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir])
         product_files = fu.get_file_list(self.product_directory)
+        published_version.product_directories = fu.get_directory_list(self.product_directory)
         published_version.project.cnx.repositories[self.resource.repository].upload_resource_commit(
             self, self.directory, work_files, product_files)
 
