@@ -733,6 +733,7 @@ class Resource(PulseDbObject):
         self._storage_vars = [
             'lock_state', 'lock_user', '_last_version', 'resource_type', 'entity', 'repository', 'metas']
 
+
     @property
     def last_version(self):
         return self._last_version
@@ -952,6 +953,13 @@ class Resource(PulseDbObject):
         self.set_lock(lock_state, lock_user, steal=True)
         self._db_update(['repository'])
 
+    def get(self, el):
+        return self.__getattribute__("_" + el)
+
+for item, v in {"jojo": 2, "koko":False}.items():
+    prop = property(lambda self, item=item: self.get(item))
+    setattr(Resource, "_" + item, v)
+    setattr(Resource, item, prop)
 
 class Project(PulseDbObject):
     """

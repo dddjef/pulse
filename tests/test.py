@@ -228,6 +228,9 @@ class TestResources(unittest.TestCase):
     def test_checkout(self):
         # remove a work with a commit product
         self.anna_mdl_work.trash()
+        print("bval", self.anna_mdl.jojo)
+        print("bval", self.anna_mdl._jojo)
+        self.anna_mdl.jojo = 5
         self.prj.purge_unused_local_products()
         # ensure the absolute product directory is missing
         self.assertFalse(os.path.exists(self.anna_mdl_work.product_directory))
