@@ -715,13 +715,20 @@ class Resource(PulseDbObject):
         a project's resource. A resource is meant to generate products, and use products from other resources
     """
     def __init__(self, project, entity, resource_type):
-        self.lock_state = False
-        self.lock_user = ''
-        self.resource_type = resource_type
-        self.entity = entity
-        self._last_version = 0
-        self.repository = None
-        self.resource_template = ''
+        storage_vars = {
+            'lock_state': False,
+            'lock_user': '',
+            'last_version': 0,
+            'resource_type': resource_type,
+            'entity': entity,
+            'repository': None
+        }
+
+        for attr, v in storage_vars.items():
+            print(attr)
+            setattr(self, "_" + attr, v)
+            setattr(self, attr, property(fget=self.get_read_only(attr)))
+
         self.resource_template = ''
         PulseDbObject.__init__(
             self,
@@ -730,13 +737,7 @@ class Resource(PulseDbObject):
         )
         self.sandbox_path = os.path.join(
             project.get_work_user_root(), project.name, self.uri)
-        self._storage_vars = [
-            'lock_state', 'lock_user', '_last_version', 'resource_type', 'entity', 'repository', 'metas']
 
-
-    @property
-    def last_version(self):
-        return self._last_version
 
     def get_products_directory(self, version_index):
         """
@@ -789,7 +790,7 @@ class Resource(PulseDbObject):
             instance_type = str
         if isinstance(version_name, instance_type):
             if version_name == "last":
-                return self.last_version
+                return self._last_version
             else:
                 try:
                     return int(version_name)
@@ -804,7 +805,11 @@ class Resource(PulseDbObject):
         :param version: integer
         :return: Commit
         """
-        return PublishedVersion(self, self.get_index(version)).db_read()
+        try:
+            return PublishedVersion(self, self.get_index(version)).db_read()
+        except PulseDatabaseMissingObject:
+            return None
+
 
     def get_work(self):
         """
@@ -842,7 +847,7 @@ class Resource(PulseDbObject):
             destination_folder = self.sandbox_path
 
         # create the work object
-        work.version = self.last_version + 1
+        work.version = self._last_version + 1
         source_resource = None
         source_commit = None
 
@@ -919,11 +924,11 @@ class Resource(PulseDbObject):
             if self.user_needs_lock(user):
                 return
 
-        self.lock_state = state
+        self._lock_state = state
         if not user:
-            self.lock_user = self.project.cnx.user_name
+            self._lock_user = self.project.cnx.user_name
         else:
-            self.lock_user = user
+            self._lock_user = user
         self._db_update(['lock_user', 'lock_state'])
 
     def set_repository(self, new_repository):
@@ -932,7 +937,11 @@ class Resource(PulseDbObject):
 
         :param new_repository: Repository
         """
-        if self.repository == new_repository:
+        if not self._repository:
+            self._repository = new_repository
+            return
+
+        if self._repository == new_repository:
             raise PulseError("the destination repository have to be different as current one :" + new_repository)
 
         if self.user_needs_lock():
@@ -949,17 +958,13 @@ class Resource(PulseDbObject):
         self.project.cnx.repositories[self.repository].download_resource(self, temp_directory)
         self.project.cnx.repositories[new_repository].upload_resource(self, temp_directory)
         self.project.cnx.repositories[self.repository].remove_resource(self)
-        self.repository = new_repository
+        self._repository = new_repository
         self.set_lock(lock_state, lock_user, steal=True)
         self._db_update(['repository'])
 
-    def get(self, el):
-        return self.__getattribute__("_" + el)
+    def get_read_only(self, attr_name):
+        return self.__getattribute__("_" + attr_name)
 
-for item, v in {"jojo": 2, "koko":False}.items():
-    prop = property(lambda self, item=item: self.get(item))
-    setattr(Resource, "_" + item, v)
-    setattr(Resource, item, prop)
 
 class Project(PulseDbObject):
     """
@@ -1163,7 +1168,7 @@ class Project(PulseDbObject):
 
         if not repository:
             repository = self.default_repository
-        resource.repository = repository
+        resource.set_repository(repository)
 
         # if a source resource is given keep its uri to db
         if source_resource:
