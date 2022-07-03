@@ -46,7 +46,7 @@ class PulseDbObject:
             :param: attribute_list: attributes name which will be saved to database
             :type: attribute_list: list
         """
-        data = dict((name, getattr(self, name)) for name in attribute_list)
+        data = {k: self._storage_vars[k] for k in attribute_list}
         self.project.cnx.db.update(self.project.name, self.__class__.__name__, self.uri, data)
 
     def db_read(self):
@@ -66,9 +66,9 @@ class PulseDbObject:
             return
 
         for k in data:
-            if k not in vars(self):
+            if k not in self._storage_vars:
                 continue
-            setattr(self, k, data[k])
+            self._storage_vars[k] = data[k]
         return self
 
     def db_create(self):
@@ -79,8 +79,7 @@ class PulseDbObject:
             the key is the uri
             raise DbError if the object already exists
         """
-        data = dict((name, getattr(self, name)) for name in self._storage_vars)
-        self.project.cnx.db.create(self.project.name, self.__class__.__name__, self.uri, data)
+        self.project.cnx.db.create(self.project.name, self.__class__.__name__, self.uri, self._storage_vars)
 
 
 class LocalProduct:
@@ -158,21 +157,54 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         self.uri = resource.uri + "@" + str(version)
         PulseDbObject.__init__(self, resource.project, self.uri)
         self.resource = resource
-        self.comment = ""
-        self.files = {}
-        self.work_inputs = []
-        self.work_directories = []
-        self.product_directories = []
-        self.version = int(version)
-        self._storage_vars = ['version', 'files', 'comment', 'work_inputs', 'work_directories', 'product_directories']
+        self._storage_vars = {
+            'version': int(version),
+            'files': {},
+            'comment': "",
+            'work_inputs': [],
+            'work_directories': [],
+            'product_directories': []
+        }
         LocalProduct.__init__(self)
         self.directory = self.product_directory
 
+    @property
+    def version(self):
+        return self._storage_vars["version"]
+
+    @property
+    def files(self):
+        return self._storage_vars["files"]
+
+    @property
+    def comment(self):
+        return self._storage_vars["comment"]
+
+    @property
+    def work_inputs(self):
+        return self._storage_vars["work_inputs"]
+
+    @property
+    def work_directories(self):
+        return self._storage_vars["work_directories"]
+
+    @property
+    def product_directories(self):
+        return self._storage_vars["product_directories"]
+
+    def create(self, files, work_directories, product_directories, comment, work_inputs):
+        self._storage_vars["files"] = files
+        self._storage_vars["work_directories"] = work_directories
+        self._storage_vars["product_directories"] = product_directories
+        self._storage_vars["comment"] = comment
+        self._storage_vars["work_inputs"] = work_inputs
+        self.db_create()
+
     def is_local(self, subpath=""):
-        """
-        check if the version exists in local products
-        """
-        return os.path.exists(os.path.join(self.product_directory, subpath))
+            """
+            check if the version exists in local products
+            """
+            return os.path.exists(os.path.join(self.product_directory, subpath))
 
     def remove_from_local_products(self):
         """
@@ -264,7 +296,7 @@ class Work(LocalProduct):
 
     def _get_trash_directory(self):
         date_time = datetime.now().strftime("%d%m%Y_%H%M%S")
-        path = os.path.join(self.project.get_work_user_root(), self.project.name, "TRASH") + os.sep
+        path = os.path.join(self.project.abs_work_user_root, self.project.name, "TRASH") + os.sep
         path += uri_standards.uri_to_filename(self.uri) + "-" + date_time
         index = 0
         path_base = path
@@ -530,21 +562,20 @@ class Work(LocalProduct):
         self.resource.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
 
         # copy work files to a new version in repository
-        published_version = PublishedVersion(self.resource, self.version)
-        published_version.files = self._get_work_files()
-        published_version.work_directories = fu.get_directory_list(
-            self.directory, [cfg.work_output_dir, cfg.work_input_dir])
         work_files = fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir])
         product_files = fu.get_file_list(self.product_directory)
-        published_version.product_directories = fu.get_directory_list(self.product_directory)
+
+        published_version = PublishedVersion(self.resource, self.version)
+        published_version.create(
+            files=self._get_work_files(),
+            work_directories=fu.get_directory_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir]),
+            product_directories=fu.get_directory_list(self.product_directory),
+            comment=comment,
+            work_inputs=self.get_inputs()
+        )
+
         published_version.project.cnx.repositories[self.resource.repository].upload_resource_commit(
             self, self.directory, work_files, product_files)
-
-        # register changes to database
-        published_version.comment = comment
-        published_version.work_inputs = self.get_inputs()
-
-        published_version.db_create()
         self.resource.set_last_version(self.version)
 
         # remove work product data
@@ -715,27 +746,58 @@ class Resource(PulseDbObject):
         a project's resource. A resource is meant to generate products, and use products from other resources
     """
     def __init__(self, project, entity, resource_type):
-        self.lock_state = False
-        self.lock_user = ''
-        self.resource_type = resource_type
-        self.entity = entity
-        self._last_version = 0
-        self.repository = None
-        self.resource_template = ''
-        self.resource_template = ''
         PulseDbObject.__init__(
             self,
             project,
             uri_standards.convert_from_dict({"entity": entity, "resource_type": resource_type})
         )
         self.sandbox_path = os.path.join(
-            project.get_work_user_root(), project.name, self.uri)
-        self._storage_vars = [
-            'lock_state', 'lock_user', '_last_version', 'resource_type', 'entity', 'repository', 'metas']
+            project.abs_work_user_root, project.name, self.uri)
+        #TODO : keep resource template to DB
+        #TODO : maybe shoudl store uri instead of entity and type
+        self._storage_vars = {
+            'lock_state': False,
+            'lock_user': '',
+            'last_version': 0,
+            'resource_type': resource_type,
+            'entity': entity,
+            'repository': None,
+            'resource_template': None,
+            'metas': {}
+        }
+
+    @property
+    def lock_state(self):
+        return self._storage_vars["lock_state"]
+
+    @property
+    def lock_user(self):
+        return self._storage_vars["lock_user"]
 
     @property
     def last_version(self):
-        return self._last_version
+        return self._storage_vars["last_version"]
+
+    @property
+    def resource_type(self):
+        return self._storage_vars["resource_type"]
+
+    @property
+    def entity(self):
+        return self._storage_vars["entity"]
+
+    @property
+    def repository(self):
+        return self._storage_vars["repository"]
+
+    @property
+    def resource_template(self):
+        return self._storage_vars["resource_template"]
+
+    def create(self, repository, template_uri):
+        self._storage_vars["repository"] = repository
+        self._storage_vars["resource_template"] = template_uri
+        self.db_create()
 
     def get_products_directory(self, version_index):
         """
@@ -746,7 +808,7 @@ class Resource(PulseDbObject):
         """
         version = str(version_index).zfill(cfg.DEFAULT_VERSION_PADDING)
         path = os.path.join(
-            self.project.get_product_user_root(),
+            self.project.abs_product_user_root,
             self.project.name,
             self.uri,
             cfg.DEFAULT_VERSION_PREFIX + version
@@ -754,13 +816,15 @@ class Resource(PulseDbObject):
         return path
 
     def set_last_version(self, version):
+        # TODO : the existence of this method should show that publish is a resource concept
+        # or last version should be compute from DB versions sum. Mainly a cache question, again
         """
         set resource last version index
 
         :param version: integer
         """
-        self._last_version = version
-        self._db_update(["_last_version"])
+        self._storage_vars["last_version"] = version
+        self._db_update(["last_version"])
 
     def user_needs_lock(self, user=None):
         """
@@ -828,7 +892,7 @@ class Resource(PulseDbObject):
         :param index: the commit index to checkout. If not set, the last one will be used
         :param resolve_conflict: can be "error", "mine", or "theirs" depending how Pulse should resolve the conflict.
         """
-        if not os.path.exists(self.project.get_work_user_root()):
+        if not os.path.exists(self.project.abs_work_user_root):
             self.project.initialize_sandbox()
 
         work = Work(self)
@@ -848,7 +912,7 @@ class Resource(PulseDbObject):
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
         if self.last_version == 0:
             # if a source resource is given, get its template
-            if self.resource_template != '':
+            if self.resource_template:
                 source_resource = self.project.get_resource(self.resource_template)
                 source_commit = source_resource.get_commit("last")
             else:
@@ -918,11 +982,11 @@ class Resource(PulseDbObject):
             if self.user_needs_lock(user):
                 return
 
-        self.lock_state = state
+        self._storage_vars['lock_state'] = state
         if not user:
-            self.lock_user = self.project.cnx.user_name
+            self._storage_vars['lock_user'] = self.project.cnx.user_name
         else:
-            self.lock_user = user
+            self._storage_vars['lock_user'] = user
         self._db_update(['lock_user', 'lock_state'])
 
     def set_repository(self, new_repository):
@@ -957,39 +1021,71 @@ class Project(PulseDbObject):
     """
         a Pulse project, containing resources and a configuration
     """
+    # TODO : question since a project inherit now from DBobject, its reference himself in attribute, is it an issue?
     def __init__(self, connection, project_name):
         self.cnx = connection
         self.name = project_name
-        self.work_user_root = None
-        self.product_user_root = None
-        self.default_repository = None
-        self.use_linked_output_directory = True
-        self.use_linked_input_directories = True
-        self._storage_vars = vars(self).keys()
+
         PulseDbObject.__init__(self, self, "config")
-        self._storage_vars = [
-            "work_user_root",
-            "product_user_root",
-            "default_repository",
-            "use_linked_output_directory",
-            "use_linked_input_directories"
-        ]
-        self.work_directory = None
-        self.work_data_directory = None
-        self.commit_product_data_directory = None
-        self.work_product_data_directory = None
+        self._storage_vars = {
+            "work_user_root": None,
+            "product_user_root": None,
+            "default_repository": None,
+            "use_linked_output_directory": True,
+            "use_linked_input_directories": True
+        }
+        self._abs_work_user_root = ""
+        self._abs_product_user_root = ""
 
-    def get_work_user_root(self):
-        return os.path.expandvars(self.work_user_root)
+    @property
+    def abs_work_user_root(self):
+        return self._abs_work_user_root
 
-    def get_product_user_root(self):
-        return os.path.expandvars(self.product_user_root)
+    @property
+    def abs_product_user_root(self):
+        return self._abs_product_user_root
 
-    def save(self):
+    @property
+    def work_user_root(self):
+        return self._storage_vars["work_user_root"]
+
+    @property
+    def product_user_root(self):
+        return self._storage_vars["product_user_root"]
+
+    @property
+    def default_repository(self):
+        return self._storage_vars["default_repository"]
+
+    @property
+    def use_linked_output_directory(self):
+        return self._storage_vars["use_linked_output_directory"]
+
+    @property
+    def use_linked_input_directories(self):
+        return self._storage_vars["use_linked_input_directories"]
+
+    def _update_local_roots_path(self):
+        self._abs_work_user_root = os.path.expandvars(self.work_user_root)
+        self._abs_product_user_root = os.path.expandvars(self.product_user_root)
+
+    def create(self,
+               default_repository,
+               work_user_root,
+               product_user_root,
+               use_linked_output_directory,
+               use_linked_input_directories):
         """
-        save the project configuration to database
+        initialize the project configuration and save it to database
         """
-        self._db_update(self._storage_vars)
+        # TODO : prevent to setting twice a project. Should be in a edit_config method with exceptions
+        self._storage_vars['default_repository'] = default_repository
+        self._storage_vars['work_user_root'] = work_user_root
+        self._storage_vars['product_user_root'] = product_user_root
+        self._storage_vars['use_linked_output_directory'] = use_linked_output_directory
+        self._storage_vars['use_linked_input_directories'] = use_linked_input_directories
+        self.db_create()
+        self._update_local_roots_path()
 
     def get_template(self, resource_type):
         """
@@ -1092,17 +1188,27 @@ class Project(PulseDbObject):
                     product.remove_from_local_products()
         return purged_products
 
-    def load_config(self):
-        """
-        load the project configuration from database
-        """
+    @property
+    def work_directory(self):
+        return os.path.join(self.abs_work_user_root, self.name)
+
+    @property
+    def work_data_directory(self):
+        return os.path.join(self.work_directory, cfg.pulse_data_dir, "works")
+
+    @property
+    def commit_product_data_directory(self):
+        product_root = os.path.join(self.abs_product_user_root, self.name)
+        return os.path.join(product_root, cfg.pulse_data_dir, "commit_products")
+
+    @property
+    def work_product_data_directory(self):
+        product_root = os.path.join(self.abs_product_user_root, self.name)
+        return os.path.join(product_root, cfg.pulse_data_dir, "work_products")
+
+    def init_from_db(self):
         self.db_read()
-        self.work_directory = os.path.join(self.get_work_user_root(), self.name)
-        self.work_data_directory = os.path.join(self.work_directory, cfg.pulse_data_dir, "works")
-        product_root = os.path.join(self.get_product_user_root(), self.name)
-        self.commit_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "commit_products")
-        self.work_product_data_directory = os.path.join(product_root, cfg.pulse_data_dir, "work_products")
-        self.initialize_sandbox()
+        self._update_local_roots_path()
 
     def initialize_sandbox(self):
         # create local data directories
@@ -1155,18 +1261,18 @@ class Project(PulseDbObject):
 
         if not repository:
             repository = self.default_repository
-        resource.repository = repository
 
         # if a source resource is given keep its uri to db
+        template_uri = None
         if source_resource:
             try:
                 source_resource.get_commit("last")
             except PulseDatabaseMissingObject:
                 raise PulseError("no commit found for template : " + source_resource.uri)
 
-            resource.resource_template = source_resource.uri
+            template_uri = source_resource.uri
 
-        resource.db_create()
+        resource.create(repository, template_uri)
 
         return resource
 
@@ -1247,13 +1353,14 @@ class Connection:
 
         project = Project(self, project_name)
         self.db.create_project(project_name)
-        project.default_repository = default_repository
-        project.work_user_root = work_user_root
-        project.product_user_root = product_user_root
-        project.use_linked_output_directory = use_linked_output_directory
-        project.use_linked_input_directories = use_linked_input_directories
-        project.db_create()
-        project.load_config()
+        project.create(
+            default_repository,
+            work_user_root,
+            product_user_root,
+            use_linked_output_directory,
+            use_linked_input_directories
+        )
+
         return project
 
     def get_project(self, project_name):
@@ -1265,7 +1372,7 @@ class Connection:
         """
         project = Project(self, project_name)
         try:
-            project.load_config()
+            project.init_from_db()
         except PulseDatabaseMissingObject:
             raise PulseError("Missing Project : " + project_name)
         return project
