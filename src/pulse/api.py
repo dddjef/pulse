@@ -751,16 +751,14 @@ class Resource(PulseDbObject):
             project,
             uri_standards.convert_from_dict({"entity": entity, "resource_type": resource_type})
         )
+        self._entity = entity
+        self._resource_type = resource_type
         self.sandbox_path = os.path.join(
             project.abs_work_user_root, project.name, self.uri)
-        #TODO : keep resource template to DB
-        #TODO : maybe shoudl store uri instead of entity and type
         self._storage_vars = {
             'lock_state': False,
             'lock_user': '',
             'last_version': 0,
-            'resource_type': resource_type,
-            'entity': entity,
             'repository': None,
             'resource_template': None,
             'metas': {}
@@ -780,11 +778,11 @@ class Resource(PulseDbObject):
 
     @property
     def resource_type(self):
-        return self._storage_vars["resource_type"]
+        return self._resource_type
 
     @property
     def entity(self):
-        return self._storage_vars["entity"]
+        return self._entity
 
     @property
     def repository(self):
