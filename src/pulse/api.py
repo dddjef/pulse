@@ -814,7 +814,6 @@ class Resource(PulseDbObject):
         return path
 
     def set_last_version(self, version):
-        # TODO : the existence of this method should show that publish is a resource concept
         # or last version should be compute from DB versions sum. Mainly a cache question, again
         """
         set resource last version index
@@ -1019,7 +1018,6 @@ class Project(PulseDbObject):
     """
         a Pulse project, containing resources and a configuration
     """
-    # TODO : question since a project inherit now from DBobject, its reference himself in attribute, is it an issue?
     def __init__(self, connection, project_name):
         self.cnx = connection
         self.name = project_name
@@ -1076,7 +1074,6 @@ class Project(PulseDbObject):
         """
         initialize the project configuration and save it to database
         """
-        # TODO : prevent to setting twice a project. Should be in a edit_config method with exceptions
         self._storage_vars['default_repository'] = default_repository
         self._storage_vars['work_user_root'] = work_user_root
         self._storage_vars['product_user_root'] = product_user_root
