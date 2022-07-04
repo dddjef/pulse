@@ -1009,7 +1009,7 @@ class Resource(PulseDbObject):
         self.project.cnx.repositories[self.repository].download_resource(self, temp_directory)
         self.project.cnx.repositories[new_repository].upload_resource(self, temp_directory)
         self.project.cnx.repositories[self.repository].remove_resource(self)
-        self.repository = new_repository
+        self._storage_vars['repository'] = new_repository
         self.set_lock(lock_state, lock_user, steal=True)
         self._db_update(['repository'])
 
