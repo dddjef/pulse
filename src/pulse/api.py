@@ -201,10 +201,10 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         self.db_create()
 
     def is_local(self, subpath=""):
-            """
-            check if the version exists in local products
-            """
-            return os.path.exists(os.path.join(self.product_directory, subpath))
+        """
+        check if the version exists in local products
+        """
+        return os.path.exists(os.path.join(self.product_directory, subpath))
 
     def remove_from_local_products(self):
         """
@@ -1409,7 +1409,7 @@ class Connection:
         )
 
 
-def get_adapter_directories(adapter_type: str)-> List[Path]:
+def get_adapter_directories(adapter_type: str) -> List[Path]:
     """Get all adapter directories.
 
     By default, native Pulse's adapters directory is included.
@@ -1443,8 +1443,7 @@ def get_adapter_list(adapter_type: str) -> FrozenSet[str]:
     Returns:
         FrozenSet[str]: FrozenSet of adapters names
     """
-    files = [directory.glob("*.py") for directory in get_adapter_directories(adapter_type)]
-    files = set()
+    files = set([directory.glob("*.py") for directory in get_adapter_directories(adapter_type)])
     for directory in get_adapter_directories(adapter_type):
         files.update((filepath.stem for filepath in directory.glob("*.py")))
 
@@ -1472,7 +1471,9 @@ def import_adapter(adapter_type, adapter_name):
             return mod
 
     # Failed to find adapter, raise error
-    raise ModuleNotFoundError(f"{adapter_name} not found in none of these locations:\n{chr(10).join([path.as_posix() for path in adapters_directories])}")
+    raise ModuleNotFoundError(
+        f"{adapter_name} not found in none of these locations"
+        ":\n{chr(10).join([path.as_posix() for path in adapters_directories])}")
 
 
 def get_project_from_path(path, username="", password=""):
