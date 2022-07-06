@@ -133,11 +133,11 @@ class TestResources(unittest.TestCase):
 
     def _initResource(self):
         self.anna_mdl = self.prj.create_resource("anna-mdl")
-        self.anna_mdl_work = self.anna_mdl.checkout()
-        utils.add_file_to_directory(self.anna_mdl_work.directory, "work.blend")
-        self.anna_abc_work_product = os.path.join(self.anna_mdl_work.output_directory, "abc")
+        self.anna_mdl.checkout()
+        utils.add_file_to_directory(self.anna_mdl.sandbox_path, "work.blend")
+        self.anna_abc_work_product = os.path.join(self.anna_mdl.output_directory, "abc")
         utils.add_file_to_directory(self.anna_abc_work_product, "anna.abc")
-        self.anna_mdl_v1 = self.anna_mdl_work.publish()
+        self.anna_mdl_v1 = self.anna_mdl.publish()
 
     def test_delete_project(self):
         self.cnx.delete_project(test_project_name)
@@ -347,61 +347,61 @@ class TestResources(unittest.TestCase):
         self.assertEqual(anna_mdl.last_version, 0)
 
         # checkout, and check directories are created
-        anna_mdl_sandbox = anna_mdl_resource.checkout()
-        self.assertTrue(os.path.exists(anna_mdl_sandbox.directory))
+        anna_mdl.checkout()
+        self.assertTrue(os.path.exists(anna_mdl.sandbox_path))
 
         # commit should fail if nothing is change in work
         with self.assertRaises(PulseError):
-            anna_mdl_sandbox.publish("very first time")
+            anna_mdl.publish("very first time")
 
         # create a new file in work directory and try to commit again
         new_file = "test_complete.txt"
-        mdl_work_dir = os.path.join(anna_mdl_sandbox.directory, "work")
+        mdl_work_dir = os.path.join(anna_mdl.sandbox_path, "work")
         utils.add_file_to_directory(mdl_work_dir, new_file)
-        self.assertEqual(anna_mdl_sandbox.status(), {"/work/" + new_file: 'added'})
+        self.assertEqual(anna_mdl.status(), {"/work/" + new_file: 'added'})
 
-        anna_mdl_sandbox.publish("add a file")
-        self.assertEqual(anna_mdl_resource.last_version, 1)
+        anna_mdl.publish("add a file")
+        self.assertEqual(anna_mdl.last_version, 1)
 
         # create a sub resource
-        abc_work_product = os.path.join(anna_mdl_sandbox.directory, "output", "abc")
+        abc_work_product = os.path.join(anna_mdl.sandbox_path, "output", "abc")
         os.makedirs(abc_work_product)
         # now products directory should exists)
         utils.add_file_to_directory(abc_work_product, "test.abc")
         # create a new commit
-        anna_mdl_v2 = anna_mdl_sandbox.publish("some abc produced")
+        anna_mdl_v2 = anna_mdl.publish("some abc produced")
 
-        self.assertEqual(anna_mdl_resource.last_version, 2)
+        self.assertEqual(anna_mdl.last_version, 2)
         # create a new resource
-        anna_srf_resource = self.prj.create_resource("ch_anna-surfacing")
-        self.assertEqual(anna_srf_resource.last_version, 0)
-        anna_srf_work = anna_srf_resource.checkout()
-        anna_srf_work.add_input("ch_anna-modeling/ABC")
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
+        anna_srf = self.prj.create_resource("ch_anna-surfacing")
+        self.assertEqual(anna_srf.last_version, 0)
+        anna_srf.checkout()
+        anna_srf.add_input("ch_anna-modeling/ABC")
+        self.assertTrue(os.path.exists(os.path.join(anna_srf.input_directory, "ch_anna-modeling~ABC/test.abc")))
 
-        anna_srf_work.publish("with input")
-        self.assertEqual(anna_srf_resource.last_version, 1)
+        anna_srf.publish("with input")
+        self.assertEqual(anna_srf.last_version, 1)
 
-        anna_srf_work.trash()
+        anna_srf.trash()
         # remove the product
         self.prj.purge_unused_local_products()
         # checkout the work
-        anna_srf_work = anna_srf_resource.checkout()
+        anna_srf.checkout()
         # test the input is restored
-        self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
+        self.assertTrue(os.path.exists(os.path.join(anna_srf.input_directory, "ch_anna-modeling~ABC/test.abc")))
 
-        anna_srf_work.remove_input("ch_anna-modeling/ABC")
-        anna_mdl_sandbox.trash()
+        anna_srf.remove_input("ch_anna-modeling/ABC")
+        anna_mdl.trash()
         # create a new output
-        utils.add_file_to_directory(fu.path_join(anna_srf_work.output_directory, "ld"))
+        utils.add_file_to_directory(fu.path_join(anna_srf.output_directory, "ld"))
 
         # commit surfacing
-        anna_srf_v2 = anna_srf_work.publish()
+        anna_srf_v2 = anna_srf.publish()
         self.assertEqual(anna_srf_v2.version, 2)
 
         # test work trash remove the work product directory
-        product_dir = anna_srf_work.product_directory
-        anna_srf_work.trash()
+        product_dir = anna_srf.product_directory
+        anna_srf.trash()
         self.assertFalse(os.path.exists(product_dir))
 
         # trash and download last commit to test restore product inputs

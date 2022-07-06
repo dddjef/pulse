@@ -90,12 +90,8 @@ class LocalProduct:
         pass
 
     @property
-    def product_directory(self):
-        return self.resource.get_products_directory(self.version)
-
-    @property
     def pulse_product_data_file(self):
-        if isinstance(self, Work):
+        if isinstance(self, Resource):
             pulse_data_dir = self.project.work_product_data_directory
         else:
             pulse_data_dir = self.project.commit_product_data_directory
@@ -167,6 +163,10 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         }
         LocalProduct.__init__(self)
         self.directory = self.product_directory
+
+    @property
+    def product_directory(self):
+        return self.resource.get_products_directory(self.version)
 
     @property
     def version(self):
@@ -265,7 +265,7 @@ class PublishedVersion(PulseDbObject, LocalProduct):
 
             # download files
             self.project.cnx.repositories[self.resource.repository].download_product(
-                self, subpath=subpath, destination_folder=destination_folder)
+                self.project.name, self.uri, subpath=subpath, destination_folder=destination_folder)
             self.init_local_product_data()
 
         return self.product_directory
@@ -296,12 +296,17 @@ class Resource(PulseDbObject, LocalProduct):
         }
 
         self.products_inputs_file = os.path.join(self.sandbox_path, cfg.input_data_filename)
-        self.sandbox_version = None
+        # TODO : find another term to defined a local version (caution, used also by local product)
+        self.version = None
         self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.uri))
         self.input_directory = os.path.join(self.sandbox_path, cfg.work_input_dir)
         self.output_directory = os.path.join(self.sandbox_path, cfg.work_output_dir)
-        if self._check_exists_in_user_workspace():
+        if self.exists_in_sandbox():
             LocalProduct.__init__(self)
+
+    @property
+    def product_directory(self):
+        return self.get_products_directory(self.version)
 
     @property
     def lock_state(self):
@@ -405,17 +410,6 @@ class Resource(PulseDbObject, LocalProduct):
         """
         return PublishedVersion(self, self.get_index(version)).db_read()
 
-    def get_work(self):
-        """
-        get the Work object associated to the resource.
-        IF there's no current work in user work space, return None
-
-        :return:
-        """
-        try:
-            return Work(self).read()
-        except PulseError:
-            return None
 
     def checkout(self, index="last", destination_folder=None, restore_products="template", resolve_conflict="error"):
         """
@@ -428,20 +422,18 @@ class Resource(PulseDbObject, LocalProduct):
         :param index: the commit index to checkout. If not set, the last one will be used
         :param resolve_conflict: can be "error", "mine", or "theirs" depending how Pulse should resolve the conflict.
         """
+        # abort checkout if the work already exists in user sandbox, just rebuild its data
+        if self.exists_in_sandbox():
+            raise PulseError("Resource already exists in sandbox")
+
         if not os.path.exists(self.project.abs_work_user_root):
             self.project.initialize_sandbox()
-
-        work = Work(self)
-
-        # abort checkout if the work already exists in user sandbox, just rebuild its data
-        if os.path.exists(work.data_file):
-            return Work(self).read()
 
         if not destination_folder:
             destination_folder = self.sandbox_path
 
         # create the work object
-        work.version = self.last_version + 1
+        self.version = self.last_version + 1
         source_resource = None
         source_commit = None
 
@@ -485,23 +477,23 @@ class Resource(PulseDbObject, LocalProduct):
                 if not os.path.exists(absolute_dir):
                     os.makedirs(absolute_dir)
 
-            self.project.cnx.repositories[source_resource.repository].download_work(source_commit, destination_folder)
+            self.project.cnx.repositories[source_resource.repository].download_work(self.project.name, source_commit.uri, destination_folder)
 
-        work.write()
+        self.write()
         # recreate last commit products from known template or from last commit
         if restore_products == "template":
             try:
-                work.restore_template_products()
+                self.restore_template_products()
             except PulseDatabaseMissingObject:
                 pass
         elif source_commit == "last" and source_commit:
             source_commit.download(destination_folder=work.product_directory)
 
         # download requested input products if needed
-        for input_name, input_uri in work.get_inputs().items():
-            work.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
+        for input_name, input_uri in self.get_inputs().items():
+            self.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
 
-        return work
+        return self.sandbox_path
 
     def set_lock(self, state, user=None, steal=False):
         """
@@ -553,11 +545,8 @@ class Resource(PulseDbObject, LocalProduct):
         self._db_update(['repository'])
 
     #### WORK METHODS STARTS HERE
-
-
-    def _check_exists_in_user_workspace(self):
-        if not os.path.exists(self.sandbox_path):
-            raise PulseMissingNode("Missing work space : " + self.sandbox_path)
+    def exists_in_sandbox(self):
+        return os.path.exists(self.sandbox_path)
 
     def _get_trash_directory(self):
         date_time = datetime.now().strftime("%d%m%Y_%H%M%S")
@@ -606,7 +595,7 @@ class Resource(PulseDbObject, LocalProduct):
         uri = inputs[input_name]
 
         try:
-            product = self.project.get_work(uri)
+            product = self.project.get_resource(uri)
         except PulseError:
             product = self.project.get_published_version(uri)
 
@@ -676,7 +665,7 @@ class Resource(PulseDbObject, LocalProduct):
         work = None
         if consider_work_product:
             # check there is a work wih a valid subpath
-            work_node = self.project.get_work(uri)
+            work_node = self.project.get_resource(uri)
             if work_node and os.path.exists(os.path.join(work_node.product_directory, subpath)):
                 work = work_node
 
@@ -732,7 +721,7 @@ class Resource(PulseDbObject, LocalProduct):
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        product = self.project.get_work(uri)
+        product = self.project.get_resource(uri)
         if not product:
             product = self.project.get_published_version(uri)
 
@@ -753,7 +742,7 @@ class Resource(PulseDbObject, LocalProduct):
 
         # write data to json
         fu.write_data(self.data_file, {
-            "version": self.sandbox_version,
+            "version": self.version,
             "entity": self.entity,
             "resource_type": self.resource_type,
             "outputs": [],
@@ -761,7 +750,7 @@ class Resource(PulseDbObject, LocalProduct):
             })
 
         # create work product directory
-        work_product_directory = self.get_products_directory(self.sandbox_version)
+        work_product_directory = self.get_products_directory(self.version)
         os.makedirs(work_product_directory)
 
         # create junction point to the output directory if needed
@@ -789,8 +778,12 @@ class Resource(PulseDbObject, LocalProduct):
         if not os.path.exists(self.data_file):
             raise PulseError("work does not exists : " + self.sandbox_path)
         work_data = fu.read_data(self.data_file)
-        self.sandbox_version = work_data["version"]
+        self.version = work_data["version"]
         return self
+
+    def assert_exists_in_sandbox(self):
+        if not self.exists_in_sandbox():
+            raise PulseError("Resource doesn't exists in sandbox : " + self.sandbox_path)
 
     def publish(self, comment="", restore_template_products=True):
         """
@@ -800,15 +793,17 @@ class Resource(PulseDbObject, LocalProduct):
         :param restore_template_products: keep same output products after the commit
         :return: the created commit object
         """
-        self._check_exists_in_user_workspace()
+
+        self.assert_exists_in_sandbox()
+
         # check current the user permission
         if self.user_needs_lock():
             raise PulseError("resource is locked by another user : " + self.lock_user)
 
         # check the work is up to date
         expected_version = self.last_version + 1
-        if not self.sandbox_version == expected_version:
-            raise PulseError("Your version is deprecated, it should be based on " + str(self.last_version))
+        if not self.version == expected_version:
+            raise PulseError("Your version is deprecated, it should be based on " + str(expected_version - 1))
 
         # check the work status
         if not self.status():
@@ -830,7 +825,7 @@ class Resource(PulseDbObject, LocalProduct):
         work_files = fu.get_file_list(self.sandbox_path, [cfg.work_output_dir, cfg.work_input_dir])
         product_files = fu.get_file_list(self.product_directory)
 
-        published_version = PublishedVersion(self, self.sandbox_version)
+        published_version = PublishedVersion(self, self.version)
         published_version.create(
             files=self._get_work_files(),
             work_directories=fu.get_directory_list(self.sandbox_path, [cfg.work_output_dir, cfg.work_input_dir]),
@@ -840,14 +835,14 @@ class Resource(PulseDbObject, LocalProduct):
         )
 
         published_version.project.cnx.repositories[self.repository].upload_resource_commit(
-            self, self.sandbox_path, work_files, product_files)
-        self.set_last_version(self.sandbox_version)
+            self.project.name, published_version.uri, self.sandbox_path, work_files, product_files, published_version.directory)
+        self.set_last_version(self.version)
 
         # remove work product data
         os.remove(self.pulse_product_data_file)
 
         # increment the work and the products files
-        self.sandbox_version += 1
+        self.version += 1
         self.write()
 
         # restore template products if needed and possible
@@ -887,7 +882,7 @@ class Resource(PulseDbObject, LocalProduct):
         # trash the current content
         self.trash(no_backup=True)
         # checkout the last work commit version
-        self.checkout(index=self.sandbox_version - 1)
+        self.checkout(index=self.version - 1)
         return True
 
     def update(self, force=False):
@@ -946,7 +941,7 @@ class Resource(PulseDbObject, LocalProduct):
         :param no_backup: if False, the work folder is moved to trash directory. If True, it is removed from disk
         :return: True on success
         """
-        self._check_exists_in_user_workspace()
+        self.exists_in_sandbox()
         # test the work and products folder are movable
         for path in [self.sandbox_path, self.product_directory]:
             if os.path.exists(path) and not fu.test_path_write_access(path):
@@ -997,7 +992,7 @@ class Resource(PulseDbObject, LocalProduct):
             fu.read_data(self.data_file)["work_files"]
         )
 
-        products_directory = self.get_products_directory(self.sandbox_version)
+        products_directory = self.get_products_directory(self.version)
         for root, subdirectories, files in os.walk(products_directory):
             for f in files:
                 filepath = os.path.join(root, f)
@@ -1011,7 +1006,10 @@ class Project(PulseDbObject):
         a Pulse project, containing resources and a configuration
     """
     def __init__(self, connection, project_name):
+        # TODO : cnx should be private
         self.cnx = connection
+
+        #TODO : project name should be a property
         self.name = project_name
 
         PulseDbObject.__init__(self, self, "config")
@@ -1081,18 +1079,6 @@ class Project(PulseDbObject):
         """
         uri = uri_standards.convert_from_dict({"entity": cfg.template_name, "resource_type": resource_type})
         return self.get_resource(uri)
-
-    def get_work(self, uri_string):
-        uri_dict = uri_standards.convert_to_dict(uri_string)
-        resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
-        work = resource.get_work()
-        if not work:
-            return
-        if not uri_dict["version"]:
-            return work
-        if str(work.version) == uri_dict["version"]:
-            return work
-        return
 
     def get_published_version(self, uri_string):
         """
@@ -1216,15 +1202,18 @@ class Project(PulseDbObject):
 
     def get_resource(self, uri):
         """
+        # TODO : should allow a local argument
         return a project resource based on its entity name and its type
         will return None on a missing resource
-
+        if a version is specified, will return None if it doesn't exist locally
         :param uri: the resource uri
         :return: a pulse Resource
         """
         uri_dict = uri_standards.convert_to_dict(uri)
         try:
             resource = Resource(self, uri_dict["entity"], uri_dict["resource_type"]).db_read()
+            if uri_dict['version'] and resource.version != uri_dict['version']:
+                return None
         except PulseDatabaseMissingObject:
             return
         return resource
@@ -1267,9 +1256,9 @@ class Project(PulseDbObject):
         """
             return True if product has to be downloaded, False if not, and raise an Error if needed by strategy
         """
-        work_version = self.get_work(uri)
+        local_resource = self.get_resource(uri)
 
-        if not work_version:
+        if not local_resource:
             return True
         else:
             if strategy == "mine":
@@ -1277,7 +1266,7 @@ class Project(PulseDbObject):
             if strategy == "error":
                 raise PulseWorkConflict("Conflict with local work version : " + uri)
             if strategy == "theirs":
-                work_version.trash()
+                resource.trash()
                 return True
 
 

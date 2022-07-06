@@ -38,21 +38,20 @@ class Repository(PulseRepository):
             os.makedirs(self.root)
         return True
 
-    def _build_commit_path(self, path_type, commit):
+    def _build_commit_path(self, project_name, path_type, uri):
+        #TODO : simplify here, too much fuctions
         """custom function to build a repository path
         """
         return os.path.join(
-            self._build_resource_path(path_type, commit.resource),
-            self.version_prefix + str(commit.version).zfill(self.version_padding)
+            self._build_resource_path(project_name, path_type, uri)
         )
 
-    def _build_resource_path(self, path_type, resource):
+    def _build_resource_path(self, project_name, path_type, uri):
         return os.path.join(
             os.path.expandvars(self.root),
-            resource.project.name,
+            project_name,
             path_type,
-            resource.resource_type,
-            resource.entity.replace(":", os.sep)
+            uri.replace("/", "~")
         )
 
     @staticmethod
@@ -65,39 +64,39 @@ class Repository(PulseRepository):
                 os.makedirs(destination_dir)
             shutil.copyfile(source_root + filepath_rel, destination)
 
-    def upload_resource_commit(self, commit, work_folder, work_files, products_files):
-        self._copy_files(work_files, work_folder, self._build_commit_path("work", commit))
-        self._copy_files(products_files, commit.product_directory, self._build_commit_path("products", commit))
+    def upload_resource_commit(self, project_name, uri, work_folder, work_files, products_files, product_directory):
+        self._copy_files(work_files, work_folder, self._build_commit_path( project_name, "work", uri))
+        self._copy_files(products_files, product_directory, self._build_commit_path( project_name, "products", uri))
         return True
 
-    def download_work(self, commit, work_folder):
-        repo_work_path = self._build_commit_path("work", commit)
+    def download_work(self, project_name, uri, work_folder):
+        repo_work_path = self._build_commit_path(project_name, "work", uri)
         # copy repo work to sandbox
         copy_folder_content(repo_work_path, work_folder)
 
-    def download_product(self, local_published_version, destination_folder, subpath=""):
+    def download_product(self, project_name, uri, destination_folder, subpath=""):
         # build_products_repository_path
-        product_repo_path = os.path.join(self._build_commit_path("products", local_published_version), subpath)
+        product_repo_path = os.path.join(self._build_commit_path(project_name, "products", uri), subpath)
         if not os.path.exists(product_repo_path):
             raise PulseRepositoryError("path does not exists : " + product_repo_path)
         # copy repo products type to products_user_filepath
         copy_folder_content(product_repo_path, destination_folder)
 
-    def download_resource(self, resource, destination):
-        resource_product_repo_path = self._build_resource_path("products", resource)
-        resource_work_repo_path = self._build_resource_path("work", resource)
+    def download_resource(self, project_name, uri, destination):
+        resource_product_repo_path = self._build_resource_path(project_name, "products", uri)
+        resource_work_repo_path = self._build_resource_path(project_name, "work", uri)
         copy_folder_content(resource_product_repo_path, os.path.join(destination, "products"))
         copy_folder_content(resource_work_repo_path, os.path.join(destination, "work"))
 
-    def upload_resource(self, resource, source):
-        resource_product_repo_path = self._build_resource_path("products", resource)
-        resource_work_repo_path = self._build_resource_path("work", resource)
+    def upload_resource(self, project_name, uri, source):
+        resource_product_repo_path = self._build_resource_path(project_name, "products", uri)
+        resource_work_repo_path = self._build_resource_path(project_name, "work", uri)
 
         copy_folder_content(os.path.join(source, "products"), resource_product_repo_path)
         copy_folder_content(os.path.join(source, "work"), resource_work_repo_path)
 
-    def remove_resource(self, resource):
-        product_path = self._build_resource_path("products", resource)
+    def remove_resource(self, project_name, resource):
+        product_path = self._build_resource_path(project_name, "products", resource)
         if os.path.exists(product_path):
-            shutil.rmtree(self._build_resource_path("products", resource))
-        shutil.rmtree(self._build_resource_path("work", resource))
+            shutil.rmtree(self._build_resource_path(project_name, "products", resource))
+        shutil.rmtree(self._build_resource_path(project_name, "work", resource))
