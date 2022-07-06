@@ -343,8 +343,8 @@ class TestResources(unittest.TestCase):
 
     def test_complete_scenario(self):
         # create a resource based on this template
-        anna_mdl_resource = self.prj.create_resource("ch_anna-modeling")
-        self.assertEqual(anna_mdl_resource.last_version, 0)
+        anna_mdl = self.prj.create_resource("ch_anna-modeling")
+        self.assertEqual(anna_mdl.last_version, 0)
 
         # checkout, and check directories are created
         anna_mdl_sandbox = anna_mdl_resource.checkout()

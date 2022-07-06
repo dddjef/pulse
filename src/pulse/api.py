@@ -271,478 +271,9 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         return self.product_directory
 
 
-class Work(LocalProduct):
+class Resource(PulseDbObject, LocalProduct):
     """
-        Resource downloaded locally to be modified
-    """
-    def __init__(self, resource):
-        self.directory = resource.sandbox_path
-        self.products_inputs_file = os.path.join(self.directory, cfg.input_data_filename)
-        self.project = resource.project
-        self.resource = resource
-        self.version = None
-        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
-        self.input_directory = os.path.join(self.directory, cfg.work_input_dir)
-        self.output_directory = os.path.join(self.directory, cfg.work_output_dir)
-        LocalProduct.__init__(self)
-
-    @property
-    def uri(self):
-        return uri_standards.edit(self.resource.uri, {'version': self.version})
-
-    def _check_exists_in_user_workspace(self):
-        if not os.path.exists(self.directory):
-            raise PulseMissingNode("Missing work space : " + self.directory)
-
-    def _get_trash_directory(self):
-        date_time = datetime.now().strftime("%d%m%Y_%H%M%S")
-        path = os.path.join(self.project.abs_work_user_root, self.project.name, "TRASH") + os.sep
-        path += uri_standards.uri_to_filename(self.uri) + "-" + date_time
-        index = 0
-        path_base = path
-        while os.path.exists(path):
-            index += 1
-            path = path_base + "_" + str(index)
-        return path
-
-    def _get_work_files(self):
-        files_dict = {}
-        excluded_path = [cfg.work_output_dir, cfg.work_input_dir]
-        for root, dirs, files in os.walk(self.directory, topdown=True):
-            dirs[:] = [d for d in dirs if d not in excluded_path]
-            for f in files:
-                filepath = os.path.join(root, f)
-                relative_path = filepath[len(self.directory):]
-                files_dict[relative_path.replace(os.sep, "/")] = {"checksum": fu.md5(filepath)}
-        return files_dict
-
-    def get_inputs(self):
-        """
-        return a dict of inputs in the form
-        {uri_input_name : {uri, resolved_uri}}
-
-        :return: inputs dict
-        """
-        if not os.path.exists(self.products_inputs_file):
-            return {}
-        with open(self.products_inputs_file, "r") as read_file:
-            return json.load(read_file)
-
-    def get_input(self, input_name):
-        """
-        return the product used by the given input
-
-        :return: Product
-        """
-        inputs = self.get_inputs()
-        if input_name not in inputs:
-            raise PulseError("input does not exist : " + input_name)
-
-        uri = inputs[input_name]
-
-        try:
-            product = self.project.get_work(uri)
-        except PulseError:
-            product = self.project.get_published_version(uri)
-
-        return product
-
-    def add_input(self, uri, input_name=None, consider_work_product=False):
-        """
-        add a product to the work inputs list
-        download it to local product if needed
-        uri can be mutable (ie: anna-mdl.abc) or not (ie : anna-mdl.abc@4)
-        if a mutable uri is given, the last version will be used
-
-        :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
-        :param uri: the product uri, can be mutable
-        :param consider_work_product: if set to True, Pulse will look in local work product to add the input
-        :return: return the product used for the input
-        """
-        if not uri_standards.is_valid(uri):
-            raise PulseError("malformed uri : " + uri)
-
-        if not input_name:
-            input_name = uri
-
-        # abort if input already exists
-        inputs = self.get_inputs()
-        if input_name in inputs:
-            raise PulseError("input already exists : " + input_name)
-
-        # save input entry to disk
-        inputs[input_name] = uri
-        with open(self.products_inputs_file, "w") as write_file:
-            json.dump(inputs, write_file, indent=4, sort_keys=True)
-
-        return self.update_input(input_name, uri, consider_work_product)
-
-    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error"):
-        """
-        update a work input.
-        the input name is an alias, used for creating linked directory in {work}/inputs/
-        if no uri is set the last uri will be used to the last available product
-        if the given uri is mutable, the last version will be used
-        the new product is downloaded if needed
-        the input directory link is redirected to the new product
-        the product register the work as a new user
-        resolve conflict strategy can be either : error, mine or theirs
-        :param input_name: the input to update
-        :param uri: if set, give a new uri for the input. If not, used the last registered uri
-        :param consider_work_product: if set to True, update will look for local work product
-        :param resolve_conflict: if the new product already exists as a local work, will give the resolve strategy
-        :return: return the new product found for the input
-        """
-        # abort if input doesn't exist
-        inputs = self.get_inputs()
-
-        # raise an error if the input name doesn't exist
-        if input_name not in inputs:
-            raise PulseError("unknown input : " + input_name)
-
-        old_uri = inputs[input_name]
-
-        # if uri is not forced to a specific version, get the uri registered for this input as mutable
-        if not uri:
-            uri = uri_standards.edit(old_uri, {"version": None})
-
-        subpath = uri_standards.convert_to_dict(uri)["subpath"]
-        # get the work version if needed
-        work = None
-        if consider_work_product:
-            # check there is a work wih a valid subpath
-            work_node = self.project.get_work(uri)
-            if work_node and os.path.exists(os.path.join(work_node.product_directory, subpath)):
-                work = work_node
-
-        # get the published product, and compare to work product version to get the last one
-        product = self.project.get_published_version(uri)
-        if product:
-            if work and product.version < work.version:
-                product = work
-            else:
-                # if it's a commit version, download it
-                # check there's no conflict with a local product
-                product.download(resolve_conflict, subpath=uri_standards.convert_to_dict(uri)["subpath"])
-                if not os.path.exists(os.path.join(product.directory, subpath)):
-                    product = None
-
-        if not product:
-            raise PulseMissingNode("No product found for :" + uri)
-
-        # add a linked directory
-        if self.project.use_linked_input_directories:
-            if not os.path.exists(self.input_directory):
-                os.makedirs(self.input_directory)
-
-            input_link_directory = os.path.join(self.input_directory, uri_standards.uri_to_filename(input_name))
-
-            if os.path.exists(input_link_directory):
-                os.remove(input_link_directory)
-            fu.make_directory_link(input_link_directory, os.path.join(product.product_directory, subpath))
-
-        # updated input data entry to disk if needed
-        new_uri = product.uri + "/" + subpath
-        if new_uri != old_uri:
-            inputs[input_name] = new_uri
-            with open(self.products_inputs_file, "w") as write_file:
-                json.dump(inputs, write_file, indent=4, sort_keys=True)
-
-        product.add_product_user(self.directory)
-
-        return product
-
-    def remove_input(self, input_name):
-        """
-        remove a product from inputs list
-
-        :param input_name: input_name
-        """
-        inputs = self.get_inputs()
-        if input_name not in inputs:
-            raise PulseError("input does not exist : " + input_name)
-
-        uri = inputs[input_name]
-        inputs.pop(input_name, None)
-        with open(self.products_inputs_file, "w") as write_file:
-            json.dump(inputs, write_file, indent=4, sort_keys=True)
-
-        product = self.project.get_work(uri)
-        if not product:
-            product = self.project.get_published_version(uri)
-
-        product.remove_product_user(self.directory)
-
-        # remove linked input directory
-        input_directory = os.path.join(self.directory, cfg.work_input_dir, uri_standards.uri_to_filename(input_name))
-        if os.path.exists(input_directory):
-            os.remove(input_directory)
-
-    def write(self):
-        """
-        write the work object to user workspace
-        """
-        # create work folder if needed
-        if not os.path.exists(self.directory):
-            os.makedirs(self.directory)
-
-        # write data to json
-        fu.write_data(self.data_file, {
-            "version": self.version,
-            "entity": self.resource.entity,
-            "resource_type": self.resource.resource_type,
-            "outputs": [],
-            "work_files": self._get_work_files()
-            })
-
-        # create work product directory
-        work_product_directory = self.resource.get_products_directory(self.version)
-        os.makedirs(work_product_directory)
-
-        # create junction point to the output directory if needed
-        if self.project.use_linked_output_directory:
-            work_output_path = os.path.join(self.directory, cfg.work_output_dir)
-
-            # link work output directory to its current output product directory
-            fu.make_directory_link(work_output_path, work_product_directory)
-
-        # create input directory if needed
-        if self.project.use_linked_input_directories:
-            work_input_path = os.path.join(self.directory, cfg.work_input_dir)
-            if not os.path.exists(work_input_path):
-                os.makedirs(work_input_path)
-
-        self.init_local_product_data()
-
-    def read(self):
-        """
-        read the work data from user work space
-        if the work doesn't exists in user work space, raise a pulse error
-
-        :return: the updated work
-        """
-        if not os.path.exists(self.data_file):
-            raise PulseError("work does not exists : " + self.directory)
-        work_data = fu.read_data(self.data_file)
-        self.version = work_data["version"]
-        return self
-
-    def publish(self, comment="", restore_template_products=True):
-        """
-        commit the work to the repository, and publish it to the database
-
-        :param comment: a user comment string
-        :param restore_template_products: keep same output products after the commit
-        :return: the created commit object
-        """
-        self._check_exists_in_user_workspace()
-        # check current the user permission
-        if self.resource.user_needs_lock():
-            raise PulseError("resource is locked by another user : " + self.resource.lock_user)
-
-        # check the work is up to date
-        expected_version = self.resource.last_version + 1
-        if not self.version == expected_version:
-            raise PulseError("Your version is deprecated, it should be based on " + str(self.resource.last_version))
-
-        # check the work status
-        if not self.status():
-            raise PulseError("no file change to commit")
-
-        # check all inputs are registered
-        for input_name, input_uri in self.get_inputs().items():
-            try:
-                self.project.get_published_version(input_uri)
-            except PulseDatabaseMissingObject:
-                raise PulseError("Input should be commit first : " + input_uri)
-
-        # lock the resource to prevent concurrent commit
-        lock_state = self.resource.lock_state
-        lock_user = self.resource.lock_user
-        self.resource.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
-
-        # copy work files to a new version in repository
-        work_files = fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir])
-        product_files = fu.get_file_list(self.product_directory)
-
-        published_version = PublishedVersion(self.resource, self.version)
-        published_version.create(
-            files=self._get_work_files(),
-            work_directories=fu.get_directory_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir]),
-            product_directories=fu.get_directory_list(self.product_directory),
-            comment=comment,
-            work_inputs=self.get_inputs()
-        )
-
-        published_version.project.cnx.repositories[self.resource.repository].upload_resource_commit(
-            self, self.directory, work_files, product_files)
-        self.resource.set_last_version(self.version)
-
-        # remove work product data
-        os.remove(self.pulse_product_data_file)
-
-        # increment the work and the products files
-        self.version += 1
-        self.write()
-
-        # restore template products if needed and possible
-        if restore_template_products:
-            try:
-                self.restore_template_products()
-            except PulseDatabaseMissingObject:
-                pass
-
-        # restore the resource lock state
-        self.resource.set_lock(lock_state, lock_user, steal=True)
-
-        published_version.init_local_product_data()
-        return published_version
-
-    def restore_template_products(self):
-        if self.resource.entity != cfg.template_name:
-
-            source_resource = self.project.get_template(self.resource.resource_type)
-
-            # If resource not found, raise missing
-            if not source_resource:
-                raise PulseDatabaseMissingObject(f"No template found for " + self.resource.resource_type)
-
-            self.trash_products_content()
-
-            source_commit = source_resource.get_commit("last")
-
-            source_commit.download(destination_folder=self.product_directory, resolve_conflict="theirs")
-
-    def revert(self):
-        """
-        revert local changes to the work and its product directory
-
-        :return: True on success
-        """
-        # trash the current content
-        self.trash(no_backup=True)
-        # checkout the last work commit version
-        self.resource.checkout(index=self.version - 1)
-        return True
-
-    def update(self, force=False):
-        """
-        update local work copy to the last resource commit
-        fails if there's some local changes
-
-        :return: True on success
-        """
-        # test there's no changes that could be lost
-        if not force:
-            if self.status():
-                raise PulseError("local changes detected, you should commit or revert your work first")
-        # delete the work
-        self.trash(no_backup=True)
-        # checkout the last resource commit version
-        self.resource.checkout()
-        return True
-
-    def trash_products_content(self):
-        """
-        remove the work product content from user workspace
-
-        :return: True on success
-        """
-        # abort if products directory is empty
-        if not os.listdir(self.product_directory):
-            return
-
-        # test the product directory is movable
-        if os.path.exists(self.product_directory) and not fu.test_path_write_access(self.product_directory):
-            raise PulseError("Aborted. Can't move folder " + self.product_directory)
-
-        # create the trash work directory
-        trash_directory = self._get_trash_directory()
-        if not os.path.exists(trash_directory):
-            os.makedirs(trash_directory)
-
-        # move work product directory
-        shutil.move(self.product_directory,  os.path.join(trash_directory, "PRODUCTS"))
-
-        # recreate an empty directory
-        os.makedirs(self.product_directory)
-
-        # create junction point to the output directory if needed
-        if self.project.use_linked_output_directory:
-            work_output_path = os.path.join(self.directory, cfg.work_output_dir)
-
-            # link work output directory to its current output product directory
-            fu.make_directory_link(work_output_path, self.product_directory)
-
-    def trash(self, no_backup=False):
-        """
-        remove the work from user workspace
-
-        :param no_backup: if False, the work folder is moved to trash directory. If True, it is removed from disk
-        :return: True on success
-        """
-        self._check_exists_in_user_workspace()
-        # test the work and products folder are movable
-        for path in [self.directory, self.product_directory]:
-            if os.path.exists(path) and not fu.test_path_write_access(path):
-                raise PulseError("Aborted. Can't move folder " + path)
-
-        # unregister from products
-        for input_name, uri in self.get_inputs().items():
-            input_product = self.project.get_published_version(uri)
-            if os.path.exists(input_product.product_directory):
-                input_product.remove_product_user(self.directory)
-
-        # create the trash work directory
-        trash_directory = self._get_trash_directory()
-        os.makedirs(trash_directory)
-
-        # remove work output link
-        if os.path.exists(self.output_directory):
-            try:
-                os.remove(self.output_directory)
-            # if someone has created a output folder manually, it will raise an error
-            except PermissionError:
-                pass
-
-        # move work product directory
-        shutil.move(self.product_directory,  os.path.join(trash_directory, "PRODUCTS"))
-
-        # move work files
-        shutil.move(self.directory, trash_directory + "/work")
-
-        if no_backup:
-            shutil.rmtree(trash_directory)
-
-        # remove work data file
-        os.remove(self.data_file)
-        os.remove(self.pulse_product_data_file)
-
-        return True
-
-    def status(self):
-        """
-        return the work files changes since last commit. Based on the files modification date time
-
-        :return: a list a tuple with the filepath and the edit type (edited, removed, added)
-        """
-
-        diff = fu.compare_directory_content(
-            fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir]),
-            fu.read_data(self.data_file)["work_files"]
-        )
-
-        products_directory = self.resource.get_products_directory(self.version)
-        for root, subdirectories, files in os.walk(products_directory):
-            for f in files:
-                filepath = os.path.join(root, f)
-                relative_path = filepath[len(products_directory):]
-                diff["product-" + relative_path] = "added"
-        return diff
-
-
-class Resource(PulseDbObject):
-    """
+        # TODO reformulate this
         a project's resource. A resource is meant to generate products, and use products from other resources
     """
     def __init__(self, project, entity, resource_type):
@@ -763,6 +294,14 @@ class Resource(PulseDbObject):
             'resource_template': None,
             'metas': {}
         }
+
+        self.products_inputs_file = os.path.join(self.sandbox_path, cfg.input_data_filename)
+        self.sandbox_version = None
+        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.uri))
+        self.input_directory = os.path.join(self.sandbox_path, cfg.work_input_dir)
+        self.output_directory = os.path.join(self.sandbox_path, cfg.work_output_dir)
+        if self._check_exists_in_user_workspace():
+            LocalProduct.__init__(self)
 
     @property
     def lock_state(self):
@@ -918,11 +457,11 @@ class Resource(PulseDbObject):
                     if self.entity != cfg.template_name:
 
                         source_resource = self.project.get_template(self.resource_type)
-                        
+
                         # If resource not found, raise missing
                         if not source_resource:
                             raise PulseDatabaseMissingObject(f"Database object not found.")
-                        
+
                         source_commit = source_resource.get_commit("last")
                 except PulseDatabaseMissingObject:
                     pass
@@ -1012,6 +551,459 @@ class Resource(PulseDbObject):
         self._storage_vars['repository'] = new_repository
         self.set_lock(lock_state, lock_user, steal=True)
         self._db_update(['repository'])
+
+    #### WORK METHODS STARTS HERE
+
+
+    def _check_exists_in_user_workspace(self):
+        if not os.path.exists(self.sandbox_path):
+            raise PulseMissingNode("Missing work space : " + self.sandbox_path)
+
+    def _get_trash_directory(self):
+        date_time = datetime.now().strftime("%d%m%Y_%H%M%S")
+        path = os.path.join(self.project.abs_work_user_root, self.project.name, "TRASH") + os.sep
+        path += uri_standards.uri_to_filename(self.uri) + "-" + date_time
+        index = 0
+        path_base = path
+        while os.path.exists(path):
+            index += 1
+            path = path_base + "_" + str(index)
+        return path
+
+    def _get_work_files(self):
+        files_dict = {}
+        excluded_path = [cfg.work_output_dir, cfg.work_input_dir]
+        for root, dirs, files in os.walk(self.sandbox_path, topdown=True):
+            dirs[:] = [d for d in dirs if d not in excluded_path]
+            for f in files:
+                filepath = os.path.join(root, f)
+                relative_path = filepath[len(self.sandbox_path):]
+                files_dict[relative_path.replace(os.sep, "/")] = {"checksum": fu.md5(filepath)}
+        return files_dict
+
+    def get_inputs(self):
+        """
+        return a dict of inputs in the form
+        {uri_input_name : {uri, resolved_uri}}
+
+        :return: inputs dict
+        """
+        if not os.path.exists(self.products_inputs_file):
+            return {}
+        with open(self.products_inputs_file, "r") as read_file:
+            return json.load(read_file)
+
+    def get_input(self, input_name):
+        """
+        return the product used by the given input
+
+        :return: Product
+        """
+        inputs = self.get_inputs()
+        if input_name not in inputs:
+            raise PulseError("input does not exist : " + input_name)
+
+        uri = inputs[input_name]
+
+        try:
+            product = self.project.get_work(uri)
+        except PulseError:
+            product = self.project.get_published_version(uri)
+
+        return product
+
+    def add_input(self, uri, input_name=None, consider_work_product=False):
+        """
+        add a product to the work inputs list
+        download it to local product if needed
+        uri can be mutable (ie: anna-mdl.abc) or not (ie : anna-mdl.abc@4)
+        if a mutable uri is given, the last version will be used
+
+        :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
+        :param uri: the product uri, can be mutable
+        :param consider_work_product: if set to True, Pulse will look in local work product to add the input
+        :return: return the product used for the input
+        """
+        if not uri_standards.is_valid(uri):
+            raise PulseError("malformed uri : " + uri)
+
+        if not input_name:
+            input_name = uri
+
+        # abort if input already exists
+        inputs = self.get_inputs()
+        if input_name in inputs:
+            raise PulseError("input already exists : " + input_name)
+
+        # save input entry to disk
+        inputs[input_name] = uri
+        with open(self.products_inputs_file, "w") as write_file:
+            json.dump(inputs, write_file, indent=4, sort_keys=True)
+
+        return self.update_input(input_name, uri, consider_work_product)
+
+    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error"):
+        """
+        update a work input.
+        the input name is an alias, used for creating linked directory in {work}/inputs/
+        if no uri is set the last uri will be used to the last available product
+        if the given uri is mutable, the last version will be used
+        the new product is downloaded if needed
+        the input directory link is redirected to the new product
+        the product register the work as a new user
+        resolve conflict strategy can be either : error, mine or theirs
+        :param input_name: the input to update
+        :param uri: if set, give a new uri for the input. If not, used the last registered uri
+        :param consider_work_product: if set to True, update will look for local work product
+        :param resolve_conflict: if the new product already exists as a local work, will give the resolve strategy
+        :return: return the new product found for the input
+        """
+        # abort if input doesn't exist
+        inputs = self.get_inputs()
+
+        # raise an error if the input name doesn't exist
+        if input_name not in inputs:
+            raise PulseError("unknown input : " + input_name)
+
+        old_uri = inputs[input_name]
+
+        # if uri is not forced to a specific version, get the uri registered for this input as mutable
+        if not uri:
+            uri = uri_standards.edit(old_uri, {"version": None})
+
+        subpath = uri_standards.convert_to_dict(uri)["subpath"]
+        # get the work version if needed
+        work = None
+        if consider_work_product:
+            # check there is a work wih a valid subpath
+            work_node = self.project.get_work(uri)
+            if work_node and os.path.exists(os.path.join(work_node.product_directory, subpath)):
+                work = work_node
+
+        # get the published product, and compare to work product version to get the last one
+        product = self.project.get_published_version(uri)
+        if product:
+            if work and product.version < work.version:
+                product = work
+            else:
+                # if it's a commit version, download it
+                # check there's no conflict with a local product
+                product.download(resolve_conflict, subpath=uri_standards.convert_to_dict(uri)["subpath"])
+                if not os.path.exists(os.path.join(product.directory, subpath)):
+                    product = None
+
+        if not product:
+            raise PulseMissingNode("No product found for :" + uri)
+
+        # add a linked directory
+        if self.project.use_linked_input_directories:
+            if not os.path.exists(self.input_directory):
+                os.makedirs(self.input_directory)
+
+            input_link_directory = os.path.join(self.input_directory, uri_standards.uri_to_filename(input_name))
+
+            if os.path.exists(input_link_directory):
+                os.remove(input_link_directory)
+            fu.make_directory_link(input_link_directory, os.path.join(product.product_directory, subpath))
+
+        # updated input data entry to disk if needed
+        new_uri = product.uri + "/" + subpath
+        if new_uri != old_uri:
+            inputs[input_name] = new_uri
+            with open(self.products_inputs_file, "w") as write_file:
+                json.dump(inputs, write_file, indent=4, sort_keys=True)
+
+        product.add_product_user(self.sandbox_path)
+
+        return product
+
+    def remove_input(self, input_name):
+        """
+        remove a product from inputs list
+
+        :param input_name: input_name
+        """
+        inputs = self.get_inputs()
+        if input_name not in inputs:
+            raise PulseError("input does not exist : " + input_name)
+
+        uri = inputs[input_name]
+        inputs.pop(input_name, None)
+        with open(self.products_inputs_file, "w") as write_file:
+            json.dump(inputs, write_file, indent=4, sort_keys=True)
+
+        product = self.project.get_work(uri)
+        if not product:
+            product = self.project.get_published_version(uri)
+
+        product.remove_product_user(self.sandbox_path)
+
+        # remove linked input directory
+        input_directory = os.path.join(self.sandbox_path, cfg.work_input_dir, uri_standards.uri_to_filename(input_name))
+        if os.path.exists(input_directory):
+            os.remove(input_directory)
+
+    def write(self):
+        """
+        write the work object to user workspace
+        """
+        # create work folder if needed
+        if not os.path.exists(self.sandbox_path):
+            os.makedirs(self.sandbox_path)
+
+        # write data to json
+        fu.write_data(self.data_file, {
+            "version": self.sandbox_version,
+            "entity": self.entity,
+            "resource_type": self.resource_type,
+            "outputs": [],
+            "work_files": self._get_work_files()
+            })
+
+        # create work product directory
+        work_product_directory = self.get_products_directory(self.sandbox_version)
+        os.makedirs(work_product_directory)
+
+        # create junction point to the output directory if needed
+        if self.project.use_linked_output_directory:
+            work_output_path = os.path.join(self.sandbox_path, cfg.work_output_dir)
+
+            # link work output directory to its current output product directory
+            fu.make_directory_link(work_output_path, work_product_directory)
+
+        # create input directory if needed
+        if self.project.use_linked_input_directories:
+            work_input_path = os.path.join(self.sandbox_path, cfg.work_input_dir)
+            if not os.path.exists(work_input_path):
+                os.makedirs(work_input_path)
+
+        self.init_local_product_data()
+
+    def read(self):
+        """
+        read the work data from user work space
+        if the work doesn't exists in user work space, raise a pulse error
+
+        :return: the updated work
+        """
+        if not os.path.exists(self.data_file):
+            raise PulseError("work does not exists : " + self.sandbox_path)
+        work_data = fu.read_data(self.data_file)
+        self.sandbox_version = work_data["version"]
+        return self
+
+    def publish(self, comment="", restore_template_products=True):
+        """
+        commit the work to the repository, and publish it to the database
+
+        :param comment: a user comment string
+        :param restore_template_products: keep same output products after the commit
+        :return: the created commit object
+        """
+        self._check_exists_in_user_workspace()
+        # check current the user permission
+        if self.user_needs_lock():
+            raise PulseError("resource is locked by another user : " + self.lock_user)
+
+        # check the work is up to date
+        expected_version = self.last_version + 1
+        if not self.sandbox_version == expected_version:
+            raise PulseError("Your version is deprecated, it should be based on " + str(self.last_version))
+
+        # check the work status
+        if not self.status():
+            raise PulseError("no file change to commit")
+
+        # check all inputs are registered
+        for input_name, input_uri in self.get_inputs().items():
+            try:
+                self.project.get_published_version(input_uri)
+            except PulseDatabaseMissingObject:
+                raise PulseError("Input should be commit first : " + input_uri)
+
+        # lock the resource to prevent concurrent commit
+        lock_state = self.lock_state
+        lock_user = self.lock_user
+        self.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
+
+        # copy work files to a new version in repository
+        work_files = fu.get_file_list(self.sandbox_path, [cfg.work_output_dir, cfg.work_input_dir])
+        product_files = fu.get_file_list(self.product_directory)
+
+        published_version = PublishedVersion(self, self.sandbox_version)
+        published_version.create(
+            files=self._get_work_files(),
+            work_directories=fu.get_directory_list(self.sandbox_path, [cfg.work_output_dir, cfg.work_input_dir]),
+            product_directories=fu.get_directory_list(self.product_directory),
+            comment=comment,
+            work_inputs=self.get_inputs()
+        )
+
+        published_version.project.cnx.repositories[self.repository].upload_resource_commit(
+            self, self.sandbox_path, work_files, product_files)
+        self.set_last_version(self.sandbox_version)
+
+        # remove work product data
+        os.remove(self.pulse_product_data_file)
+
+        # increment the work and the products files
+        self.sandbox_version += 1
+        self.write()
+
+        # restore template products if needed and possible
+        if restore_template_products:
+            try:
+                self.restore_template_products()
+            except PulseDatabaseMissingObject:
+                pass
+
+        # restore the resource lock state
+        self.set_lock(lock_state, lock_user, steal=True)
+
+        published_version.init_local_product_data()
+        return published_version
+
+    def restore_template_products(self):
+        if self.entity != cfg.template_name:
+
+            source_resource = self.project.get_template(self.resource_type)
+
+            # If resource not found, raise missing
+            if not source_resource:
+                raise PulseDatabaseMissingObject(f"No template found for " + self.resource_type)
+
+            self.trash_products_content()
+
+            source_commit = source_resource.get_commit("last")
+
+            source_commit.download(destination_folder=self.product_directory, resolve_conflict="theirs")
+
+    def revert(self):
+        """
+        revert local changes to the work and its product directory
+
+        :return: True on success
+        """
+        # trash the current content
+        self.trash(no_backup=True)
+        # checkout the last work commit version
+        self.checkout(index=self.sandbox_version - 1)
+        return True
+
+    def update(self, force=False):
+        """
+        update local work copy to the last resource commit
+        fails if there's some local changes
+
+        :return: True on success
+        """
+        # test there's no changes that could be lost
+        if not force:
+            if self.status():
+                raise PulseError("local changes detected, you should commit or revert your work first")
+        # delete the work
+        self.trash(no_backup=True)
+        # checkout the last resource commit version
+        self.checkout()
+        return True
+
+    def trash_products_content(self):
+        """
+        remove the work product content from user workspace
+
+        :return: True on success
+        """
+        # abort if products directory is empty
+        if not os.listdir(self.product_directory):
+            return
+
+        # test the product directory is movable
+        if os.path.exists(self.product_directory) and not fu.test_path_write_access(self.product_directory):
+            raise PulseError("Aborted. Can't move folder " + self.product_directory)
+
+        # create the trash work directory
+        trash_directory = self._get_trash_directory()
+        if not os.path.exists(trash_directory):
+            os.makedirs(trash_directory)
+
+        # move work product directory
+        shutil.move(self.product_directory,  os.path.join(trash_directory, "PRODUCTS"))
+
+        # recreate an empty directory
+        os.makedirs(self.product_directory)
+
+        # create junction point to the output directory if needed
+        if self.project.use_linked_output_directory:
+            work_output_path = os.path.join(self.sandbox_path, cfg.work_output_dir)
+
+            # link work output directory to its current output product directory
+            fu.make_directory_link(work_output_path, self.product_directory)
+
+    def trash(self, no_backup=False):
+        """
+        remove the work from user workspace
+
+        :param no_backup: if False, the work folder is moved to trash directory. If True, it is removed from disk
+        :return: True on success
+        """
+        self._check_exists_in_user_workspace()
+        # test the work and products folder are movable
+        for path in [self.sandbox_path, self.product_directory]:
+            if os.path.exists(path) and not fu.test_path_write_access(path):
+                raise PulseError("Aborted. Can't move folder " + path)
+
+        # unregister from products
+        for input_name, uri in self.get_inputs().items():
+            input_product = self.project.get_published_version(uri)
+            if os.path.exists(input_product.product_directory):
+                input_product.remove_product_user(self.sandbox_path)
+
+        # create the trash work directory
+        trash_directory = self._get_trash_directory()
+        os.makedirs(trash_directory)
+
+        # remove work output link
+        if os.path.exists(self.output_directory):
+            try:
+                os.remove(self.output_directory)
+            # if someone has created a output folder manually, it will raise an error
+            except PermissionError:
+                pass
+
+        # move work product directory
+        shutil.move(self.product_directory,  os.path.join(trash_directory, "PRODUCTS"))
+
+        # move work files
+        shutil.move(self.sandbox_path, trash_directory + "/work")
+
+        if no_backup:
+            shutil.rmtree(trash_directory)
+
+        # remove work data file
+        os.remove(self.data_file)
+        os.remove(self.pulse_product_data_file)
+
+        return True
+
+    def status(self):
+        """
+        return the work files changes since last commit. Based on the files modification date time
+
+        :return: a list a tuple with the filepath and the edit type (edited, removed, added)
+        """
+
+        diff = fu.compare_directory_content(
+            fu.get_file_list(self.sandbox_path, [cfg.work_output_dir, cfg.work_input_dir]),
+            fu.read_data(self.data_file)["work_files"]
+        )
+
+        products_directory = self.get_products_directory(self.sandbox_version)
+        for root, subdirectories, files in os.walk(products_directory):
+            for f in files:
+                filepath = os.path.join(root, f)
+                relative_path = filepath[len(products_directory):]
+                diff["product-" + relative_path] = "added"
+        return diff
 
 
 class Project(PulseDbObject):
