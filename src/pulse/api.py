@@ -473,7 +473,7 @@ class Resource(PulseDbObject, LocalProduct):
 
             # create the directory structure
             for rel_dir in source_commit.work_directories:
-                absolute_dir = os.path.join(work.directory, rel_dir[1:])
+                absolute_dir = os.path.join(self.sandbox_path, rel_dir[1:])
                 if not os.path.exists(absolute_dir):
                     os.makedirs(absolute_dir)
 
@@ -665,7 +665,7 @@ class Resource(PulseDbObject, LocalProduct):
         work = None
         if consider_work_product:
             # check there is a work wih a valid subpath
-            work_node = self.project.get_resource(uri)
+            work_node = self.project.get_resource(uri, local=True)
             if work_node and os.path.exists(os.path.join(work_node.product_directory, subpath)):
                 work = work_node
 
@@ -811,9 +811,7 @@ class Resource(PulseDbObject, LocalProduct):
 
         # check all inputs are registered
         for input_name, input_uri in self.get_inputs().items():
-            try:
-                self.project.get_published_version(input_uri)
-            except PulseDatabaseMissingObject:
+            if not self.project.get_published_version(input_uri):
                 raise PulseError("Input should be commit first : " + input_uri)
 
         # lock the resource to prevent concurrent commit
@@ -1101,7 +1099,7 @@ class Project(PulseDbObject):
                 uri_standards.edit(uri_string, {"version": "*"})
             )
             if not commits:
-                raise PulseMissingNode("No published version found for :" + uri_string)
+                return
             commits.sort()
             last_version = uri_standards.convert_to_dict(commits[-1])["version"]
             return resource.get_commit(last_version)
@@ -1200,16 +1198,19 @@ class Project(PulseDbObject):
         with open(json_path, "w") as write_file:
             json.dump(data, write_file, indent=4, sort_keys=True)
 
-    def get_resource(self, uri):
+    def get_resource(self, uri, local=False):
         """
-        # TODO : should allow a local argument
         return a project resource based on its entity name and its type
         will return None on a missing resource
         if a version is specified, will return None if it doesn't exist locally
         :param uri: the resource uri
+        :param local: only return resource in user sandbox
         :return: a pulse Resource
         """
         uri_dict = uri_standards.convert_to_dict(uri)
+        if local:
+            pass
+
         try:
             resource = Resource(self, uri_dict["entity"], uri_dict["resource_type"]).db_read()
             if uri_dict['version'] and resource.version != uri_dict['version']:

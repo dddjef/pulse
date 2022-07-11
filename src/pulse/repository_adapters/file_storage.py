@@ -57,6 +57,7 @@ class Repository(PulseRepository):
     @staticmethod
     def _copy_files(relative_filepath_list, source_root, destination_root):
         os.makedirs(destination_root)
+
         for filepath_rel in relative_filepath_list:
             destination = destination_root + filepath_rel
             destination_dir = os.path.split(destination)[0]
