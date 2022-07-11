@@ -265,7 +265,7 @@ class PublishedVersion(PulseDbObject, LocalProduct):
 
             # download files
             self.project.cnx.repositories[self.resource.repository].download_product(
-                self, subpath=subpath, destination_folder=destination_folder)
+                self.project.name, self.uri, subpath=subpath, destination_folder=destination_folder)
             self.init_local_product_data()
 
         return self.product_directory
@@ -575,7 +575,14 @@ class Work(LocalProduct):
         )
 
         published_version.project.cnx.repositories[self.resource.repository].upload_resource_commit(
-            self, self.directory, work_files, product_files)
+            self.project.name,
+            published_version.uri,
+            self.directory,
+            work_files,
+            published_version.directory,
+            product_files
+            )
+
         self.resource.set_last_version(self.version)
 
         # remove work product data
@@ -946,7 +953,8 @@ class Resource(PulseDbObject):
                 if not os.path.exists(absolute_dir):
                     os.makedirs(absolute_dir)
 
-            self.project.cnx.repositories[source_resource.repository].download_work(source_commit, destination_folder)
+            self.project.cnx.repositories[source_resource.repository].download_work(
+                self.project.name, source_commit.uri, destination_folder)
 
         work.write()
         # recreate last commit products from known template or from last commit

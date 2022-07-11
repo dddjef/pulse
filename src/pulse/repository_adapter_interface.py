@@ -15,33 +15,33 @@ class PulseRepository:
         """
         pass
 
-    def upload_resource_commit(self, commit, work_folder, work_files, products_files):
+    def upload_resource_commit(self, project_name, uri, work_root, work_files, product_root, product_files):
         """upload a commit content to repository
         """
         pass
 
-    def download_work(self, commit, work_folder):
+    def download_work(self, project_name, uri, work_folder):
         """download a resource work content to a local folder. Creates the folder if needed
         """
         pass
 
-    def download_product(self, product, destination_folder, subpath=""):
+    def download_product(self, project_name, uri, destination_folder, subpath=""):
         """download a product content to a local folder. Creates the folder if needed
             raise a PulseRepositoryError if the subpath is unreachable
         """
         pass
 
-    def download_resource(self, resource, destination):
+    def download_resource(self, project_name, uri, destination):
         """download a resource content  and all its history to a local folder. Creates the folder if needed
          """
         pass
 
-    def upload_resource(self, resource, source):
+    def upload_resource(self, project_name, uri, source):
         """upload a resource content and all its history to repository from a local source directory
          """
         pass
 
-    def remove_resource(self, resource):
+    def remove_resource(self, project_name, uri):
         """remove a resource and all its history from repository
          """
         pass
