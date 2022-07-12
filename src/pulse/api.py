@@ -937,7 +937,7 @@ class Resource(PulseDbObject):
             os.makedirs(destination_folder)
         else:
             # test for local work product in conflict with incoming work input product
-            for input_name, uri in source_commit.work_inputs.items():
+            for input_name, uri in source_commit.work_inputs:
                 self.project.resolve_local_product_conflict(uri, resolve_conflict)
 
             # create the directory structure
