@@ -590,7 +590,7 @@ class MainWindow(QMainWindow):
 
             if isinstance(item.pulse_node, pulse.Resource):
                 self.show_details({
-                    "last_version": item.pulse_node.last_version,
+                    "last_version": item.pulse_node.get_last_version,
                     "repository": item.pulse_node.repository,
                     "resource_template": item.pulse_node.resource_template,
                     "lock_user": item.pulse_node.lock_user
