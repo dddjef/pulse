@@ -344,43 +344,43 @@ class TestResources(unittest.TestCase):
     def test_complete_scenario(self):
         # create a resource based on this template
         anna_mdl_resource = self.prj.create_resource("ch_anna-modeling")
-        self.assertEqual(anna_mdl_resource.last_version, 0)
+        self.assertEqual(anna_mdl_resource.get_last_version(), 0)
 
         # checkout, and check directories are created
-        anna_mdl_sandbox = anna_mdl_resource.checkout()
-        self.assertTrue(os.path.exists(anna_mdl_sandbox.directory))
+        anna_mdl_work = anna_mdl_resource.checkout()
+        self.assertTrue(os.path.exists(anna_mdl_work.directory))
 
         # commit should fail if nothing is change in work
         with self.assertRaises(PulseError):
-            anna_mdl_sandbox.publish("very first time")
+            anna_mdl_work.publish("very first time")
 
         # create a new file in work directory and try to commit again
         new_file = "test_complete.txt"
-        mdl_work_dir = os.path.join(anna_mdl_sandbox.directory, "work")
+        mdl_work_dir = os.path.join(anna_mdl_work.directory, "work")
         utils.add_file_to_directory(mdl_work_dir, new_file)
-        self.assertEqual(anna_mdl_sandbox.status(), {"/work/" + new_file: 'added'})
+        self.assertEqual(anna_mdl_work.status(), {"/work/" + new_file: 'added'})
 
-        anna_mdl_sandbox.publish("add a file")
-        self.assertEqual(anna_mdl_resource.last_version, 1)
+        anna_mdl_work.publish("add a file")
+        self.assertEqual(anna_mdl_resource.get_last_version(), 1)
 
         # create a sub resource
-        abc_work_product = os.path.join(anna_mdl_sandbox.directory, "output", "abc")
+        abc_work_product = os.path.join(anna_mdl_work.directory, "output", "abc")
         os.makedirs(abc_work_product)
         # now products directory should exists)
         utils.add_file_to_directory(abc_work_product, "test.abc")
         # create a new commit
-        anna_mdl_v2 = anna_mdl_sandbox.publish("some abc produced")
+        anna_mdl_v2 = anna_mdl_work.publish("some abc produced")
 
-        self.assertEqual(anna_mdl_resource.last_version, 2)
+        self.assertEqual(anna_mdl_resource.get_last_version(), 2)
         # create a new resource
         anna_srf_resource = self.prj.create_resource("ch_anna-surfacing")
-        self.assertEqual(anna_srf_resource.last_version, 0)
+        self.assertEqual(anna_srf_resource.get_last_version(), 0)
         anna_srf_work = anna_srf_resource.checkout()
         anna_srf_work.add_input("ch_anna-modeling/ABC")
         self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
 
         anna_srf_work.publish("with input")
-        self.assertEqual(anna_srf_resource.last_version, 1)
+        self.assertEqual(anna_srf_resource.get_last_version(), 1)
 
         anna_srf_work.trash()
         # remove the product
@@ -391,7 +391,7 @@ class TestResources(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(anna_srf_work.input_directory, "ch_anna-modeling~ABC/test.abc")))
 
         anna_srf_work.remove_input("ch_anna-modeling/ABC")
-        anna_mdl_sandbox.trash()
+        anna_mdl_work.trash()
         # create a new output
         utils.add_file_to_directory(fu.path_join(anna_srf_work.output_directory, "ld"))
 
@@ -795,10 +795,10 @@ class TestResources(unittest.TestCase):
         resource_model_b = proj_b.get_resource("joe-model")
 
         # Ensure publish from another user increment the last version for every one
-        self.assertEqual(resource_model_b.last_version, 0)
+        self.assertEqual(resource_model_b.get_last_version(), 0)
         work_model_a.publish()
         resource_model_b.db_read()
-        self.assertEqual(resource_model_b.last_version, 1)
+        self.assertEqual(resource_model_b.get_last_version(), 1)
 
 if __name__ == '__main__':
     unittest.main()

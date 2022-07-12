@@ -38,7 +38,6 @@ class PulseDatabase:
         'Resource': [
             "lock_state BOOLEAN",
             "lock_user VARCHAR(255)",
-            "last_version INT",
             "resource_type VARCHAR(255)",
             "entity VARCHAR(255)",
             "repository VARCHAR(255)",

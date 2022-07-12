@@ -275,11 +275,13 @@ class Work(LocalProduct):
     """
         Resource downloaded locally to be modified
     """
-    def __init__(self, resource):
-        self.directory = resource.sandbox_path
+    def __init__(self, project, uri):
+        self._uri = uri
+        # TODO : Project.get_work_path(uri) should be created for this
+        self.directory = project.get_sandbox_path(uri)
         self.products_inputs_file = os.path.join(self.directory, cfg.input_data_filename)
-        self.project = resource.project
-        self.resource = resource
+        self.project = project
+        self._resource = None
         self.version = None
         self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
         self.input_directory = os.path.join(self.directory, cfg.work_input_dir)
@@ -288,7 +290,13 @@ class Work(LocalProduct):
 
     @property
     def uri(self):
-        return uri_standards.edit(self.resource.uri, {'version': self.version})
+        return uri_standards.edit(self._uri, {'version': self.version})
+
+    @property
+    def resource(self):
+        if not self._resource:
+            self._resource = self.project.get_resource(self.uri)
+        return self._resource
 
     def _check_exists_in_user_workspace(self):
         if not os.path.exists(self.directory):
@@ -541,9 +549,10 @@ class Work(LocalProduct):
             raise PulseError("resource is locked by another user : " + self.resource.lock_user)
 
         # check the work is up to date
-        expected_version = self.resource.last_version + 1
+        last_version = self.resource.get_last_version()
+        expected_version = last_version + 1
         if not self.version == expected_version:
-            raise PulseError("Your version is deprecated, it should be based on " + str(self.resource.last_version))
+            raise PulseError("Your version is deprecated, it should be based on " + str(last_version))
 
         # check the work status
         if not self.status():
@@ -582,8 +591,6 @@ class Work(LocalProduct):
             published_version.directory,
             product_files
             )
-
-        self.resource.set_last_version(self.version)
 
         # remove work product data
         os.remove(self.pulse_product_data_file)
@@ -760,12 +767,10 @@ class Resource(PulseDbObject):
         )
         self._entity = entity
         self._resource_type = resource_type
-        self.sandbox_path = os.path.join(
-            project.abs_work_user_root, project.name, self.uri)
+        self.sandbox_path = project.get_sandbox_path(self.uri)
         self._storage_vars = {
             'lock_state': False,
             'lock_user': '',
-            'last_version': 0,
             'repository': None,
             'resource_template': None,
             'metas': {}
@@ -779,9 +784,9 @@ class Resource(PulseDbObject):
     def lock_user(self):
         return self._storage_vars["lock_user"]
 
-    @property
-    def last_version(self):
-        return self._storage_vars["last_version"]
+    def get_last_version(self):
+        versions = self.project.list_published_versions(uri_pattern=(self.uri + "*"))
+        return len(versions)
 
     @property
     def resource_type(self):
@@ -820,16 +825,6 @@ class Resource(PulseDbObject):
         )
         return path
 
-    def set_last_version(self, version):
-        # or last version should be compute from DB versions sum. Mainly a cache question, again
-        """
-        set resource last version index
-
-        :param version: integer
-        """
-        self._storage_vars["last_version"] = version
-        self._db_update(["last_version"])
-
     def user_needs_lock(self, user=None):
         """
         return if the given user needs to get the resource lock to modify it
@@ -856,7 +851,7 @@ class Resource(PulseDbObject):
             instance_type = str
         if isinstance(version_name, instance_type):
             if version_name == "last":
-                return self.last_version
+                return self.get_last_version()
             else:
                 try:
                     return int(version_name)
@@ -881,7 +876,7 @@ class Resource(PulseDbObject):
         :return:
         """
         try:
-            return Work(self).read()
+            return Work(self.project, self.uri).read()
         except PulseError:
             return None
 
@@ -899,22 +894,23 @@ class Resource(PulseDbObject):
         if not os.path.exists(self.project.abs_work_user_root):
             self.project.initialize_sandbox()
 
-        work = Work(self)
+        work = Work(self.project, self.uri)
 
         # abort checkout if the work already exists in user sandbox, just rebuild its data
         if os.path.exists(work.data_file):
-            return Work(self).read()
+            return Work(self.project, self.uri).read()
 
         if not destination_folder:
             destination_folder = self.sandbox_path
 
         # create the work object
-        work.version = self.last_version + 1
+        last_version = self.get_last_version()
+        work.version = last_version + 1
         source_resource = None
         source_commit = None
 
         # if it's an initial checkout, try to get data from source resource or template. Else, create empty folders
-        if self.last_version == 0:
+        if last_version == 0:
             # if a source resource is given, get its template
             if self.resource_template:
                 source_resource = self.project.get_resource(self.resource_template)
@@ -1072,6 +1068,9 @@ class Project(PulseDbObject):
     def _update_local_roots_path(self):
         self._abs_work_user_root = os.path.expandvars(self.work_user_root)
         self._abs_product_user_root = os.path.expandvars(self.product_user_root)
+
+    def get_sandbox_path(self, uri):
+        return os.path.join(self.abs_work_user_root, self.name, uri)
 
     def create(self,
                default_repository,
