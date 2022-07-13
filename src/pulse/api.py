@@ -161,7 +161,7 @@ class PublishedVersion(PulseDbObject, LocalProduct):
             'version': int(version),
             'files': {},
             'comment': "",
-            'work_inputs': [],
+            'work_inputs': {},
             'work_directories': [],
             'product_directories': []
         }
