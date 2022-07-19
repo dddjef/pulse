@@ -122,11 +122,16 @@ class TestResources(unittest.TestCase):
     def setUp(self):
         utils.reset_test_data()
         self.cnx = Connection(adapter="json_db", path=utils.json_db_path)
-        self.cnx.add_repository(name="main_storage", adapter="file_storage", path=utils.file_storage_path)
+        storage_name = "main_storage"
+        self.cnx.add_repository(
+            name=storage_name,
+            adapter="file_storage",
+            path=utils.file_storage_path + "/" + storage_name
+        )
         self.prj = self.cnx.create_project(
             test_project_name,
             utils.sandbox_work_path,
-            default_repository="main_storage",
+            default_repository=storage_name,
             product_user_root=utils.sandbox_products_path
         )
         self._initResource()
@@ -143,6 +148,19 @@ class TestResources(unittest.TestCase):
         self.cnx.delete_project(test_project_name)
         with self.assertRaises(PulseError):
             self.cnx.get_project(test_project_name)
+
+    def test_resource_set_repository(self):
+        new_repo_name = "new_storage"
+        self.cnx.add_repository(
+            name=new_repo_name,
+            adapter="file_storage",
+            path=os.path.join(utils.file_storage_path, new_repo_name).replace("\\", "/")
+        )
+        self.assertTrue(os.path.exists(os.path.join(utils.file_storage_path, "main_storage", "test", "anna-mdl")))
+        self.anna_mdl.set_repository(new_repo_name)
+        # test the resource is only in the second repository
+        self.assertFalse(os.path.exists(os.path.join(utils.file_storage_path,"main_storage", "test", "anna-mdl")))
+        self.assertTrue(os.path.exists(os.path.join(utils.file_storage_path, new_repo_name, "test", "anna-mdl")))
 
     def test_template_resource(self):
         template_mdl = self.prj.create_template("mdl")
