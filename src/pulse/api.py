@@ -1458,7 +1458,7 @@ def get_adapter_list(adapter_type: str) -> FrozenSet[str]:
     Returns:
         FrozenSet[str]: FrozenSet of adapters names
     """
-    files = set([directory.glob("*.py") for directory in get_adapter_directories(adapter_type)])
+    files = set()
     for directory in get_adapter_directories(adapter_type):
         files.update((filepath.stem for filepath in directory.glob("*.py")))
 
