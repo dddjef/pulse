@@ -10,18 +10,27 @@ sandbox_products_path = os.path.join(test_data_output_path, "products")
 file_storage_path = os.path.join(test_data_output_path, "repos").replace("\\", "/")
 
 
+def ignore_extended_attributes(func, filename, exc_info):
+    is_meta_file = os.path.basename(filename).startswith("._")
+    if not (func is os.unlink and is_meta_file):
+        raise
+
+# TODO : ensure the read only mode is not an issue on linux
 def reset_test_data(root=test_data_output_path):
     if os.path.exists(root):
         # first remove all read only mode from files attributes
-        for path, subdirs, files in os.walk(root):
-            for name in files:
-                filepath = os.path.join(path, name)
-                if filepath.endswith(".pipe"):
-                    if platform == "win32":
+        if platform == "win32":
+            for path, subdirs, files in os.walk(root):
+                for name in files:
+                    filepath = os.path.join(path, name)
+                    if filepath.endswith(".pipe"):
                         os.chmod(filepath, 0o777)
 
         if platform == "win32":
-            subprocess.call('rmdir /s /q "' + root + '"', shell=True)
+            subprocess.call('rmdir /s /q "' + root + '"',
+                            shell=True,
+                            stderr=subprocess.DEVNULL,
+                            stdout=subprocess.DEVNULL)
         else:
             shutil.rmtree(root)
     os.makedirs(root)
