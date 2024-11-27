@@ -95,8 +95,8 @@ class LocalProduct:
 
     @property
     def pulse_product_data_file(self):
-        if isinstance(self, Work):
-            pulse_data_dir = self.project.work_product_data_directory
+        if isinstance(self, SandBoxResource):
+            pulse_data_dir = self.project.sandbox_resource_product_data_directory
         else:
             pulse_data_dir = self.project.commit_product_data_directory
         return os.path.normpath(os.path.join(pulse_data_dir, fu.uri_to_json_filename(self.uri)))
@@ -149,7 +149,7 @@ class LocalProduct:
         fu.lock_directory_content(self.product_directory)
 
 
-class PublishedVersion(PulseDbObject, LocalProduct):
+class PublishedResource(PulseDbObject, LocalProduct):
     """
         Object created when a resource has been published to database
     """
@@ -161,8 +161,8 @@ class PublishedVersion(PulseDbObject, LocalProduct):
             'version': int(version),
             'files': {},
             'comment': "",
-            'work_inputs': {},
-            'work_directories': [],
+            'sandbox_resource_inputs': {},
+            'sandbox_resource_directories': [],
             'product_directories': []
         }
         LocalProduct.__init__(self)
@@ -181,23 +181,23 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         return self._storage_vars["comment"]
 
     @property
-    def work_inputs(self):
-        return self._storage_vars["work_inputs"]
+    def sandbox_resource_inputs(self):
+        return self._storage_vars["sandbox_resource_inputs"]
 
     @property
-    def work_directories(self):
-        return self._storage_vars["work_directories"]
+    def sandbox_resource_directories(self):
+        return self._storage_vars["sandbox_resource_directories"]
 
     @property
     def product_directories(self):
         return self._storage_vars["product_directories"]
 
-    def create(self, files, work_directories, product_directories, comment, work_inputs):
+    def create(self, files, sandbox_resource_directories, product_directories, comment, sandbox_resource_inputs):
         self._storage_vars["files"] = files
-        self._storage_vars["work_directories"] = work_directories
+        self._storage_vars["sandbox_resource_directories"] = sandbox_resource_directories
         self._storage_vars["product_directories"] = product_directories
         self._storage_vars["comment"] = comment
-        self._storage_vars["work_inputs"] = work_inputs
+        self._storage_vars["sandbox_resource_inputs"] = sandbox_resource_inputs
         self.db_create()
 
     def is_local(self, subpath=""):
@@ -237,11 +237,11 @@ class PublishedVersion(PulseDbObject, LocalProduct):
     def download(self, resolve_conflict="error", subpath="", destination_folder=None):
         """
         download the resource_version to local pulse cache if it doesn't already exists.
-        Since the downloaded version could be currently worked by the user, this could
+        Since the downloaded version could be already in user sandbox, this could
         raise a conflict. Pulse by default stop the process and raise an error.
         resolve conflict could be "error", "mine", and "theirs".
         :return: the local published version
-        :param resolve_conflict: behaviour if there's already a local work product with the same uri
+        :param resolve_conflict: behaviour if there's already a local sandbox_resource product with the same uri
         :param subpath: only download a part of the commit
         :param destination_folder: download to a custom directory
         """
@@ -271,21 +271,21 @@ class PublishedVersion(PulseDbObject, LocalProduct):
         return self.product_directory
 
 
-class Work(LocalProduct):
+class SandBoxResource(LocalProduct):
     """
         Resource downloaded locally to be modified
     """
     def __init__(self, project, uri):
         self._uri = uri
-        # TODO : Project.get_work_path(uri) should be created for this
-        self.directory = project.get_sandbox_path(uri)
+        # TODO : Project.get_sandbox_resource_path(uri) should be created for this
+        self.directory = project.get_sandbox_resource_path(uri)
         self.products_inputs_file = os.path.join(self.directory, cfg.input_data_filename)
         self.project = project
         self._resource = None
         self.version = None
-        self.data_file = os.path.join(self.project.work_data_directory, fu.uri_to_json_filename(self.resource.uri))
-        self.input_directory = os.path.join(self.directory, cfg.work_input_dir)
-        self.output_directory = os.path.join(self.directory, cfg.work_output_dir)
+        self.data_file = os.path.join(self.project.sandbox_resource_data_directory, fu.uri_to_json_filename(self.resource.uri))
+        self.input_directory = os.path.join(self.directory, cfg.product_input_dir)
+        self.output_directory = os.path.join(self.directory)
         LocalProduct.__init__(self)
 
     @property
@@ -298,13 +298,13 @@ class Work(LocalProduct):
             self._resource = self.project.get_resource(self.uri)
         return self._resource
 
-    def _check_exists_in_user_workspace(self):
+    def _check_exists_in_user_sandbox_resourcespace(self):
         if not os.path.exists(self.directory):
-            raise PulseMissingNode("Missing work space : " + self.directory)
+            raise PulseMissingNode("Missing sandbox_resource space : " + self.directory)
 
     def _get_trash_directory(self):
         date_time = datetime.now().strftime("%d%m%Y_%H%M%S")
-        path = os.path.join(self.project.abs_work_user_root, self.project.name, "TRASH") + os.sep
+        path = os.path.join(self.project.abs_sandbox_resource_user_root, self.project.name, "TRASH") + os.sep
         path += uri_standards.uri_to_filename(self.uri) + "-" + date_time
         index = 0
         path_base = path
@@ -313,9 +313,9 @@ class Work(LocalProduct):
             path = path_base + "_" + str(index)
         return path
 
-    def _get_work_files(self):
+    def _get_sandbox_resource_files(self):
         files_dict = {}
-        excluded_path = [cfg.work_output_dir, cfg.work_input_dir]
+        excluded_path = [cfg.product_input_dir]
         for root, dirs, files in os.walk(self.directory, topdown=True):
             dirs[:] = [d for d in dirs if d not in excluded_path]
             for f in files:
@@ -349,22 +349,22 @@ class Work(LocalProduct):
         uri = inputs[input_name]
 
         try:
-            product = self.project.get_work(uri)
+            product = self.project.get_sandbox_resource(uri)
         except PulseError:
             product = self.project.get_published_version(uri)
 
         return product
 
-    def add_input(self, uri, input_name=None, consider_work_product=False):
+    def add_input(self, uri, input_name=None, consider_sandbox_resource_product=False):
         """
-        add a product to the work inputs list
+        add a product to the sandbox_resource inputs list
         download it to local product if needed
         uri can be mutable (ie: anna-mdl.abc) or not (ie : anna-mdl.abc@4)
         if a mutable uri is given, the last version will be used
 
         :param input_name: the input name, it will be used to name the input directory. If not set, uri will be used
         :param uri: the product uri, can be mutable
-        :param consider_work_product: if set to True, Pulse will look in local work product to add the input
+        :param consider_sandbox_resource_product: if set to True, Pulse will look in local sandbox_resource product to add the input
         :return: return the product used for the input
         """
         if not uri_standards.is_valid(uri):
@@ -383,22 +383,22 @@ class Work(LocalProduct):
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        return self.update_input(input_name, uri, consider_work_product)
+        return self.update_input(input_name, uri, consider_sandbox_resource_product)
 
-    def update_input(self, input_name, uri=None, consider_work_product=False, resolve_conflict="error"):
+    def update_input(self, input_name, uri=None, consider_sandbox_resource_product=False, resolve_conflict="error"):
         """
-        update a work input.
-        the input name is an alias, used for creating linked directory in {work}/inputs/
+        update a sandbox_resource input.
+        the input name is an alias, used for creating linked directory in {sandbox_resource}/inputs/
         if no uri is set the last uri will be used to the last available product
         if the given uri is mutable, the last version will be used
         the new product is downloaded if needed
         the input directory link is redirected to the new product
-        the product register the work as a new user
+        the product register the sandbox_resource as a new user
         resolve conflict strategy can be either : error, mine or theirs
         :param input_name: the input to update
         :param uri: if set, give a new uri for the input. If not, used the last registered uri
-        :param consider_work_product: if set to True, update will look for local work product
-        :param resolve_conflict: if the new product already exists as a local work, will give the resolve strategy
+        :param consider_sandbox_resource_product: if set to True, update will look for local sandbox_resource product
+        :param resolve_conflict: if the new product already exists as a local sandbox_resource, will give the resolve strategy
         :return: return the new product found for the input
         """
         # abort if input doesn't exist
@@ -415,19 +415,19 @@ class Work(LocalProduct):
             uri = uri_standards.edit(old_uri, {"version": None})
 
         subpath = uri_standards.convert_to_dict(uri)["subpath"]
-        # get the work version if needed
-        work = None
-        if consider_work_product:
-            # check there is a work wih a valid subpath
-            work_node = self.project.get_work(uri)
-            if work_node and os.path.exists(os.path.join(work_node.product_directory, subpath)):
-                work = work_node
+        # get the sandbox_resource version if needed
+        sandbox_resource = None
+        if consider_sandbox_resource_product:
+            # check there is a sandbox_resource wih a valid subpath
+            sandbox_resource_node = self.project.get_sandbox_resource(uri)
+            if sandbox_resource_node and os.path.exists(os.path.join(sandbox_resource_node.product_directory, subpath)):
+                sandbox_resource = sandbox_resource_node
 
-        # get the published product, and compare to work product version to get the last one
+        # get the published product, and compare to sandbox_resource product version to get the last one
         product = self.project.get_published_version(uri)
         if product:
-            if work and product.version < work.version:
-                product = work
+            if sandbox_resource and product.version < sandbox_resource.version:
+                product = sandbox_resource
             else:
                 # if it's a commit version, download it
                 # check there's no conflict with a local product
@@ -475,22 +475,22 @@ class Work(LocalProduct):
         with open(self.products_inputs_file, "w") as write_file:
             json.dump(inputs, write_file, indent=4, sort_keys=True)
 
-        product = self.project.get_work(uri)
+        product = self.project.get_sandbox_resource(uri)
         if not product:
             product = self.project.get_published_version(uri)
 
         product.remove_product_user(self.directory)
 
         # remove linked input directory
-        input_directory = os.path.join(self.directory, cfg.work_input_dir, uri_standards.uri_to_filename(input_name))
+        input_directory = os.path.join(self.directory, cfg.product_input_dir, uri_standards.uri_to_filename(input_name))
         if os.path.exists(input_directory):
             os.remove(input_directory)
 
     def write(self):
         """
-        write the work object to user workspace
+        write the sandbox_resource object to user sandbox_resource root
         """
-        # create work folder if needed
+        # create sandbox_resource folder if needed
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
 
@@ -500,61 +500,55 @@ class Work(LocalProduct):
             "entity": self.resource.entity,
             "resource_type": self.resource.resource_type,
             "outputs": [],
-            "work_files": self._get_work_files()
+            "sandbox_resource_files": self._get_sandbox_resource_files()
             })
 
-        # create work product directory
-        work_product_directory = self.resource.get_products_directory(self.version)
-        os.makedirs(work_product_directory)
+        # create sandbox_resource product directory
+        sandbox_resource_product_directory = self.resource.get_products_directory(self.version)
+        os.makedirs(sandbox_resource_product_directory)
 
-        # create junction point to the output directory if needed
-        if self.project.use_linked_output_directory:
-            work_output_path = os.path.join(self.directory, cfg.work_output_dir)
+# TODO : create products in local resources and link to them
 
-            # link work output directory to its current output product directory
-            fu.make_directory_link(work_output_path, work_product_directory)
-
-        # create input directory if needed
-        if self.project.use_linked_input_directories:
-            work_input_path = os.path.join(self.directory, cfg.work_input_dir)
-            if not os.path.exists(work_input_path):
-                os.makedirs(work_input_path)
+        # create input directory
+        sandbox_resource_input_path = os.path.join(self.directory, cfg.product_input_dir)
+        if not os.path.exists(sandbox_resource_input_path):
+            os.makedirs(sandbox_resource_input_path)
 
         self.init_local_product_data()
 
     def read(self):
         """
-        read the work data from user work space
-        if the work doesn't exists in user work space, raise a pulse error
+        read the sandbox_resource data from user sandbox_resource space
+        if the sandbox_resource doesn't exists in user sandbox_resource space, raise a pulse error
 
-        :return: the updated work
+        :return: the updated sandbox_resource
         """
         if not os.path.exists(self.data_file):
-            raise PulseError("work does not exists : " + self.directory)
-        work_data = fu.read_data(self.data_file)
-        self.version = work_data["version"]
+            raise PulseError("sandbox_resource does not exists : " + self.directory)
+        sandbox_resource_data = fu.read_data(self.data_file)
+        self.version = sandbox_resource_data["version"]
         return self
 
     def publish(self, comment="", restore_template_products=True):
         """
-        commit the work to the repository, and publish it to the database
+        commit the sandbox_resource to the repository, and publish it to the database
 
         :param comment: a user comment string
         :param restore_template_products: keep same output products after the commit
         :return: the created commit object
         """
-        self._check_exists_in_user_workspace()
+        self._check_exists_in_user_sandbox_resourcespace()
         # check current the user permission
         if self.resource.user_needs_lock():
             raise PulseError("resource is locked by another user : " + self.resource.lock_user)
 
-        # check the work is up to date
+        # check the sandbox_resource is up to date
         last_version = self.resource.get_last_version()
         expected_version = last_version + 1
         if not self.version == expected_version:
             raise PulseError("Your version is deprecated, it should be based on " + str(last_version))
 
-        # check the work status
+        # check the sandbox_resource status
         if not self.status():
             raise PulseError("no file change to commit")
 
@@ -570,32 +564,32 @@ class Work(LocalProduct):
         lock_user = self.resource.lock_user
         self.resource.set_lock(True, self.project.cnx.user_name + "_commit", steal=True)
 
-        # copy work files to a new version in repository
-        work_files = fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir])
+        # copy sandbox_resource files to a new version in repository
+        sandbox_resource_files = fu.get_file_list(self.directory, [cfg.product_input_dir])
         product_files = fu.get_file_list(self.product_directory)
 
-        published_version = PublishedVersion(self.resource, self.version)
+        published_version = PublishedResource(self.resource, self.version)
         published_version.create(
-            files=self._get_work_files(),
-            work_directories=fu.get_directory_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir]),
+            files=self._get_sandbox_resource_files(),
+            sandbox_resource_directories=fu.get_directory_list(self.directory, [cfg.product_input_dir]),
             product_directories=fu.get_directory_list(self.product_directory),
             comment=comment,
-            work_inputs=self.get_inputs()
+            sandbox_resource_inputs=self.get_inputs()
         )
 
         published_version.project.cnx.repositories[self.resource.repository].upload_resource_commit(
             self.project.name,
             published_version.uri,
             self.directory,
-            work_files,
+            sandbox_resource_files,
             published_version.directory,
             product_files
             )
 
-        # remove work product data
+        # remove sandbox_resource product data
         os.remove(self.pulse_product_data_file)
 
-        # increment the work and the products files
+        # increment the sandbox_resource and the products files
         self.version += 1
         self.write()
 
@@ -629,19 +623,19 @@ class Work(LocalProduct):
 
     def revert(self):
         """
-        revert local changes to the work and its product directory
+        revert local changes to the sandbox_resource and its product directory
 
         :return: True on success
         """
         # trash the current content
         self.trash(no_backup=True)
-        # checkout the last work commit version
+        # checkout the last sandbox_resource commit version
         self.resource.checkout(index=self.version - 1)
         return True
 
     def update(self, force=False):
         """
-        update local work copy to the last resource commit
+        update local sandbox_resource copy to the last resource commit
         fails if there's some local changes
 
         :return: True on success
@@ -649,8 +643,8 @@ class Work(LocalProduct):
         # test there's no changes that could be lost
         if not force:
             if self.status():
-                raise PulseError("local changes detected, you should commit or revert your work first")
-        # delete the work
+                raise PulseError("local changes detected, you should commit or revert your sandbox_resource first")
+        # delete the sandbox_resource
         self.trash(no_backup=True)
         # checkout the last resource commit version
         self.resource.checkout()
@@ -658,7 +652,7 @@ class Work(LocalProduct):
 
     def trash_products_content(self):
         """
-        remove the work product content from user workspace
+        remove the sandbox_resource product content from user sandbox_resourcespace
 
         :return: True on success
         """
@@ -670,33 +664,26 @@ class Work(LocalProduct):
         if os.path.exists(self.product_directory) and not fu.test_path_write_access(self.product_directory):
             raise PulseError("Aborted. Can't move folder " + self.product_directory)
 
-        # create the trash work directory
+        # create the trash sandbox_resource directory
         trash_directory = self._get_trash_directory()
         if not os.path.exists(trash_directory):
             os.makedirs(trash_directory)
 
-        # move work product directory
+        # move sandbox_resource product directory
         shutil.move(self.product_directory,  os.path.join(trash_directory, "PRODUCTS"))
 
         # recreate an empty directory
         os.makedirs(self.product_directory)
 
-        # create junction point to the output directory if needed
-        if self.project.use_linked_output_directory:
-            work_output_path = os.path.join(self.directory, cfg.work_output_dir)
-
-            # link work output directory to its current output product directory
-            fu.make_directory_link(work_output_path, self.product_directory)
-
     def trash(self, no_backup=False):
         """
-        remove the work from user workspace
+        remove the sandbox_resource from user sandbox_resourcespace
 
-        :param no_backup: if False, the work folder is moved to trash directory. If True, it is removed from disk
+        :param no_backup: if False, the sandbox_resource folder is moved to trash directory. If True, it is removed from disk
         :return: True on success
         """
-        self._check_exists_in_user_workspace()
-        # test the work and products folder are movable
+        self._check_exists_in_user_sandbox_resourcespace()
+        # test the sandbox_resource and products folder are movable
         for path in [self.directory, self.product_directory]:
             if os.path.exists(path) and not fu.test_path_write_access(path):
                 raise PulseError("Aborted. Can't move folder " + path)
@@ -707,11 +694,11 @@ class Work(LocalProduct):
             if os.path.exists(input_product.product_directory):
                 input_product.remove_product_user(self.directory)
 
-        # create the trash work directory
+        # create the trash sandbox_resource directory
         trash_directory = self._get_trash_directory()
         os.makedirs(trash_directory)
 
-        # remove work output link
+        # remove sandbox_resource output link
         if os.path.exists(self.output_directory):
             try:
                 os.remove(self.output_directory)
@@ -719,16 +706,16 @@ class Work(LocalProduct):
             except PermissionError:
                 pass
 
-        # move work product directory
+        # move sandbox_resource product directory
         shutil.move(self.product_directory,  os.path.join(trash_directory, "PRODUCTS"))
 
-        # move work files
-        shutil.move(self.directory, trash_directory + "/work")
+        # move sandbox_resource files
+        shutil.move(self.directory, trash_directory + "/sandbox_resource")
 
         if no_backup:
             shutil.rmtree(trash_directory)
 
-        # remove work data file
+        # remove sandbox_resource data file
         os.remove(self.data_file)
         os.remove(self.pulse_product_data_file)
 
@@ -736,14 +723,14 @@ class Work(LocalProduct):
 
     def status(self):
         """
-        return the work files changes since last commit. Based on the files modification date time
+        return the sandbox_resource files changes since last commit. Based on the files modification date time
 
         :return: a list a tuple with the filepath and the edit type (edited, removed, added)
         """
 
         diff = fu.compare_directory_content(
-            fu.get_file_list(self.directory, [cfg.work_output_dir, cfg.work_input_dir]),
-            fu.read_data(self.data_file)["work_files"]
+            fu.get_file_list(self.directory, [cfg.product_input_dir]),
+            fu.read_data(self.data_file)["sandbox_resource_files"]
         )
 
         products_directory = self.resource.get_products_directory(self.version)
@@ -767,7 +754,7 @@ class Resource(PulseDbObject):
         )
         self._entity = entity
         self._resource_type = resource_type
-        self.sandbox_path = project.get_sandbox_path(self.uri)
+        self.sandbox_resource_path = project.get_sandbox_resource_path(self.uri)
         self._storage_vars = {
             'lock_state': False,
             'lock_user': '',
@@ -866,46 +853,51 @@ class Resource(PulseDbObject):
         :param version: integer
         :return: Commit
         """
-        return PublishedVersion(self, self.get_index(version)).db_read()
+        return PublishedResource(self, self.get_index(version)).db_read()
 
-    def get_work(self):
+    def get_sandbox_resource(self):
         """
-        get the Work object associated to the resource.
-        IF there's no current work in user work space, return None
+        get the SandBoxResource object associated to the resource.
+        IF there's no current sandbox_resource in user sandbox_resource space, return None
 
         :return:
         """
         try:
-            return Work(self.project, self.uri).read()
+            return SandBoxResource(self.project, self.uri).read()
         except PulseError:
             return None
 
-    def checkout(self, index="last", destination_folder=None, restore_products="template", resolve_conflict="error"):
+# TODO : add a test to checkout only a product
+# TODO : If no product specified, will download only sandbox_resource product and empty products based on restore_products
+    def checkout(self, product_list=[], version="last", destination_folder=None, restore_products="template", resolve_conflict="error"):
         """
-        Download the resource work files in the user work space.
+        Download resource products in the user sandbox_resource.
         Download related dependencies if they are not available in user products space
-        If the incoming work have input product, those product can be in conflict with local product, by default the
+        If the incoming sandbox_resource have input product, those product can be in conflict with sandbox_resource product, by default the
         checkout process will fail with no consequence.
+
         :param restore_products: could be : none, template, or last.
         :param destination_folder: where the resource will be checkout, if not set, project config is used
-        :param index: the commit index to checkout. If not set, the last one will be used
+        :param version: the resource version index to checkout. If not set, the last one will be used
         :param resolve_conflict: can be "error", "mine", or "theirs" depending how Pulse should resolve the conflict.
         """
-        if not os.path.exists(self.project.abs_work_user_root):
-            self.project.initialize_sandbox()
+        # if the sandbox doesn't exist, create it
+        if not os.path.exists(self.project.abs_sandbox_resource_user_root):
+            self.project.initialize_sandbox_resource()
 
-        work = Work(self.project, self.uri)
+        sandbox_resource = SandBoxResource(self.project, self.uri)
 
-        # abort checkout if the work already exists in user sandbox, just rebuild its data
-        if os.path.exists(work.data_file):
-            return Work(self.project, self.uri).read()
+        # abort checkout if the sandbox_resource already exists in user sandbox_resource, just rebuild its data
+        if os.path.exists(sandbox_resource.data_file):
+            return SandBoxResource(self.project, self.uri).read()
 
+        # if no destination folder is specified, check out to the default sandbox path
         if not destination_folder:
-            destination_folder = self.sandbox_path
+            destination_folder = self.sandbox_resource_path
 
-        # create the work object
+        # create the sandbox_resource object
         last_version = self.get_last_version()
-        work.version = last_version + 1
+        sandbox_resource.version = last_version + 1
         source_resource = None
         source_commit = None
 
@@ -933,40 +925,41 @@ class Resource(PulseDbObject):
         # else get the resource commit
         else:
             source_resource = self
-            source_commit = self.get_commit(index)
+            source_commit = self.get_commit(version)
 
-        # if no source has been found, just create empty work folder
+        # if no source has been found, just create empty sandbox_resource folder
         if not source_commit:
-            os.makedirs(destination_folder)
+            os.makedirs(destination_folder + "/work")
         else:
-            # test for local work product in conflict with incoming work input product
-            for input_name, uri in source_commit.work_inputs.items():
+            # test for local sandbox_resource product in conflict with incoming sandbox_resource input product
+            for input_name, uri in source_commit.sandbox_resource_inputs.items():
                 self.project.resolve_local_product_conflict(uri, resolve_conflict)
 
             # create the directory structure
-            for rel_dir in source_commit.work_directories:
-                absolute_dir = os.path.join(work.directory, rel_dir[1:])
+            for rel_dir in source_commit.sandbox_resource_directories:
+                absolute_dir = os.path.join(sandbox_resource.directory, rel_dir[1:])
                 if not os.path.exists(absolute_dir):
                     os.makedirs(absolute_dir)
 
-            self.project.cnx.repositories[source_resource.repository].download_work(
+
+            self.project.cnx.repositories[source_resource.repository].download_sandbox_resource(
                 self.project.name, source_commit.uri, destination_folder)
 
-        work.write()
+        sandbox_resource.write()
         # recreate last commit products from known template or from last commit
         if restore_products == "template":
             try:
-                work.restore_template_products()
+                sandbox_resource.restore_template_products()
             except PulseDatabaseMissingObject:
                 pass
         elif source_commit == "last" and source_commit:
-            source_commit.download(destination_folder=work.product_directory)
+            source_commit.download(destination_folder=sandbox_resource.product_directory)
 
         # download requested input products if needed
-        for input_name, input_uri in work.get_inputs().items():
-            work.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
+        for input_name, input_uri in sandbox_resource.get_inputs().items():
+            sandbox_resource.update_input(input_name, uri=input_uri, resolve_conflict=resolve_conflict)
 
-        return work
+        return sandbox_resource
 
     def set_lock(self, state, user=None, steal=False):
         """
@@ -1036,26 +1029,24 @@ class Project(PulseDbObject):
 
         PulseDbObject.__init__(self, self, "config")
         self._storage_vars = {
-            "work_user_root": None,
+            "sandbox_resource_user_root": None,
             "product_user_root": None,
-            "default_repository": None,
-            "use_linked_output_directory": True,
-            "use_linked_input_directories": True
+            "default_repository": None
         }
-        self._abs_work_user_root = ""
+        self._abs_sandbox_resource_user_root = ""
         self._abs_product_user_root = ""
 
     @property
-    def abs_work_user_root(self):
-        return self._abs_work_user_root
+    def abs_sandbox_resource_user_root(self):
+        return self._abs_sandbox_resource_user_root
 
     @property
     def abs_product_user_root(self):
         return self._abs_product_user_root
 
     @property
-    def work_user_root(self):
-        return self._storage_vars["work_user_root"]
+    def sandbox_resource_user_root(self):
+        return self._storage_vars["sandbox_resource_user_root"]
 
     @property
     def product_user_root(self):
@@ -1065,35 +1056,24 @@ class Project(PulseDbObject):
     def default_repository(self):
         return self._storage_vars["default_repository"]
 
-    @property
-    def use_linked_output_directory(self):
-        return self._storage_vars["use_linked_output_directory"]
-
-    @property
-    def use_linked_input_directories(self):
-        return self._storage_vars["use_linked_input_directories"]
-
     def _update_local_roots_path(self):
-        self._abs_work_user_root = os.path.expandvars(self.work_user_root)
+        self._abs_sandbox_resource_user_root = os.path.expandvars(self.sandbox_resource_user_root)
         self._abs_product_user_root = os.path.expandvars(self.product_user_root)
 
-    def get_sandbox_path(self, uri):
-        return os.path.join(self.abs_work_user_root, self.name, uri)
+    def get_sandbox_resource_path(self, uri):
+        return os.path.join(self.abs_sandbox_resource_user_root, self.name, uri)
 
     def create(self,
                default_repository,
-               work_user_root,
-               product_user_root,
-               use_linked_output_directory,
-               use_linked_input_directories):
+               sandbox_resource_user_root,
+               product_user_root
+               ):
         """
         initialize the project configuration and save it to database
         """
         self._storage_vars['default_repository'] = default_repository
-        self._storage_vars['work_user_root'] = work_user_root
+        self._storage_vars['sandbox_resource_user_root'] = sandbox_resource_user_root
         self._storage_vars['product_user_root'] = product_user_root
-        self._storage_vars['use_linked_output_directory'] = use_linked_output_directory
-        self._storage_vars['use_linked_input_directories'] = use_linked_input_directories
         self.db_create()
         self._update_local_roots_path()
 
@@ -1105,16 +1085,16 @@ class Project(PulseDbObject):
         uri = uri_standards.convert_from_dict({"entity": cfg.template_name, "resource_type": resource_type})
         return self.get_resource(uri)
 
-    def get_work(self, uri_string):
+    def get_sandbox_resource(self, uri_string):
         uri_dict = uri_standards.convert_to_dict(uri_string)
         resource = Resource(self, uri_dict['entity'], uri_dict['resource_type'])
-        work = resource.get_work()
-        if not work:
+        sandbox_resource = resource.get_sandbox_resource()
+        if not sandbox_resource:
             return
         if not uri_dict["version"]:
-            return work
-        if str(work.version) == uri_dict["version"]:
-            return work
+            return sandbox_resource
+        if str(sandbox_resource.version) == uri_dict["version"]:
+            return sandbox_resource
         return
 
     def get_published_version(self, uri_string):
@@ -1123,7 +1103,7 @@ class Project(PulseDbObject):
         @last or no version return the last version
         raise a PulseError if the uri is not found in the project
         :param uri_string: a pulse product uri
-        :return: PublishedVersion
+        :return: PublishedResource
         """
 
         uri_string = uri_string.split("/", 1)[0]
@@ -1134,7 +1114,7 @@ class Project(PulseDbObject):
         if not uri_dict['version'] or uri_dict['version'] == "last":
             commits = self.cnx.db.find_uris(
                 self.name,
-                "PublishedVersion",
+                "PublishedResource",
                 uri_standards.edit(uri_string, {"version": "*"})
             )
             if not commits:
@@ -1144,8 +1124,8 @@ class Project(PulseDbObject):
             return resource.get_commit(last_version)
 
         else:
-            index = resource.get_index(uri_dict['version'])
-            return resource.get_commit(index)
+            version = resource.get_index(uri_dict['version'])
+            return resource.get_commit(version)
 
     def list_published_versions(self, uri_pattern="*", local_only=False):
         """
@@ -1163,16 +1143,16 @@ class Project(PulseDbObject):
             file_list = [os.path.basename(x) for x in path_list]
             return [fu.json_filename_to_uri(filename) for filename in file_list]
 
-        return self.cnx.db.find_uris(self.name, "PublishedVersion", uri_pattern)
+        return self.cnx.db.find_uris(self.name, "PublishedResource", uri_pattern)
 
-    def list_works(self, uri_pattern="*"):
+    def list_sandbox_resources(self, uri_pattern="*"):
         """
-        return the list of work resource in user sandbox
+        return the list of sandbox_resource resource in user sandbox_resource
         :return: uri list
         """
-        if not os.path.exists(self.work_data_directory):
+        if not os.path.exists(self.sandbox_resource_data_directory):
             return []
-        path_list = glob.glob(os.path.join(self.work_data_directory, uri_pattern) + ".json")
+        path_list = glob.glob(os.path.join(self.sandbox_resource_data_directory, uri_pattern) + ".json")
         file_list = [os.path.basename(x) for x in path_list]
         return [fu.json_filename_to_uri(filename) for filename in file_list]
 
@@ -1199,12 +1179,12 @@ class Project(PulseDbObject):
         return purged_products
 
     @property
-    def work_directory(self):
-        return os.path.join(self.abs_work_user_root, self.name)
+    def sandbox_resource_directory(self):
+        return os.path.join(self.abs_sandbox_resource_user_root, self.name)
 
     @property
-    def work_data_directory(self):
-        return os.path.join(self.work_directory, cfg.pulse_data_dir, "works")
+    def sandbox_resource_data_directory(self):
+        return os.path.join(self.sandbox_resource_directory, cfg.pulse_data_dir, "sandbox_resources")
 
     @property
     def commit_product_data_directory(self):
@@ -1212,19 +1192,19 @@ class Project(PulseDbObject):
         return os.path.join(product_root, cfg.pulse_data_dir, "commit_products")
 
     @property
-    def work_product_data_directory(self):
+    def sandbox_resource_product_data_directory(self):
         product_root = os.path.join(self.abs_product_user_root, self.name)
-        return os.path.join(product_root, cfg.pulse_data_dir, "work_products")
+        return os.path.join(product_root, cfg.pulse_data_dir, "sandbox_resource_products")
 
     def init_from_db(self):
         self.db_read()
         self._update_local_roots_path()
 
-    def initialize_sandbox(self):
+    def initialize_sandbox_resource(self):
         # create local data directories
-        for directory in [self.work_data_directory,
+        for directory in [self.sandbox_resource_data_directory,
                           self.commit_product_data_directory,
-                          self.work_product_data_directory]:
+                          self.sandbox_resource_product_data_directory]:
             if not os.path.isdir(directory):
                 os.makedirs(directory)
             # if platform is windows, hide the directory with ctypes
@@ -1232,7 +1212,7 @@ class Project(PulseDbObject):
                 ctypes.windll.kernel32.SetFileAttributesW(os.path.dirname(directory), 2)
 
         # write connexion path and settings to local project settings
-        json_path = os.path.join(self.work_directory, cfg.pulse_data_dir, cfg.project_settings)
+        json_path = os.path.join(self.sandbox_resource_directory, cfg.pulse_data_dir, cfg.project_settings)
         data = {'connection': self.cnx.get_settings()}
         with open(json_path, "w") as write_file:
             json.dump(data, write_file, indent=4, sort_keys=True)
@@ -1290,17 +1270,17 @@ class Project(PulseDbObject):
         """
             return True if product has to be downloaded, False if not, and raise an Error if needed by strategy
         """
-        work_version = self.get_work(uri)
+        sandbox_resource_version = self.get_sandbox_resource(uri)
 
-        if not work_version:
+        if not sandbox_resource_version:
             return True
         else:
             if strategy == "mine":
                 return False
             if strategy == "error":
-                raise PulseWorkConflict("Conflict with local work version : " + uri)
+                raise PulseSandBoxResourceConflict("Conflict with local sandbox_resource version : " + uri)
             if strategy == "theirs":
-                work_version.trash()
+                sandbox_resource_version.trash()
                 return True
 
 
@@ -1335,40 +1315,32 @@ class Connection:
 
     def create_project(self,
                        project_name,
-                       work_user_root,
+                       sandbox_resource_user_root,
                        default_repository,
-                       product_user_root,
-                       use_linked_output_directory=True,
-                       use_linked_input_directories=True
+                       product_user_root
                        ):
         """
         create a new project in the connexion database
-        work user root and product user root have to be independent
+        sandbox_resource user root and product user root have to be independent
         environment variables can be used to define path. It should follow this convention : my_path/${MY_ENV_VAR}/
 
         :param project_name:
-        :param work_user_root: user work space path where the project directory will be created
+        :param sandbox_resource_user_root: user sandbox_resource space path where the project directory will be created
         :param product_user_root: user product space path where the project directory will be created
         :param default_repository: repository name use by default when a resource is created
-        :param use_linked_output_directory: create a linked directory in each work directory to the current output
-         product
-        :param use_linked_input_directories: create a input directory in each work directory containing
-         linked directories pointing to the input products
         :return: the new pulse Project
         """
-        work_user_root = work_user_root.replace("\\", "/")
+        sandbox_resource_user_root = sandbox_resource_user_root.replace("\\", "/")
         product_user_root = product_user_root.replace("\\", "/")
-        if work_user_root in product_user_root or product_user_root in work_user_root:
-            raise PulseError("work user root and product user root should be independent")
+        if sandbox_resource_user_root in product_user_root or product_user_root in sandbox_resource_user_root:
+            raise PulseError("sandbox_resource user root and product user root should be independent")
 
         project = Project(self, project_name)
         self.db.create_project(project_name)
         project.create(
             default_repository,
-            work_user_root,
+            sandbox_resource_user_root,
             product_user_root,
-            use_linked_output_directory,
-            use_linked_input_directories
         )
 
         return project
@@ -1496,10 +1468,10 @@ def get_project_from_path(path, username="", password=""):
     path_list = path.split(os.sep)
     mode = None
 
-    # find the pulse_data_dir to determine if it's a product or work URI
+    # find the pulse_data_dir to determine if it's a product or sandbox_resource URI
     for i in range(1, len(path_list)):
-        if os.path.exists(os.path.join(path, cfg.pulse_data_dir, "works")):
-            mode = "work"
+        if os.path.exists(os.path.join(path, cfg.pulse_data_dir, "sandbox_resources")):
+            mode = "sandbox_resource"
             break
         path = os.path.dirname(path)
     if not mode:

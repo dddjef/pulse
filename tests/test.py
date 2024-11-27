@@ -4,7 +4,7 @@ import unittest
 import os
 import utils
 import sys
-test_project_name = "test"
+test_project_name = "test_project"
 
 
 class TestProjectSettings(unittest.TestCase):
@@ -17,17 +17,17 @@ class TestProjectSettings(unittest.TestCase):
         with self.assertRaises(PulseError):
             self.cnx.create_project(
                 project_name=test_project_name,
-                work_user_root=utils.sandbox_work_path,
+                work_user_root=utils.sandbox_path,
                 default_repository="local_test_storage",
-                product_user_root=utils.sandbox_work_path
+                product_user_root=utils.sandbox_path
             )
 
         with self.assertRaises(PulseError):
             self.cnx.create_project(
                 project_name=test_project_name,
-                work_user_root=utils.sandbox_work_path,
+                work_user_root=utils.sandbox_path,
                 default_repository="local_test_storage",
-                product_user_root=utils.sandbox_work_path + "/subdir"
+                product_user_root=utils.sandbox_path + "/subdir"
             )
 
     def test_environment_variables_in_project_path(self):
@@ -81,42 +81,6 @@ class TestProjectSettings(unittest.TestCase):
             with self.assertRaises(WindowsError):
                 self.cnx.add_repository(name="bad_path", adapter="file_storage", path="its:/invalid/path")
 
-    def test_cfg_without_linked_directories(self):
-        # set up env var
-        # create a project which use this variables in its work and product path
-        prj = self.cnx.create_project(
-            test_project_name,
-            utils.sandbox_work_path,
-            default_repository="local_test_storage",
-            product_user_root=utils.sandbox_products_path,
-            use_linked_output_directory=False,
-            use_linked_input_directories=False
-        )
-        # create a resource
-        resource = prj.create_resource("ch_anna-model")
-        # check out the resource
-        work = resource.checkout()
-        # test there's no output directory
-        self.assertFalse(os.path.exists(work.output_directory))
-
-        # add an output product
-        os.makedirs(fu.path_join(work.product_directory, "abc"))
-        os.makedirs(work.output_directory)
-        # commit
-        utils.add_file_to_directory(work.directory)
-        anna_mdl_v1 = work.publish()
-        # trash
-        work.trash(no_backup=True)
-        prj.purge_unused_local_products()
-        # create another resource
-        surf_resource = prj.create_resource("ch_anna-surfacing")
-        surf_work = surf_resource.checkout()
-        # require this product
-        surf_work.add_input(anna_mdl_v1.uri)
-        # test the product location
-        self.assertFalse(os.path.exists(work.input_directory))
-        surf_work.publish()
-
 
 class TestResources(unittest.TestCase):
     def setUp(self):
@@ -130,9 +94,9 @@ class TestResources(unittest.TestCase):
         )
         self.prj = self.cnx.create_project(
             test_project_name,
-            utils.sandbox_work_path,
+            utils.sandbox_path,
             default_repository=storage_name,
-            product_user_root=utils.sandbox_products_path
+            product_user_root=utils.resources_path
         )
         self._initResource()
 
@@ -259,9 +223,9 @@ class TestResources(unittest.TestCase):
         os.environ["USER_VAR"] = "userA"
         prj_a = self.cnx.create_project(
             "project_conflict",
-            utils.sandbox_work_path + "_${USER_VAR}",
+            utils.sandbox_path + "_${USER_VAR}",
             default_repository="main_storage",
-            product_user_root=utils.sandbox_products_path + "_${USER_VAR}"
+            product_user_root=utils.resources_path + "_${USER_VAR}"
         )
 
         # userA checkout a modeling, he creates a abc product in V001
@@ -364,30 +328,29 @@ class TestResources(unittest.TestCase):
         anna_mdl_resource = self.prj.create_resource("ch_anna-modeling")
         self.assertEqual(anna_mdl_resource.get_last_version(), 0)
 
-        # checkout, and check directories are created
-        anna_mdl_work = anna_mdl_resource.checkout()
-        self.assertTrue(os.path.exists(anna_mdl_work.directory))
+        # checkout, and check default directories are created
+        anna_mdl_sandbox = anna_mdl_resource.checkout()
+        self.assertTrue(os.path.exists(os.path.join(utils.sandbox_path, test_project_name, "ch_anna-modeling", "work" )))
 
         # commit should fail if nothing is change in work
         with self.assertRaises(PulseError):
-            anna_mdl_work.publish("very first time")
+            anna_mdl_sandbox.publish("very first time")
 
         # create a new file in work directory and try to commit again
         new_file = "test_complete.txt"
-        mdl_work_dir = os.path.join(anna_mdl_work.directory, "work")
+        mdl_work_dir = os.path.join(anna_mdl_sandbox.directory, "work")
         utils.add_file_to_directory(mdl_work_dir, new_file)
-        self.assertEqual(anna_mdl_work.status(), {"/work/" + new_file: 'added'})
+        self.assertEqual(anna_mdl_sandbox.status(), {"/work/" + new_file: 'added'})
 
-        anna_mdl_work.publish("add a file")
+        anna_mdl_sandbox.publish("add a file")
         self.assertEqual(anna_mdl_resource.get_last_version(), 1)
 
-        # create a sub resource
-        abc_work_product = os.path.join(anna_mdl_work.directory, "output", "abc")
-        os.makedirs(abc_work_product)
+        # create a product
+        abc_product = anna_mdl_sandbox.create_product("abc")
         # now products directory should exists)
-        utils.add_file_to_directory(abc_work_product, "test.abc")
+        utils.add_file_to_directory(abc_product.directory, "test.abc")
         # create a new commit
-        anna_mdl_v2 = anna_mdl_work.publish("some abc produced")
+        anna_mdl_v2 = anna_mdl_sandbox.publish("some abc produced")
 
         self.assertEqual(anna_mdl_resource.get_last_version(), 2)
         # create a new resource
@@ -592,9 +555,9 @@ class TestResources(unittest.TestCase):
         os.environ["USER_VAR"] = "userA"
         prj_a = self.cnx.create_project(
             "project_conflict",
-            utils.sandbox_work_path + "_${USER_VAR}",
+            utils.sandbox_path + "_${USER_VAR}",
             default_repository="main_storage",
-            product_user_root=utils.sandbox_products_path + "_${USER_VAR}"
+            product_user_root=utils.resources_path + "_${USER_VAR}"
         )
 
         # userA checkout a modeling, he creates a abc product in V001
@@ -798,9 +761,9 @@ class TestResources(unittest.TestCase):
         os.environ["USER_VAR"] = "userA"
         prj_a = self.cnx.create_project(
             "project_conflict",
-            utils.sandbox_work_path + "_${USER_VAR}",
+            utils.sandbox_path + "_${USER_VAR}",
             default_repository="main_storage",
-            product_user_root=utils.sandbox_products_path + "_${USER_VAR}"
+            product_user_root=utils.resources_path + "_${USER_VAR}"
         )
 
         # userA checkout a modeling, he creates a abc product in V001
